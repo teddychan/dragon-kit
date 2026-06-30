@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Stand up the open-source `dragon-kit` Swift package (DragonKit library: design primitives, settings shell, localization helper, About module) plus a runnable minimal menu-bar **Example** app that uses it.
+**Goal:** Stand up the open-source `dragon-kit` Swift package (DragonKit library: design primitives, settings shell + window controller, localization helper, About module) plus a runnable minimal menu-bar **Example** app that uses it.
 
-**Architecture:** One SwiftPM library `DragonKit` (namespaced modules) consumed by an SPM-based Example app. DragonKit reproduces ice-2's grouped-`Form` look. Settings is a data-driven `NavigationSplitView` shell fed an ordered `[AnySettingsPane]`; modules expose `SettingsPane` conformers. App-specific data (About content, app name) is injected by the host.
+**Architecture:** One SwiftPM library `DragonKit` (namespaced modules) consumed by an SPM-based Example app. DragonKit's primitives are **source-compatible ports** of ice-2's `IceForm`/`IceSection`/`.annotation` (same API surface + defaults), so later app migration is a near-mechanical rename. Settings is a data-driven `NavigationSplitView` shell with host-owned selection, opened via a reusable accessory-app `NSWindowController`. App-specific data (About content, app name) is injected by the host.
 
 **Tech Stack:** Swift 6.1, SwiftUI + AppKit, SwiftPM, swift-testing, macOS 26 deployment target. Repo: `~/git/dragon-kit` (local; public `teddychan/dragon-kit` pushed only after v0 builds green).
 
@@ -23,11 +23,12 @@ dragon-kit/
     DesignSystem/DragonForm.swift
     DesignSystem/DragonSection.swift
     DesignSystem/Annotation.swift
-    Settings/SettingsPane.swift          # SettingsPane protocol + AnySettingsPane
-    Settings/SettingsShell.swift
+    Settings/SettingsPane.swift            # SettingsPane protocol + AnySettingsPane
+    Settings/SettingsShell.swift           # SettingsShell + ManagedSettingsShell
+    Settings/SettingsWindowController.swift # DragonSettingsWindowController
     Localization/L.swift
-    About/AboutContent.swift             # AboutContent + AboutLink
-    About/AboutPane.swift                # AboutPane view + AboutSettingsPane
+    About/AboutContent.swift               # AboutContent + AboutLink
+    About/AboutPane.swift                  # AboutPane view + AboutSettingsPane
     Resources/en.lproj/DragonKit.strings
   Tests/DragonKitTests/
     LocalizationTests.swift
@@ -35,7 +36,7 @@ dragon-kit/
     SettingsPaneTests.swift
   Example/
     Package.swift
-    Sources/DragonAppTemplate/main.swift
+    Sources/DragonAppTemplate/App.swift          # @main entry
     Sources/DragonAppTemplate/AppDelegate.swift
     Sources/DragonAppTemplate/GeneralPane.swift
     Sources/DragonAppTemplate/AboutConfig.swift
@@ -210,14 +211,17 @@ Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 
 ---
 
-## Task 3: Design primitives (DragonForm, DragonSection, annotation)
+## Task 3: Design primitives (source-compatible ports of ice-2)
 
 **Files:**
 - Create: `Sources/DragonKit/DesignSystem/DragonForm.swift`
 - Create: `Sources/DragonKit/DesignSystem/DragonSection.swift`
 - Create: `Sources/DragonKit/DesignSystem/Annotation.swift`
 
-> These are SwiftUI view wrappers (ports of ice-2's `IceForm`/`IceSection`/`.annotation`); they carry no branchable logic, so they're verified by `swift build`, then exercised on screen in Task 7.
+> These mirror ice-2's `IceForm`/`IceSection`/`.annotation` **API surface and defaults**
+> (compat params, `DragonSectionOptions`, the full init overload set, and an annotation
+> with `.subheadline`/spacing-2 defaults), so later ice-2 migration is a rename, not a
+> rewrite. Pure view wrappers — verified by `swift build`, exercised on screen in Task 8.
 
 - [ ] **Step 1: Write `DragonForm`**
 
@@ -226,12 +230,27 @@ Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 ```swift
 import SwiftUI
 
-/// A settings form on the system's grouped `Form`, so panes adopt the standard
-/// macOS inset-grouped look, fonts, and control sizing. Port of ice-2's `IceForm`.
+/// A settings form on the system's grouped `Form`. Source-compatible port of ice-2's
+/// `IceForm`: layout params are accepted for call-site compatibility; layout is driven
+/// by the grouped `Form`.
 public struct DragonForm<Content: View>: View {
     private let content: Content
 
-    public init(@ViewBuilder content: () -> Content) {
+    public init(
+        alignment: HorizontalAlignment = .center,
+        padding: EdgeInsets = .dragonFormDefaultPadding,
+        spacing: CGFloat = .dragonFormDefaultSpacing,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.content = content()
+    }
+
+    public init(
+        alignment: HorizontalAlignment = .center,
+        padding: CGFloat,
+        spacing: CGFloat = .dragonFormDefaultSpacing,
+        @ViewBuilder content: () -> Content
+    ) {
         self.content = content()
     }
 
@@ -242,55 +261,185 @@ public struct DragonForm<Content: View>: View {
             .accessibilityElement(children: .contain)
     }
 }
+
+public extension EdgeInsets {
+    /// Default padding for a ``DragonForm`` (port of ice-2's `iceFormDefaultPadding`).
+    static let dragonFormDefaultPadding = EdgeInsets(top: 0, leading: 20, bottom: 20, trailing: 20)
+}
+
+public extension CGFloat {
+    /// Default spacing for a ``DragonForm``.
+    static let dragonFormDefaultSpacing: CGFloat = 10
+}
 ```
 
-- [ ] **Step 2: Write `DragonSection`**
+- [ ] **Step 2: Write `DragonSection` + `DragonSectionOptions`**
 
 `Sources/DragonKit/DesignSystem/DragonSection.swift`:
 
 ```swift
 import SwiftUI
 
-/// A grouped settings section. Port of ice-2's `IceSection`. Pass a title for a
-/// header, or omit it for a plain inset box.
-public struct DragonSection<Content: View>: View {
-    private let title: LocalizedStringKey?
-    private let content: Content
+/// Compatibility options carried over from ice-2's `IceSectionOptions`. Grouping and
+/// dividers are provided by the system grouped `Form`; these are accepted for source
+/// compatibility with ice-2 call sites.
+public struct DragonSectionOptions: OptionSet, Sendable {
+    public let rawValue: Int
+    public init(rawValue: Int) { self.rawValue = rawValue }
 
-    public init(_ title: LocalizedStringKey? = nil, @ViewBuilder content: () -> Content) {
-        self.title = title
+    public static let isBordered = DragonSectionOptions(rawValue: 1 << 0)
+    public static let hasDividers = DragonSectionOptions(rawValue: 1 << 1)
+
+    public static let plain: DragonSectionOptions = []
+    public static let `default`: DragonSectionOptions = [.isBordered, .hasDividers]
+}
+
+/// A grouped settings section. Source-compatible port of ice-2's `IceSection`:
+/// `spacing`/`options` are accepted for call-site compatibility.
+public struct DragonSection<Header: View, Content: View, Footer: View>: View {
+    private let header: Header
+    private let content: Content
+    private let footer: Footer
+
+    public init(
+        spacing: CGFloat = .dragonSectionDefaultSpacing,
+        options: DragonSectionOptions = .default,
+        @ViewBuilder header: () -> Header,
+        @ViewBuilder content: () -> Content,
+        @ViewBuilder footer: () -> Footer
+    ) {
+        self.header = header()
         self.content = content()
+        self.footer = footer()
+    }
+
+    public init(
+        spacing: CGFloat = .dragonSectionDefaultSpacing,
+        options: DragonSectionOptions = .default,
+        @ViewBuilder content: () -> Content,
+        @ViewBuilder footer: () -> Footer
+    ) where Header == EmptyView {
+        self.init(spacing: spacing, options: options) { EmptyView() } content: { content() } footer: { footer() }
+    }
+
+    public init(
+        spacing: CGFloat = .dragonSectionDefaultSpacing,
+        options: DragonSectionOptions = .default,
+        @ViewBuilder header: () -> Header,
+        @ViewBuilder content: () -> Content
+    ) where Footer == EmptyView {
+        self.init(spacing: spacing, options: options) { header() } content: { content() } footer: { EmptyView() }
+    }
+
+    public init(
+        spacing: CGFloat = .dragonSectionDefaultSpacing,
+        options: DragonSectionOptions = .default,
+        @ViewBuilder content: () -> Content
+    ) where Header == EmptyView, Footer == EmptyView {
+        self.init(spacing: spacing, options: options) { EmptyView() } content: { content() } footer: { EmptyView() }
+    }
+
+    public init(
+        _ title: LocalizedStringKey,
+        spacing: CGFloat = .dragonSectionDefaultSpacing,
+        options: DragonSectionOptions = .default,
+        @ViewBuilder content: () -> Content
+    ) where Header == Text, Footer == EmptyView {
+        self.init(spacing: spacing, options: options) { Text(title) } content: { content() }
     }
 
     public var body: some View {
-        if let title {
-            Section(title) { content }
-        } else {
-            Section { content }
+        Section {
+            content
+        } header: {
+            header
+        } footer: {
+            footer
         }
     }
 }
+
+public extension CGFloat {
+    /// Default spacing for a ``DragonSection``.
+    static let dragonSectionDefaultSpacing: CGFloat = 11
+}
 ```
 
-- [ ] **Step 3: Write the annotation modifier**
+- [ ] **Step 3: Write the annotation port**
 
 `Sources/DragonKit/DesignSystem/Annotation.swift`:
 
 ```swift
 import SwiftUI
 
-public extension View {
-    /// A secondary caption rendered beneath a settings row, matching ice-2's
-    /// `.annotation(...)` style.
-    func dragonAnnotation(_ text: LocalizedStringKey) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            self
-            Text(text)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
+/// Displays content as an annotation below a parent view. Port of ice-2's `AnnotationView`.
+public struct DragonAnnotationView<Parent: View, Content: View, FG: ShapeStyle>: View {
+    private let alignment: HorizontalAlignment
+    private let spacing: CGFloat
+    private let font: Font?
+    private let foregroundStyle: FG
+    private let parent: Parent
+    private let content: Content
+
+    public init(
+        alignment: HorizontalAlignment = .leading,
+        spacing: CGFloat = .dragonAnnotationDefaultSpacing,
+        font: Font? = .subheadline,
+        foregroundStyle: FG = .secondary,
+        @ViewBuilder parent: () -> Parent,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.alignment = alignment
+        self.spacing = spacing
+        self.font = font
+        self.foregroundStyle = foregroundStyle
+        self.parent = parent()
+        self.content = content()
     }
+
+    public var body: some View {
+        VStack(alignment: alignment, spacing: spacing) {
+            parent
+            content
+                .font(font)
+                .foregroundStyle(foregroundStyle)
+        }
+        .frame(maxWidth: .infinity, alignment: Alignment(horizontal: alignment, vertical: .center))
+        .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+public extension View {
+    /// Adds a view as an annotation below this view. Port of ice-2's `.annotation`.
+    func dragonAnnotation<Content: View, FG: ShapeStyle>(
+        alignment: HorizontalAlignment = .leading,
+        spacing: CGFloat = .dragonAnnotationDefaultSpacing,
+        font: Font? = .subheadline,
+        foregroundStyle: FG = .secondary,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        DragonAnnotationView(
+            alignment: alignment, spacing: spacing, font: font, foregroundStyle: foregroundStyle
+        ) { self } content: { content() }
+    }
+
+    /// Adds text as an annotation below this view. Port of ice-2's `.annotation(_:)`.
+    func dragonAnnotation<FG: ShapeStyle>(
+        _ titleKey: LocalizedStringKey,
+        alignment: HorizontalAlignment = .leading,
+        spacing: CGFloat = .dragonAnnotationDefaultSpacing,
+        font: Font? = .subheadline,
+        foregroundStyle: FG = .secondary
+    ) -> some View {
+        dragonAnnotation(
+            alignment: alignment, spacing: spacing, font: font, foregroundStyle: foregroundStyle
+        ) { Text(titleKey) }
+    }
+}
+
+public extension CGFloat {
+    /// Default spacing for a ``DragonAnnotationView`` (ice-2 parity).
+    static let dragonAnnotationDefaultSpacing: CGFloat = 2
 }
 ```
 
@@ -303,7 +452,7 @@ Expected: `Build complete!`
 
 ```bash
 git add Sources/DragonKit/DesignSystem
-git commit -m "feat: DragonForm/DragonSection/.dragonAnnotation primitives (ice-2 look)
+git commit -m "feat: DragonForm/DragonSection/.dragonAnnotation (source-compatible ice-2 ports)
 
 Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 ```
@@ -363,9 +512,9 @@ Expected: FAIL — `cannot find type 'SettingsPane'` / `'AnySettingsPane'`.
 ```swift
 import SwiftUI
 
-/// A registrable settings pane. Modules (or apps) conform; the settings shell
-/// renders them from an ordered array. Uses `paneBody` (not `body`) so a type can
-/// be both a `SettingsPane` and a `View` without collision.
+/// A registrable settings pane. Modules (or apps) conform; the settings shell renders
+/// them from an ordered array. Uses `paneBody` (not `body`) so a type can be both a
+/// `SettingsPane` and a `View` without collision.
 public protocol SettingsPane: Identifiable where ID == String {
     var id: String { get }
     var title: LocalizedStringKey { get }
@@ -407,32 +556,34 @@ Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 
 ---
 
-## Task 5: SettingsShell view
+## Task 5: SettingsShell (host-owned selection) + ManagedSettingsShell
 
 **Files:**
 - Create: `Sources/DragonKit/Settings/SettingsShell.swift`
 
-> SwiftUI view; verified by `swift build` and exercised on screen in Task 7.
+> `SettingsShell` takes a `Binding<String?>` so the host can persist the selected pane
+> and open directly to a pane; `ManagedSettingsShell` is the self-managed convenience for
+> the simple template. SwiftUI views — verified by `swift build`, exercised in Task 8.
 
-- [ ] **Step 1: Write `SettingsShell`**
+- [ ] **Step 1: Write `SettingsShell` + `ManagedSettingsShell`**
 
 `Sources/DragonKit/Settings/SettingsShell.swift`:
 
 ```swift
 import SwiftUI
 
-/// A `NavigationSplitView` settings window driven by an ordered list of panes —
-/// the data-driven generalization of ice-2's `SettingsView`. The sidebar shows the
-/// app name as a header and one row per pane; the detail shows the selection.
+/// A `NavigationSplitView` settings window driven by an ordered list of panes — the
+/// data-driven generalization of ice-2's `SettingsView`. The host owns `selection`, so it
+/// can persist the choice (e.g. `@AppStorage`) and open directly to a specific pane.
 public struct SettingsShell: View {
     private let appName: String
     private let panes: [AnySettingsPane]
-    @State private var selection: String?
+    @Binding private var selection: String?
 
-    public init(appName: String, panes: [AnySettingsPane]) {
+    public init(appName: String, panes: [AnySettingsPane], selection: Binding<String?>) {
         self.appName = appName
         self.panes = panes
-        _selection = State(initialValue: panes.first?.id)
+        self._selection = selection
     }
 
     public var body: some View {
@@ -441,7 +592,7 @@ public struct SettingsShell: View {
                 Section {
                     ForEach(panes) { pane in
                         Label(pane.title, systemImage: pane.systemImage)
-                            .tag(pane.id)
+                            .tag(pane.id as String?)
                     }
                 } header: {
                     Text(appName)
@@ -464,6 +615,24 @@ public struct SettingsShell: View {
         }
     }
 }
+
+/// Convenience that owns its own selection `@State` and renders `SettingsShell` — for the
+/// simple case (the basic template) where the host doesn't need to persist or redirect.
+public struct ManagedSettingsShell: View {
+    private let appName: String
+    private let panes: [AnySettingsPane]
+    @State private var selection: String?
+
+    public init(appName: String, panes: [AnySettingsPane], initialSelection: String? = nil) {
+        self.appName = appName
+        self.panes = panes
+        _selection = State(initialValue: initialSelection ?? panes.first?.id)
+    }
+
+    public var body: some View {
+        SettingsShell(appName: appName, panes: panes, selection: $selection)
+    }
+}
 ```
 
 - [ ] **Step 2: Build**
@@ -475,14 +644,89 @@ Expected: `Build complete!`
 
 ```bash
 git add Sources/DragonKit/Settings/SettingsShell.swift
-git commit -m "feat: data-driven SettingsShell (NavigationSplitView)
+git commit -m "feat: SettingsShell (host-owned selection) + ManagedSettingsShell
 
 Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 ```
 
 ---
 
-## Task 6: About module (AboutContent + AboutPane + AboutSettingsPane)
+## Task 6: DragonSettingsWindowController (reliable accessory-app window)
+
+**Files:**
+- Create: `Sources/DragonKit/Settings/SettingsWindowController.swift`
+
+> The genuinely hard, reusable part for `LSUIElement` apps: the SwiftUI `Settings` scene
+> doesn't open cleanly for accessory apps (clipmenu-2 ships its own `SettingsWindowController`
+> for this). AppKit — verified by `swift build`, exercised in Task 8.
+
+- [ ] **Step 1: Write the controller**
+
+`Sources/DragonKit/Settings/SettingsWindowController.swift`:
+
+```swift
+import AppKit
+import SwiftUI
+
+/// Opens the settings window reliably for `LSUIElement` (accessory) menu-bar apps. Owns
+/// one resizable window with a content minimum size, created once and reused; flips the
+/// app to `.regular` + activates on show, and back to `.accessory` when the window closes
+/// (an accessory app otherwise can't make a window key).
+@MainActor
+public final class DragonSettingsWindowController: NSWindowController, NSWindowDelegate {
+    public init(
+        title: String,
+        minSize: NSSize = NSSize(width: 720, height: 480),
+        defaultSize: NSSize = NSSize(width: 800, height: 560),
+        rootView: some View
+    ) {
+        let hosting = NSHostingController(rootView: rootView)
+        let window = NSWindow(contentViewController: hosting)
+        window.title = title
+        window.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
+        window.contentMinSize = minSize
+        window.setContentSize(defaultSize)
+        window.isReleasedWhenClosed = false
+        super.init(window: window)
+        window.delegate = self
+    }
+
+    @available(*, unavailable)
+    public required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
+
+    /// Bring settings to front. Accessory apps can't key a window, so temporarily become
+    /// a regular app while the window is open.
+    public func show() {
+        NSApp.setActivationPolicy(.regular)
+        NSApp.activate(ignoringOtherApps: true)
+        if window?.isVisible == false { window?.center() }
+        showWindow(nil)
+        window?.makeKeyAndOrderFront(nil)
+    }
+
+    public func windowWillClose(_ notification: Notification) {
+        NSApp.setActivationPolicy(.accessory)
+    }
+}
+```
+
+- [ ] **Step 2: Build**
+
+Run: `swift build`
+Expected: `Build complete!`
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add Sources/DragonKit/Settings/SettingsWindowController.swift
+git commit -m "feat: DragonSettingsWindowController (reliable accessory-app settings window)
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+```
+
+---
+
+## Task 7: About module (AboutContent + AboutPane + AboutSettingsPane)
 
 **Files:**
 - Create: `Sources/DragonKit/About/AboutContent.swift`
@@ -596,8 +840,8 @@ Expected: PASS (3 tests).
 ```swift
 import SwiftUI
 
-/// The shared About view, reproducing ice-2's About pane: centered icon, name,
-/// version, copyright; a links section; and a credits section.
+/// The shared About view, reproducing ice-2's About pane: centered icon, name, version,
+/// copyright; a links section; and a credits section.
 public struct AboutPane: View {
     private let content: AboutContent
 
@@ -703,18 +947,21 @@ Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 
 ---
 
-## Task 7: Example menu-bar app (the basic template)
+## Task 8: Example menu-bar app (the basic template)
 
 **Files:**
 - Create: `Example/Package.swift`
-- Create: `Example/Sources/DragonAppTemplate/main.swift`
+- Create: `Example/Sources/DragonAppTemplate/App.swift`
 - Create: `Example/Sources/DragonAppTemplate/AppDelegate.swift`
 - Create: `Example/Sources/DragonAppTemplate/GeneralPane.swift`
 - Create: `Example/Sources/DragonAppTemplate/AboutConfig.swift`
 - Create: `Example/Resources/Info.plist`
 - Create: `Example/scripts/run.sh`
 
-> An SPM executable assembled into a `.app` by `run.sh` (mirrors clipmenu-2). Verified by building the executable, then launching it manually.
+> An SPM executable assembled into a `.app` by `run.sh` (mirrors clipmenu-2). Uses
+> `DragonSettingsWindowController` + `ManagedSettingsShell` so the template stays tiny and
+> the hard window logic lives in the kit. `@main` + `@MainActor static main()` keeps Swift 6
+> concurrency happy (no `main.swift`). Verified by building, then launching manually.
 
 - [ ] **Step 1: Write `Example/Package.swift`**
 
@@ -737,20 +984,27 @@ let package = Package(
 )
 ```
 
-> Note: the parent package directory is `dragon-kit`, so `package:` is `"dragon-kit"`. If `swift build` reports a different expected package identifier, use the name SwiftPM prints.
+> Note: the parent package directory is `dragon-kit`, so `package:` is `"dragon-kit"`. If
+> `swift build` reports a different expected package identifier, use the name SwiftPM prints.
 
-- [ ] **Step 2: Write the app entry**
+- [ ] **Step 2: Write the `@main` entry**
 
-`Example/Sources/DragonAppTemplate/main.swift`:
+`Example/Sources/DragonAppTemplate/App.swift`:
 
 ```swift
 import AppKit
 
-let app = NSApplication.shared
-let delegate = AppDelegate()
-app.delegate = delegate
-app.setActivationPolicy(.accessory)   // menu-bar app, no Dock icon
-app.run()
+@main
+struct DragonAppTemplate {
+    @MainActor
+    static func main() {
+        let app = NSApplication.shared
+        let delegate = AppDelegate()
+        app.delegate = delegate
+        app.setActivationPolicy(.accessory)   // menu-bar app, no Dock icon
+        app.run()
+    }
+}
 ```
 
 - [ ] **Step 3: Write the app delegate**
@@ -762,9 +1016,20 @@ import AppKit
 import SwiftUI
 import DragonKit
 
+@MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem?
-    private var settingsWindow: NSWindow?
+
+    private lazy var settingsController = DragonSettingsWindowController(
+        title: "Dragon App Settings",
+        rootView: ManagedSettingsShell(
+            appName: "Dragon App",
+            panes: [
+                AnySettingsPane(GeneralPane()),
+                AnySettingsPane(AboutSettingsPane(content: AboutConfig.content)),
+            ]
+        )
+    )
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -781,22 +1046,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func openSettings() {
-        if settingsWindow == nil {
-            let panes: [AnySettingsPane] = [
-                AnySettingsPane(GeneralPane()),
-                AnySettingsPane(AboutSettingsPane(content: AboutConfig.content)),
-            ]
-            let root = SettingsShell(appName: "Dragon App", panes: panes)
-            let window = NSWindow(contentViewController: NSHostingController(rootView: root))
-            window.title = "Dragon App Settings"
-            window.styleMask = [.titled, .closable, .miniaturizable]
-            window.setContentSize(NSSize(width: 760, height: 560))
-            window.isReleasedWhenClosed = false
-            settingsWindow = window
-        }
-        NSApp.activate(ignoringOtherApps: true)
-        settingsWindow?.center()
-        settingsWindow?.makeKeyAndOrderFront(nil)
+        settingsController.show()
     }
 }
 ```
@@ -936,21 +1186,24 @@ If the product line errors, run `swift build` once to read the resolved package 
 - [ ] **Step 9: Launch and verify manually**
 
 Run: `cd ~/git/dragon-kit/Example && ./scripts/run.sh`
-Expected: a status-bar ✦ icon appears (no Dock icon). Click it → **Settings…** opens a window with a sidebar (General, About). **About** shows icon/name/version/links/credits like ice-2. **Quit** terminates the app.
+Expected: a status-bar ✦ icon appears (no Dock icon). Click it → **Settings…** opens a
+resizable window with a sidebar (General, About). **About** shows icon/name/version/links/
+credits like ice-2. Closing the window returns the app to accessory (no Dock icon).
+**Quit** terminates the app.
 
 - [ ] **Step 10: Commit**
 
 ```bash
 cd ~/git/dragon-kit
 git add Example
-git commit -m "feat: Example menu-bar app template (Settings shell + About + General)
+git commit -m "feat: Example menu-bar app template (window controller + shell + About)
 
 Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 ```
 
 ---
 
-## Task 8: OSS scaffolding (LICENSE, README, CI)
+## Task 9: OSS scaffolding (LICENSE, README, CI)
 
 **Files:**
 - Create: `LICENSE`
@@ -993,10 +1246,11 @@ menu-bar apps (ice-2, clipmenu-2, KeyKey) — built and updated once.
 
 ## Status: v0
 
-- **Design primitives** — `DragonForm`, `DragonSection`, `.dragonAnnotation` (the
-  grouped-`Form` look shared by every pane).
-- **Settings shell** — `SettingsShell` driven by an ordered `[AnySettingsPane]`;
-  modules conform to `SettingsPane`.
+- **Design primitives** — `DragonForm`, `DragonSection`, `.dragonAnnotation`
+  (source-compatible ports of ice-2's grouped-`Form` look).
+- **Settings** — `SettingsShell` (host-owned selection) + `ManagedSettingsShell`;
+  `DragonSettingsWindowController` opens it reliably for accessory apps; modules
+  conform to `SettingsPane`.
 - **About** — `AboutContent` + `AboutPane` / `AboutSettingsPane`.
 - **Localization** — `L(_:)` (module bundle → app bundle → key).
 - **Example/** — a runnable minimal menu-bar app template using all of the above.
@@ -1017,7 +1271,11 @@ let panes = [
     AnySettingsPane(MyGeneralPane()),
     AnySettingsPane(AboutSettingsPane(content: myAboutContent)),
 ]
-SettingsShell(appName: "My App", panes: panes)
+let controller = DragonSettingsWindowController(
+    title: "My App Settings",
+    rootView: ManagedSettingsShell(appName: "My App", panes: panes)
+)
+controller.show()
 ```
 
 ## Run the template
@@ -1072,9 +1330,10 @@ Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 
 ---
 
-## Task 9: Publish (only after v0 is green) — requires user confirmation
+## Task 10: Publish (only after v0 is green) — requires user confirmation
 
-> Outward-facing. Do this only once Tasks 1–8 are green and the Example app runs, and only after confirming with the owner.
+> Outward-facing. Do this only once Tasks 1–9 are green and the Example app runs, and only
+> after confirming with the owner.
 
 - [ ] **Step 1: Confirm with the owner** that v0 builds green and they want it public.
 
@@ -1096,7 +1355,21 @@ Expected: repo exists; CI runs green.
 ---
 
 ## Self-review notes
-- **Spec coverage:** primitives (T3), shell (T4–T5), About (T6), localization (T2), Example template w/ About + General + Quit (T7), MIT+README+CI (T8), publish-after-green (T9), macOS 26 + SPM app (T1, T7). All §2 in-scope items covered; §2 out-of-scope (Backup/Updates/Uninstall, scaffolding, app migration, KeyKey) intentionally excluded.
-- **Type consistency:** `SettingsPane.paneBody` and `AnySettingsPane(_:)` used identically in T4, T5, T6, T7. `AboutContent`/`AboutLink`/`AboutSettingsPane` signatures match between T6 and T7.
-- **Known risks:** (1) `Example/Package.swift` `package:` identifier (`dragon-kit`) — T7 Step 8 has a fallback if SwiftPM expects a different name. (2) SwiftUI module-bundle string localization deferred to the Localization module spec; v0 visible strings localize via the app bundle (`LocalizedStringKey`); `L()` covers module lookups. (3) macOS 26 / Swift 6.1 toolchain assumed present on the build host (Darwin 25 = macOS 26).
+- **Spec coverage:** primitives as source-compatible ports (T3), SettingsPane (T4),
+  host-owned shell + managed convenience (T5), reusable accessory window controller (T6),
+  About (T7), localization (T2), Example template w/ window controller + About + General +
+  Quit (T8), MIT+README+CI (T9), publish-after-green (T10), macOS 26 + SPM app (T1, T8).
+  All §2 in-scope items covered; §2 out-of-scope (Backup/Updates/Uninstall, scaffolding,
+  app migration, KeyKey) intentionally excluded. Review items #1 (T3), #2 (T5), #3 (T6,T8),
+  #4 (spec §5), #5 (spec §8) addressed.
+- **Type consistency:** `SettingsPane.paneBody` / `AnySettingsPane(_:)` used identically in
+  T4–T8. `SettingsShell(...selection:)` / `ManagedSettingsShell(...initialSelection:)`
+  consistent between T5 and T8. `DragonSettingsWindowController(title:rootView:)` matches
+  between T6 and T8. `AboutContent`/`AboutLink`/`AboutSettingsPane` match T7↔T8.
+- **Known risks:** (1) `Example/Package.swift` `package:` identifier (`dragon-kit`) — T8
+  Step 8 has a fallback. (2) `List` optional-selection: rows use `.tag(pane.id as String?)`
+  to match `Binding<String?>`; if selection still doesn't update, verify the tag type in T8
+  Step 9. (3) SwiftUI module-bundle string localization deferred to the Localization module
+  spec; v0 visible strings localize via the app bundle (`LocalizedStringKey`); `L()` covers
+  module lookups. (4) macOS 26 / Swift 6.1 toolchain assumed present (Darwin 25 = macOS 26).
 ```

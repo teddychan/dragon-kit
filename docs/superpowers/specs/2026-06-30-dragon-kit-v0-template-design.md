@@ -69,8 +69,9 @@ dragon-kit/
       DragonSection.swift       # grouped Section wrapper (port of IceSection)
       Annotation.swift          # .dragonAnnotation(_:) caption modifier
     Settings/
-      SettingsPane.swift        # protocol: id, title, systemImage, body
-      SettingsShell.swift       # NavigationSplitView + data-driven sidebar
+      SettingsPane.swift            # protocol + AnySettingsPane eraser
+      SettingsShell.swift           # NavigationSplitView + ManagedSettingsShell
+      SettingsWindowController.swift # reusable accessory-app window opener
     About/
       AboutContent.swift        # config the app supplies
       AboutPane.swift           # view reproducing ice-2's About
@@ -91,23 +92,45 @@ in) — everything app-specific is injected by the host.
 
 ## 4. Component designs
 
-### 4.1 Design primitives
-- `DragonForm { ... }` → `Form { content }.formStyle(.grouped)` with `.focusSection()`
-  and `accessibilityElement(children: .contain)`. Direct port of `IceForm`.
-- `DragonSection(_ title:) { ... }` (and header/footer overloads) → system `Section`.
-  Direct port of `IceSection`.
-- `.dragonAnnotation(_ text:)` → renders a caption (`.font(.caption)`,
-  `.foregroundStyle(.secondary)`) beneath a row's control, matching ice-2's
-  `.annotation(...)`.
+### 4.1 Design primitives (source-compatible ports of ice-2)
+These mirror ice-2's `IceForm` / `IceSection` / `.annotation` **API surface and
+defaults**, not just their look, so migrating ice-2 later is a near-mechanical rename
+(`Ice*` → `Dragon*`, `.annotation` → `.dragonAnnotation`). All are thin wrappers over
+the system grouped `Form` / `Section`.
+- `DragonForm` → `Form { }.formStyle(.grouped)` + `.focusSection()` +
+  `accessibilityElement(children: .contain)`. Keeps ice's source-compat init params
+  (`alignment`, `padding` as `EdgeInsets` **or** `CGFloat`, `spacing`) as
+  accepted-but-layout-inert, plus `EdgeInsets.dragonFormDefaultPadding` and
+  `CGFloat.dragonFormDefaultSpacing`.
+- `DragonSection` — port of `IceSection`: a `DragonSectionOptions` `OptionSet`
+  (`isBordered`, `hasDividers`, `plain`, `default`), a `spacing` param, and the full set
+  of init overloads (header+content+footer, header+content, content+footer, content-only,
+  and `(_ title:)`), each mapping to the system `Section`.
+- `.dragonAnnotation(...)` — port of ice's `.annotation`: **both** a `(_ titleKey:)`
+  string variant and a `@ViewBuilder content:` variant, with `alignment` (`.leading`),
+  `spacing` (`2`), `font` (`.subheadline`), and `foregroundStyle` (`.secondary`) —
+  **matching ice's defaults so the look is identical**, not the narrower caption-only
+  version.
 
-### 4.2 Settings shell
-- `protocol SettingsPane: Identifiable`: `var id: String`, `var title: LocalizedStringKey`,
-  `var systemImage: String`, `@ViewBuilder var body: some View` (type-erased via a small
-  `AnySettingsPane` wrapper for the array).
-- `SettingsShell(appName: String, panes: [AnySettingsPane])` renders a `NavigationSplitView`:
-  sidebar = big app-name header + a `List` of panes (Label with `systemImage` + `title`),
-  detail = the selected pane's `body`. Mirrors ice-2's `SettingsView`, but data-driven
-  instead of a hardcoded enum switch.
+### 4.2 Settings shell + window
+- `protocol SettingsPane: Identifiable where ID == String`: `id`, `title`
+  (`LocalizedStringKey`), `systemImage`, and `@MainActor @ViewBuilder var paneBody`
+  (named `paneBody`, not `body`, so a type can be both a `SettingsPane` and a `View`).
+  Type-erased by `AnySettingsPane` for a homogeneous array.
+- `SettingsShell(appName:panes:selection: Binding<String?>)` — the controlled, reusable
+  form: a `NavigationSplitView` (app-name header + a `List` of panes; detail = selection).
+  The **host owns `selection`**, so it can **persist the selected pane** (e.g.
+  `@AppStorage`) and **open directly to a pane** (e.g. About) — matching how clipmenu-2
+  persists `settingsSelectedTab` and ice-2 drives selection from an external state object.
+- `ManagedSettingsShell(appName:panes:initialSelection:)` — convenience that owns its own
+  `@State` selection and renders `SettingsShell`; used by the basic template when no
+  persistence is needed.
+- `DragonSettingsWindowController` — a reusable `NSWindowController` that opens the
+  settings window **reliably for `LSUIElement` (accessory) apps**, where the SwiftUI
+  `Settings` scene does not open cleanly (clipmenu-2 ships its own `SettingsWindowController`
+  for exactly this reason). It owns a single **resizable** `NSWindow` with a content
+  **minimum size** hosting the shell, switches the app to `.regular` + activates on show
+  and back to `.accessory` on window close, and is created once and reused.
 
 ### 4.3 About module
 - `AboutContent`:
@@ -134,22 +157,26 @@ SwiftUI pane + orchestration; the app injects a small protocol implementation.**
 for the next module:
 
 ```swift
+@MainActor
 public protocol BackupEngine {
     var folderDisplayPath: String { get }
     var retentionLimit: Int { get }
     func chooseFolder()
     func revealInFinder()
-    func listBackups() throws -> [BackupItem]   // id, date, optional subtitle
-    func backUpNow() throws
-    func restore(_ item: BackupItem) throws     // app decides relaunch vs in-place
-    func delete(_ item: BackupItem) throws
+    func listBackups() async throws -> [BackupItem]   // id, date, optional subtitle
+    func backUpNow() async throws
+    func restore(_ item: BackupItem) async throws     // app decides relaunch vs in-place
+    func delete(_ item: BackupItem) async throws
 }
 ```
 
-ice-2 implements it over `SettingsBackup` (settings plist + relaunch); clipmenu-2 over
-`BackupManager`/`FolderBackupStore` (snapshot + rollback + security-scoped bookmark).
-Same `BackupRestorePane`, different engine. v0 only documents this so the Backup spec can
-build it.
+`@MainActor` + `async` from the start: clipmenu-2's real backup path (`BackupManager`) is
+already `@MainActor` and async (it reads/writes a `ModelContext` and does file I/O off the
+main actor), so a synchronous protocol would force an immediate redesign. ice-2's
+`SettingsBackup` is synchronous today but adapts trivially to async. ice-2 implements the
+engine over `SettingsBackup` (settings plist + relaunch); clipmenu-2 over
+`BackupManager`/`FolderBackupStore` (snapshot + rollback + security-scoped bookmark). Same
+`BackupRestorePane`, different engine. v0 only documents this so the Backup spec can build it.
 
 ## 6. Resolved decisions
 
@@ -178,6 +205,10 @@ build it.
 - The look matches ice-2 (grouped form, sidebar, About layout).
 - `LICENSE` (MIT), `README.md`, and CI present; no secrets; no app-specific identifiers
   inside `DragonKit`.
+- **Non-goal (explicit):** v0 does **not** improve clipmenu-2's or ice-2's actual
+  Backup & Restore UI. No shipping app changes; nothing user-visible in those apps. The
+  real Backup UI fix (and clipmenu matching ice-2) lands in the **Backup & Restore module
+  spec** that follows. v0 is "foundation green," not "clipmenu looks fixed."
 
 ## 9. Roadmap (post-v0, each its own spec → plan → PR)
 1. **Backup & Restore** module — build `BackupEngine` + `BackupRestorePane`; migrate
