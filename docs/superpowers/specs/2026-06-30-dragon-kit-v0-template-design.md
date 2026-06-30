@@ -151,17 +151,18 @@ ice-2 implements it over `SettingsBackup` (settings plist + relaunch); clipmenu-
 Same `BackupRestorePane`, different engine. v0 only documents this so the Backup spec can
 build it.
 
-## 6. Open questions for spec review
+## 6. Resolved decisions
 
-1. **Template build system** — *recommend* an **SPM-based app** mirroring clipmenu-2's
-   proven structure (Package executable + Info.plist + run script), for tooling/CI
-   consistency with DragonKit. Alternative: a minimal Xcode project (matches ice-2,
-   better for MAS/signing UI). Either consumes DragonKit identically.
-2. **Minimum macOS version** — *recommend* **macOS 14**, with `@available` gating for
-   newer (Liquid Glass / macOS 26) APIs, so all three apps can adopt the kit.
-3. **GitHub publish timing** — create/push the public `dragon-kit` repo during
-   implementation (after the plan), or keep local until v0 is built? *Recommend* push
-   once v0 builds green.
+1. **Template build system → SPM-based app.** The Example/template mirrors clipmenu-2's
+   proven structure (Package executable + Info.plist + run/build script), for tooling/CI
+   consistency with DragonKit. (Only affects *new* apps started from the template; ice-2
+   and clipmenu-2 consume DragonKit as a normal SPM dependency regardless.)
+2. **Minimum macOS version → macOS 26.** Matches clipmenu-2's SDK; newest APIs available
+   without `@available` gating. (Trade-off: apps deploying below macOS 26 can't adopt the
+   kit until/unless the floor is lowered later.)
+3. **GitHub publish timing → after v0 builds green.** Keep `dragon-kit` local while
+   building; create and push the public repo once `swift build`/`swift test` pass and the
+   Example app runs.
 
 ## 7. Testing strategy
 - DragonKit unit tests (swift-testing): `L` fallback order; `AboutContent` defaults; the
