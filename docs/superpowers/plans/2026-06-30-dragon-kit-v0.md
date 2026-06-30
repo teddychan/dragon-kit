@@ -1354,6 +1354,14 @@ Expected: repo exists; CI runs green.
 
 ---
 
+## Post-plan addition — Task 11: What's New module
+Added after review at the owner's request ("we should have a section called 'What's New' …
+add it as the basic info"). `DragonKit/WhatsNew/` — `WhatsNewContent` + `ChangeSection`
+(`Kind`: added/changed/fixed/removed/improved/security, with uppercased `label` +
+per-kind `systemImage`) + `WhatsNewPane` + `WhatsNewSettingsPane`. TDD: 4 tests
+(`WhatsNewContentTests`) for label/symbol/storage/defaults; library now 12 tests. Wired
+into the Example as a third pane (`WhatsNewConfig`). String `DragonKit.whatsNew.title`.
+
 ## Self-review notes
 - **Spec coverage:** primitives as source-compatible ports (T3), SettingsPane (T4),
   host-owned shell + managed convenience (T5), reusable accessory window controller (T6),

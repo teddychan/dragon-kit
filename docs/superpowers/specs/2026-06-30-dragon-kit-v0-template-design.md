@@ -44,6 +44,10 @@ runnable **app template**. This document specifies **v0 only**.
     the app bundle, then falls back to the key (mirrors clipmenu-2's `L`).
   - **About module** (`DragonKit.About`) — an `AboutContent` value the app supplies and
     an `AboutPane` view reproducing ice-2's About pane.
+  - **What's New module** (`DragonKit.WhatsNew`) — a `WhatsNewContent` value the app
+    supplies (version, date, summary, and grouped `ChangeSection`s: Added/Changed/Fixed/…)
+    and a `WhatsNewPane` view rendering a release-notes screen. Added as basic info
+    alongside About.
 - **Example/template app** — a runnable menu-bar app skeleton:
   - `LSUIElement` SwiftUI app, an `NSStatusItem` with a menu → **Settings…** and **Quit**.
   - Settings window via the DragonKit shell, hosting a **real About pane** + a
@@ -75,6 +79,9 @@ dragon-kit/
     About/
       AboutContent.swift        # config the app supplies
       AboutPane.swift           # view reproducing ice-2's About
+    WhatsNew/
+      WhatsNewContent.swift     # WhatsNewContent + ChangeSection(+Kind)
+      WhatsNewPane.swift        # release-notes view + WhatsNewSettingsPane
     Localization/
       L.swift                   # module-bundle -> app-bundle string lookup
     Resources/
@@ -145,7 +152,17 @@ the system grouped `Form` / `Section`.
   copyright, a links section (Website / Support / Acknowledgements), and a credits
   section. App supplies its own `AboutContent`.
 
-### 4.4 Localization
+### 4.4 What's New module
+- `ChangeSection`: a `Kind` enum (`added`, `changed`, `fixed`, `removed`, `improved`,
+  `security`) with `label` (uppercased header) + `systemImage` (SF Symbol per kind), plus
+  `entries: [String]`.
+- `WhatsNewContent`: `version`, `date`, `summary` (optional), `sections: [ChangeSection]`.
+- `WhatsNewPane(content:)` renders a release-notes screen — title ("What's new in this
+  version"), `version · date`, summary, then one grouped section per `ChangeSection` with
+  bulleted, icon-tagged entries. `WhatsNewSettingsPane(content:)` is the `SettingsPane`
+  wrapper (id `whatsnew`, `sparkles` icon). App supplies its own `WhatsNewContent`.
+
+### 4.5 Localization
 - `func L(_ key: String) -> String` — looks up `key` in DragonKit's bundle table, then
   `Bundle.main`, else returns `key`. Each module ships its own `.strings`; the app can
   override by defining the same key.
@@ -201,7 +218,8 @@ engine over `SettingsBackup` (settings plist + relaunch); clipmenu-2 over
 ## 8. Success criteria
 - `swift build` and `swift test` green in `dragon-kit`.
 - Example/template app launches as a menu-bar app; Settings window renders via the
-  DragonKit shell with a working **About** pane + a **General** placeholder; **Quit** works.
+  DragonKit shell with a working **About** pane, a **What's New** pane, and a **General**
+  placeholder; **Quit** works.
 - The look matches ice-2 (grouped form, sidebar, About layout).
 - `LICENSE` (MIT), `README.md`, and CI present; no secrets; no app-specific identifiers
   inside `DragonKit`.

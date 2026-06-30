@@ -11,6 +11,8 @@ menu-bar apps (ice-2, clipmenu-2, KeyKey) — built and updated once.
   `DragonSettingsWindowController` opens it reliably for accessory apps; modules
   conform to `SettingsPane`.
 - **About** — `AboutContent` + `AboutPane` / `AboutSettingsPane`.
+- **What's New** — release-notes pane: `WhatsNewContent` / `ChangeSection` (Added /
+  Changed / Fixed …) + `WhatsNewPane` / `WhatsNewSettingsPane`.
 - **Localization** — `L(_:)` (module bundle → app bundle → key).
 - **Example/** — a runnable minimal menu-bar app template using all of the above.
 
