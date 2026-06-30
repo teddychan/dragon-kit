@@ -13,6 +13,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             panes: [
                 AnySettingsPane(GeneralPane()),
                 AnySettingsPane(AboutSettingsPane(content: AboutConfig.content)),
+                AnySettingsPane(WhatsNewSettingsPane(content: WhatsNewConfig.content)),
             ]
         )
     )

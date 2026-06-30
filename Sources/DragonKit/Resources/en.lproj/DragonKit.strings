@@ -1,3 +1,4 @@
 "DragonKit.ping" = "pong";
 "DragonKit.selectSetting" = "Select a setting";
 "DragonKit.acknowledgements" = "Acknowledgements";
+"DragonKit.whatsNew.title" = "What's new in this version";
