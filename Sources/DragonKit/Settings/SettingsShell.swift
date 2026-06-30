@@ -37,7 +37,7 @@ public struct SettingsShell: View {
             if let selection, let pane = panes.first(where: { $0.id == selection }) {
                 pane.view
             } else {
-                Text("Select a setting")
+                Text(L("DragonKit.selectSetting"))
                     .foregroundStyle(.secondary)
             }
         }

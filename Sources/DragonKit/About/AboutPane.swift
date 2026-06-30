@@ -63,7 +63,7 @@ public struct AboutPane: View {
             Button {
                 NSWorkspace.shared.open(ack)
             } label: {
-                Label("Acknowledgements", systemImage: "doc.text")
+                Label(L("DragonKit.acknowledgements"), systemImage: "doc.text")
             }
         }
     }
