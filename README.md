@@ -45,6 +45,10 @@ controller.show()
 cd Example && ./scripts/run.sh
 ```
 
+## Start a new app on DragonKit
+See [`docs/STARTING-A-NEW-APP.md`](docs/STARTING-A-NEW-APP.md) — a self-contained guide
+(API cheat-sheet + complete starter files) for scaffolding a new menu-bar app on this kit.
+
 ## Roadmap
 Backup & Restore → Check for Update → Uninstall → settings-shell hardening →
 app-template polish → KeyKey onboarding.
