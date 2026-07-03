@@ -41,20 +41,44 @@ public enum DragonUninstaller {
             UserDefaults.standard.removePersistentDomain(forName: name)
         }
 
-        if !config.bundleID.isEmpty {
-            let library = fileManager.homeDirectoryForCurrentUser.appending(path: "Library")
-            let leftovers = [
-                library.appending(path: "Preferences/\(config.bundleID).plist"),
-                library.appending(path: "Saved Application State/\(config.bundleID).savedState"),
-            ]
-            for url in leftovers {
-                try? fileManager.removeItem(at: url)
-            }
+        let library = fileManager.homeDirectoryForCurrentUser.appending(path: "Library")
+        let leftovers = leftoverPaths(bundleID: config.bundleID, suiteNames: config.suiteNames, library: library)
+        for url in leftovers {
+            try? fileManager.removeItem(at: url)
         }
+        // cfprefsd rewrites an emptied preference plist when the app exits, recreating the
+        // file we just deleted. Delete the leftovers again from a detached process that runs
+        // after we've quit, so nothing lingers. (Direct-download apps only — a sandboxed Mac
+        // App Store app can't spawn processes and is removed by the App Store instead.)
+        schedulePostExitCleanup(of: leftovers)
 
         NSWorkspace.shared.recycle([Bundle.main.bundleURL]) { _, _ in
             Task { @MainActor in onComplete() }
         }
+    }
+
+    /// Preference plists (one per wiped domain — the bundle id and each settings suite) plus
+    /// saved application state: everything a full uninstall must remove. Factored out so the
+    /// path coverage can be tested without side effects.
+    static func leftoverPaths(bundleID: String, suiteNames: [String], library: URL) -> [URL] {
+        var domains = suiteNames
+        if !bundleID.isEmpty { domains.append(bundleID) }
+        var paths = domains.map { library.appending(path: "Preferences/\($0).plist") }
+        if !bundleID.isEmpty {
+            paths.append(library.appending(path: "Saved Application State/\(bundleID).savedState"))
+        }
+        return paths
+    }
+
+    /// Deletes `urls` from a detached shell that outlives this process, defeating cfprefsd's
+    /// on-exit flush that would otherwise resurrect emptied preference plists.
+    private static func schedulePostExitCleanup(of urls: [URL]) {
+        guard !urls.isEmpty else { return }
+        let script = "sleep 2; " + urls.map { "/bin/rm -rf \"\($0.path)\"" }.joined(separator: "; ")
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/sh")
+        process.arguments = ["-c", script]
+        try? process.run()
     }
 }
 

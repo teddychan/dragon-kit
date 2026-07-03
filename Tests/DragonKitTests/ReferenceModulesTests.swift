@@ -104,3 +104,19 @@ import Foundation
         #expect(p.canRequest == true)
     }
 }
+
+@Suite struct DragonUninstallerTests {
+    @MainActor @Test func leftoverPathsCoverBundleAndSuites() {
+        let library = URL(fileURLWithPath: "/Users/x/Library", isDirectory: true)
+        let paths = DragonUninstaller.leftoverPaths(
+            bundleID: "com.acme.app",
+            suiteNames: ["com.acme.app.settings"],
+            library: library
+        ).map(\.path)
+
+        #expect(paths.contains { $0.hasSuffix("Preferences/com.acme.app.plist") })
+        // The settings-suite plist must be targeted too (regression: it was previously missed).
+        #expect(paths.contains { $0.hasSuffix("Preferences/com.acme.app.settings.plist") })
+        #expect(paths.contains { $0.hasSuffix("Saved Application State/com.acme.app.savedState") })
+    }
+}
