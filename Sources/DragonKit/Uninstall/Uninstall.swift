@@ -175,33 +175,68 @@ public struct UninstallView: View {
     }
 }
 
-/// Drop-in Uninstall pane: an "Uninstall…" button that presents ``UninstallView`` and, on
-/// confirmation, runs ``DragonUninstaller``.
+/// Drop-in Uninstall pane: shows the confirmation directly (checklist of what's removed +
+/// Uninstall) and, on confirm, runs ``DragonUninstaller`` — no separate window, so the whole
+/// flow stays in the settings pane. Pass `onCancel` to also show a Cancel button (e.g. to
+/// navigate back to another pane); omit it and no Cancel is shown.
 public struct UninstallSettingsPane: SettingsPane {
     public let id = "uninstall"
     public let title: LocalizedStringKey = "Uninstall"
     public let systemImage = "trash"
     private let config: UninstallConfig
+    private let onCancel: (() -> Void)?
 
-    public init(config: UninstallConfig) { self.config = config }
+    public init(config: UninstallConfig, onCancel: (() -> Void)? = nil) {
+        self.config = config
+        self.onCancel = onCancel
+    }
 
-    public var paneBody: some View { UninstallPaneView(config: config) }
+    public var paneBody: some View { UninstallPaneView(config: config, onCancel: onCancel) }
 }
 
 private struct UninstallPaneView: View {
     let config: UninstallConfig
+    let onCancel: (() -> Void)?
 
     var body: some View {
         DragonForm {
             DragonSection(LocalizedStringKey(L("DragonKit.uninstall.section"))) {
-                Button(role: .destructive) {
-                    UninstallWindowController.shared.present(config: config) {
-                        DragonUninstaller.run(config: config)
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(String(format: L("DragonKit.uninstall.title"), config.appName))
+                        .font(.headline)
+                    Text(String(format: L("DragonKit.uninstall.body"), config.appName))
+                        .foregroundStyle(.secondary)
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(config.checklistItems, id: \.self) { item in
+                            Label {
+                                Text(item)
+                            } icon: {
+                                Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                            }
+                        }
                     }
-                } label: {
-                    Label(L("DragonKit.uninstall.button"), systemImage: "trash")
+
+                    Text(L("DragonKit.uninstall.permissionsNote"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    HStack(spacing: 12) {
+                        Button(role: .destructive) {
+                            DragonUninstaller.run(config: config)
+                        } label: {
+                            Text(L("DragonKit.uninstall.confirm"))
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.red)
+
+                        if let onCancel {
+                            Button(L("DragonKit.cancel")) { onCancel() }
+                        }
+                    }
+                    .padding(.top, 4)
                 }
-                .dragonAnnotation(LocalizedStringKey(L("DragonKit.uninstall.buttonHint")))
+                .padding(.vertical, 4)
             }
         }
     }

@@ -4,19 +4,18 @@ import DragonKit
 enum WhatsNewConfig {
     static var content: WhatsNewContent {
         WhatsNewContent(
-            version: "v1.0.0",
+            version: "v1.0.2",
             date: "2026-07-03",
-            summary: "The first DragonKit template release: every shared menu-bar feature "
-                + "wired up end-to-end, so you can see how each module is used.",
+            summary: "Menu and settings refinements that keep the whole experience inside the "
+                + "settings window — fewer standalone popups.",
             sections: [
                 ChangeSection(kind: .added, entries: [
-                    "General settings with real, persisted toggles (Launch at login, Show in menu bar).",
-                    "Check for Update pane (Sparkle) and a menu shortcut.",
-                    "Permissions pane with live status and Open System Settings.",
-                    "Backup & Restore of the app's settings, and a self-Uninstall flow.",
+                    "About item in the menu-bar quick menu, opening directly to the About pane.",
                 ]),
                 ChangeSection(kind: .improved, entries: [
-                    "Design primitives reproduce the canonical grouped-form look.",
+                    "Uninstall confirms inline in the settings pane instead of a separate window.",
+                    "Check for Updates from the menu opens the Updates pane for context.",
+                    "Dev builds stamp a real build number (git commit count), shown in About.",
                 ]),
             ]
         )

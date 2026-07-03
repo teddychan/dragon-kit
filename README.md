@@ -3,7 +3,7 @@
 Shared SwiftUI foundations for [Dragon App](https://www.dragonapp.com) macOS
 menu-bar apps (ice-2, clipmenu-2, KeyKey) — built and updated once.
 
-## Status: v1.0.0 — the first template
+## Status: v1.0.2 — the first template
 
 Two products in one package:
 
