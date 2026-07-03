@@ -55,7 +55,7 @@ private struct BackupPaneView: View {
 
     var body: some View {
         DragonForm {
-            DragonSection(LocalizedStringKey("DragonKit.backup.folderSection")) {
+            DragonSection(LocalizedStringKey(L("DragonKit.backup.folderSection"))) {
                 LabeledContent {
                     Button(L("DragonKit.backup.choose")) { chooseFolder() }
                 } label: {
@@ -64,10 +64,10 @@ private struct BackupPaneView: View {
                         .truncationMode(.middle)
                 }
                 Toggle(L("DragonKit.backup.autoOnQuit"), isOn: $autoBackup)
-                    .dragonAnnotation(LocalizedStringKey("DragonKit.backup.autoOnQuitHint"))
+                    .dragonAnnotation(LocalizedStringKey(L("DragonKit.backup.autoOnQuitHint")))
             }
 
-            DragonSection(LocalizedStringKey("DragonKit.backup.backupsSection")) {
+            DragonSection(LocalizedStringKey(L("DragonKit.backup.backupsSection"))) {
                 HStack {
                     Button(L("DragonKit.backup.now")) { backUpNow() }
                     Button(L("DragonKit.backup.reveal")) { revealFolder() }

@@ -21,12 +21,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             appName: appName,
             panes: [
                 AnySettingsPane(GeneralPane(model: model)),
-                AnySettingsPane(PermissionsSettingsPane(permissions: [.accessibility()])),
-                AnySettingsPane(UpdatesSettingsPane(updater: updater)),
                 AnySettingsPane(BackupSettingsPane(config: backupConfig)),
-                AnySettingsPane(UninstallSettingsPane(config: uninstallConfig)),
-                AnySettingsPane(AboutSettingsPane(content: AboutConfig.content)),
+                AnySettingsPane(PermissionsSettingsPane(permissions: [.accessibility()])),
                 AnySettingsPane(WhatsNewSettingsPane(content: WhatsNewConfig.content)),
+                AnySettingsPane(UpdatesSettingsPane(updater: updater)),
+                AnySettingsPane(AboutSettingsPane(content: AboutConfig.content)),
+                AnySettingsPane(UninstallSettingsPane(config: uninstallConfig)),
             ]
         )
     )

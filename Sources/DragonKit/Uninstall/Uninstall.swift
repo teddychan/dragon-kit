@@ -193,7 +193,7 @@ private struct UninstallPaneView: View {
 
     var body: some View {
         DragonForm {
-            DragonSection(LocalizedStringKey("DragonKit.uninstall.section")) {
+            DragonSection(LocalizedStringKey(L("DragonKit.uninstall.section"))) {
                 Button(role: .destructive) {
                     UninstallWindowController.shared.present(config: config) {
                         DragonUninstaller.run(config: config)
@@ -201,7 +201,7 @@ private struct UninstallPaneView: View {
                 } label: {
                     Label(L("DragonKit.uninstall.button"), systemImage: "trash")
                 }
-                .dragonAnnotation(LocalizedStringKey("DragonKit.uninstall.buttonHint"))
+                .dragonAnnotation(LocalizedStringKey(L("DragonKit.uninstall.buttonHint")))
             }
         }
     }

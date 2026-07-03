@@ -31,7 +31,7 @@ private struct PermissionsPaneView: View {
             }
             DragonSection {
                 Button(L("DragonKit.permissions.refresh")) { refreshToken &+= 1 }
-                    .dragonAnnotation(LocalizedStringKey("DragonKit.permissions.refreshHint"))
+                    .dragonAnnotation(LocalizedStringKey(L("DragonKit.permissions.refreshHint")))
             }
         }
         .id(refreshToken)
