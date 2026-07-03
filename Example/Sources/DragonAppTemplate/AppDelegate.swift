@@ -55,7 +55,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        item.button?.image = NSImage(systemSymbolName: "sparkles", accessibilityDescription: appName)
+        // A plain "D" marks this as the DragonKit sample app in the menu bar.
+        if let button = item.button {
+            button.title = "D"
+            button.font = .systemFont(ofSize: 15, weight: .heavy)
+        }
 
         let menu = NSMenu()
         let settings = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ",")

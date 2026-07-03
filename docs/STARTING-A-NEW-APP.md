@@ -15,7 +15,7 @@ grouped-form design primitives (the canonical look), a reliable settings-window 
 accessory apps, and a localization helper.
 
 - **DragonKit repo:** https://github.com/teddychan/dragon-kit (public, MIT)
-- **Version to depend on:** `0.1.0` (tag), i.e. `.package(url: "https://github.com/teddychan/dragon-kit", from: "0.1.0")`
+- **Version to depend on:** `1.0.0` (tag), i.e. `.package(url: "https://github.com/teddychan/dragon-kit", from: "1.0.0")`
 - The kit's own design spec + plan live in that repo under `docs/superpowers/` if you want the rationale.
 
 Your job = **scaffold a runnable shell first** (this doc gives you the complete starter files),
@@ -202,7 +202,7 @@ let package = Package(
     name: "<TARGET>",
     platforms: [.macOS("26")],
     dependencies: [
-        .package(url: "https://github.com/teddychan/dragon-kit", from: "0.1.0"),
+        .package(url: "https://github.com/teddychan/dragon-kit", from: "1.0.0"),
     ],
     targets: [
         .executableTarget(
@@ -427,8 +427,8 @@ Once the shell runs:
 - `@main` + `@MainActor static func main()` — do **not** add a `main.swift` (they conflict).
 - SwiftPM identity: the product is `.product(name: "DragonKit", package: "dragon-kit")`
   (identity = repo name `dragon-kit`).
-- If `from: "0.1.0"` can't resolve, confirm the tag exists on the repo and your network/gh access.
+- If `from: "1.0.0"` can't resolve, confirm the tag exists on the repo and your network/gh access.
 
 ---
 
-*DragonKit v0.1.0 · this guide lives at `docs/STARTING-A-NEW-APP.md` in the dragon-kit repo.*
+*DragonKit v1.0.0 · this guide lives at `docs/STARTING-A-NEW-APP.md` in the dragon-kit repo.*
