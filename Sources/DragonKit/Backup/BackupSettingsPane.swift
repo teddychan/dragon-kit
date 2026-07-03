@@ -24,7 +24,7 @@ public struct BackupConfig {
 /// never captures backup settings.
 public struct BackupSettingsPane: SettingsPane {
     public let id = "backup"
-    public let title: LocalizedStringKey = "Backup & Restore"
+    public let title = "DragonKit.pane.backup"
     public let systemImage = "arrow.clockwise.circle"
     private let config: BackupConfig
 

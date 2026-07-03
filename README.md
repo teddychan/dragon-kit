@@ -3,7 +3,7 @@
 Shared SwiftUI foundations for [Dragon App](https://www.dragonapp.com) macOS
 menu-bar apps (ice-2, clipmenu-2, KeyKey) — built and updated once.
 
-## Status: v1.0.2 — the first template
+## Status: v1.1.0 — the first template
 
 Two products in one package:
 
@@ -30,7 +30,10 @@ Modules:
   (`UninstallConfig`).
 - **Updates** (`DragonKitUpdates`) — `DragonUpdater` (Sparkle wrapper) +
   `UpdatesSettingsPane`.
-- **Localization** — `L(_:)` (module bundle → app bundle → key).
+- **Localization** — `L(_:)` (module bundle → app bundle → key) with a runtime
+  `LocalizationManager` + `LanguagePicker` and `.dragonLocalized()`. Ships **7 languages**
+  (en, es, fr, ja, ko, zh-Hans, zh-Hant); switches **live, no restart**. Apps add their own
+  `Localizable.strings` per language and drop in `LanguagePicker`.
 - **Example/** — a runnable **reference app** wiring up every module end-to-end:
   General (real persisted toggles), Permissions, Updates, Backup & Restore, Uninstall,
   About, What's New, plus Check-for-Updates and Quit in the menu.

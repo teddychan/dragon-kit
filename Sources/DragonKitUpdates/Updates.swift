@@ -59,7 +59,7 @@ public final class DragonUpdater: ObservableObject {
 /// last-checked time. Ported from ice-2's `UpdatesSettingsPane`.
 public struct UpdatesSettingsPane: SettingsPane {
     public let id = "updates"
-    public let title: LocalizedStringKey = "Updates"
+    public let title = "DragonKit.pane.updates"
     public let systemImage = "arrow.down.circle"
     private let updater: DragonUpdater
 

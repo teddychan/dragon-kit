@@ -8,6 +8,9 @@ public struct ChangeSection: Identifiable {
         /// Uppercased section header, e.g. "ADDED".
         public var label: String { rawValue.uppercased() }
 
+        /// Localization key for the section header, resolved via ``L(_:)``.
+        public var localizationKey: String { "DragonKit.whatsNew.kind.\(rawValue)" }
+
         /// SF Symbol shown beside each entry in this section.
         public var systemImage: String {
             switch self {

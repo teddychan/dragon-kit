@@ -4,7 +4,7 @@ import SwiftUI
 
 private struct FakePane: SettingsPane {
     let id: String
-    let title: LocalizedStringKey
+    let title: String
     let systemImage: String
     var paneBody: some View { Text(verbatim: id) }
 }

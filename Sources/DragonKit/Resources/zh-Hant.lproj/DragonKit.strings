@@ -1,0 +1,57 @@
+"DragonKit.ping" = "pong";
+"DragonKit.selectSetting" = "選擇一個設定";
+"DragonKit.acknowledgements" = "致謝";
+"DragonKit.whatsNew.title" = "此版本的新功能";
+
+"DragonKit.ok" = "好";
+"DragonKit.cancel" = "取消";
+
+"DragonKit.language.label" = "語言";
+"DragonKit.language.system" = "自動";
+
+"DragonKit.pane.about" = "關於";
+"DragonKit.pane.whatsNew" = "新功能";
+"DragonKit.pane.permissions" = "權限";
+"DragonKit.pane.backup" = "備份與還原";
+"DragonKit.pane.updates" = "更新";
+"DragonKit.pane.uninstall" = "解除安裝";
+
+"DragonKit.permissions.granted" = "已授予";
+"DragonKit.permissions.notGranted" = "未授予";
+"DragonKit.permissions.request" = "請求…";
+"DragonKit.permissions.openSettings" = "打開系統設定";
+"DragonKit.permissions.refresh" = "重新整理";
+"DragonKit.permissions.refreshHint" = "重新檢查上方的權限狀態。";
+
+"DragonKit.backup.folderSection" = "備份檔案夾";
+"DragonKit.backup.choose" = "選擇…";
+"DragonKit.backup.autoOnQuit" = "結束時自動備份";
+"DragonKit.backup.autoOnQuitHint" = "每次結束 App 時寫入一份新備份。";
+"DragonKit.backup.backupsSection" = "備份";
+"DragonKit.backup.now" = "立即備份";
+"DragonKit.backup.reveal" = "在 Finder 中顯示";
+"DragonKit.backup.none" = "尚無備份。";
+"DragonKit.backup.restore" = "還原";
+"DragonKit.backup.restoreConfirmTitle" = "還原此備份？";
+"DragonKit.backup.restoreConfirmMessage" = "你目前的設定將被取代，App 將重新啟動。";
+"DragonKit.backup.errorTitle" = "備份錯誤";
+
+"DragonKit.uninstall.section" = "解除安裝";
+"DragonKit.uninstall.title" = "解除安裝 %@？";
+"DragonKit.uninstall.body" = "%@ 將結束並徹底移除自身。這將刪除：";
+"DragonKit.uninstall.permissionsNote" = "你授予的權限需由你在系統設定 ▸ 隱私權與安全性中移除——macOS 不允許 App 撤銷這些權限。此操作無法復原。";
+"DragonKit.uninstall.confirm" = "解除安裝";
+
+"DragonKit.updates.autoCheck" = "自動檢查更新";
+"DragonKit.updates.autoDownload" = "自動下載更新";
+"DragonKit.updates.checkNow" = "檢查更新…";
+"DragonKit.updates.checkNowTitle" = "立即檢查更新";
+"DragonKit.updates.lastChecked" = "上次檢查";
+"DragonKit.updates.never" = "從不";
+
+"DragonKit.whatsNew.kind.added" = "新增";
+"DragonKit.whatsNew.kind.changed" = "變更";
+"DragonKit.whatsNew.kind.fixed" = "修復";
+"DragonKit.whatsNew.kind.removed" = "移除";
+"DragonKit.whatsNew.kind.improved" = "改進";
+"DragonKit.whatsNew.kind.security" = "安全";

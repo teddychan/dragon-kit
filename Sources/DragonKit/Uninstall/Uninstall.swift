@@ -181,7 +181,7 @@ public struct UninstallView: View {
 /// navigate back to another pane); omit it and no Cancel is shown.
 public struct UninstallSettingsPane: SettingsPane {
     public let id = "uninstall"
-    public let title: LocalizedStringKey = "Uninstall"
+    public let title = "DragonKit.pane.uninstall"
     public let systemImage = "trash"
     private let config: UninstallConfig
     private let onCancel: (() -> Void)?

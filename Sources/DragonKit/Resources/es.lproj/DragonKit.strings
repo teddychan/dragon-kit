@@ -1,0 +1,57 @@
+"DragonKit.ping" = "pong";
+"DragonKit.selectSetting" = "Selecciona un ajuste";
+"DragonKit.acknowledgements" = "Agradecimientos";
+"DragonKit.whatsNew.title" = "Novedades de esta versión";
+
+"DragonKit.ok" = "OK";
+"DragonKit.cancel" = "Cancelar";
+
+"DragonKit.language.label" = "Idioma";
+"DragonKit.language.system" = "Automático";
+
+"DragonKit.pane.about" = "Acerca de";
+"DragonKit.pane.whatsNew" = "Novedades";
+"DragonKit.pane.permissions" = "Permisos";
+"DragonKit.pane.backup" = "Copia de seguridad";
+"DragonKit.pane.updates" = "Actualizaciones";
+"DragonKit.pane.uninstall" = "Desinstalar";
+
+"DragonKit.permissions.granted" = "Concedido";
+"DragonKit.permissions.notGranted" = "No concedido";
+"DragonKit.permissions.request" = "Solicitar…";
+"DragonKit.permissions.openSettings" = "Abrir Ajustes del Sistema";
+"DragonKit.permissions.refresh" = "Actualizar";
+"DragonKit.permissions.refreshHint" = "Vuelve a comprobar los estados de permisos anteriores.";
+
+"DragonKit.backup.folderSection" = "Carpeta de copias";
+"DragonKit.backup.choose" = "Elegir…";
+"DragonKit.backup.autoOnQuit" = "Hacer copia automáticamente al salir";
+"DragonKit.backup.autoOnQuitHint" = "Guarda una copia nueva cada vez que se cierra la app.";
+"DragonKit.backup.backupsSection" = "Copias de seguridad";
+"DragonKit.backup.now" = "Hacer copia ahora";
+"DragonKit.backup.reveal" = "Mostrar en el Finder";
+"DragonKit.backup.none" = "Aún no hay copias.";
+"DragonKit.backup.restore" = "Restaurar";
+"DragonKit.backup.restoreConfirmTitle" = "¿Restaurar esta copia?";
+"DragonKit.backup.restoreConfirmMessage" = "Se reemplazarán tus ajustes actuales y la app se reiniciará.";
+"DragonKit.backup.errorTitle" = "Error de copia";
+
+"DragonKit.uninstall.section" = "Desinstalar";
+"DragonKit.uninstall.title" = "¿Desinstalar %@?";
+"DragonKit.uninstall.body" = "%@ se cerrará y se eliminará por completo. Esto eliminará:";
+"DragonKit.uninstall.permissionsNote" = "Los permisos que hayas concedido debes eliminarlos tú en Ajustes del Sistema ▸ Privacidad y seguridad; macOS no permite que la app los revoque. Esto no se puede deshacer.";
+"DragonKit.uninstall.confirm" = "Desinstalar";
+
+"DragonKit.updates.autoCheck" = "Buscar actualizaciones automáticamente";
+"DragonKit.updates.autoDownload" = "Descargar actualizaciones automáticamente";
+"DragonKit.updates.checkNow" = "Buscar actualizaciones…";
+"DragonKit.updates.checkNowTitle" = "Buscar actualizaciones ahora";
+"DragonKit.updates.lastChecked" = "Última comprobación";
+"DragonKit.updates.never" = "Nunca";
+
+"DragonKit.whatsNew.kind.added" = "Añadido";
+"DragonKit.whatsNew.kind.changed" = "Cambiado";
+"DragonKit.whatsNew.kind.fixed" = "Corregido";
+"DragonKit.whatsNew.kind.removed" = "Eliminado";
+"DragonKit.whatsNew.kind.improved" = "Mejorado";
+"DragonKit.whatsNew.kind.security" = "Seguridad";

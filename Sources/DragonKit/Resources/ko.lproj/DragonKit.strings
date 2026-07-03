@@ -1,0 +1,57 @@
+"DragonKit.ping" = "pong";
+"DragonKit.selectSetting" = "설정을 선택하세요";
+"DragonKit.acknowledgements" = "감사의 말";
+"DragonKit.whatsNew.title" = "이 버전의 새로운 기능";
+
+"DragonKit.ok" = "확인";
+"DragonKit.cancel" = "취소";
+
+"DragonKit.language.label" = "언어";
+"DragonKit.language.system" = "자동";
+
+"DragonKit.pane.about" = "정보";
+"DragonKit.pane.whatsNew" = "새로운 기능";
+"DragonKit.pane.permissions" = "권한";
+"DragonKit.pane.backup" = "백업 및 복원";
+"DragonKit.pane.updates" = "업데이트";
+"DragonKit.pane.uninstall" = "제거";
+
+"DragonKit.permissions.granted" = "허용됨";
+"DragonKit.permissions.notGranted" = "허용 안 됨";
+"DragonKit.permissions.request" = "요청…";
+"DragonKit.permissions.openSettings" = "시스템 설정 열기";
+"DragonKit.permissions.refresh" = "새로 고침";
+"DragonKit.permissions.refreshHint" = "위의 권한 상태를 다시 확인합니다.";
+
+"DragonKit.backup.folderSection" = "백업 폴더";
+"DragonKit.backup.choose" = "선택…";
+"DragonKit.backup.autoOnQuit" = "종료 시 자동으로 백업";
+"DragonKit.backup.autoOnQuitHint" = "앱을 종료할 때마다 새 백업을 저장합니다.";
+"DragonKit.backup.backupsSection" = "백업";
+"DragonKit.backup.now" = "지금 백업";
+"DragonKit.backup.reveal" = "Finder에서 보기";
+"DragonKit.backup.none" = "아직 백업이 없습니다.";
+"DragonKit.backup.restore" = "복원";
+"DragonKit.backup.restoreConfirmTitle" = "이 백업을 복원하시겠습니까?";
+"DragonKit.backup.restoreConfirmMessage" = "현재 설정이 대체되고 앱이 다시 시작됩니다.";
+"DragonKit.backup.errorTitle" = "백업 오류";
+
+"DragonKit.uninstall.section" = "제거";
+"DragonKit.uninstall.title" = "%@을(를) 제거하시겠습니까?";
+"DragonKit.uninstall.body" = "%@이(가) 종료되고 완전히 삭제됩니다. 다음 항목이 삭제됩니다:";
+"DragonKit.uninstall.permissionsNote" = "부여한 권한은 시스템 설정 ▸ 개인정보 보호 및 보안에서 직접 제거해야 합니다. macOS는 앱이 권한을 취소하도록 허용하지 않습니다. 이 작업은 취소할 수 없습니다.";
+"DragonKit.uninstall.confirm" = "제거";
+
+"DragonKit.updates.autoCheck" = "자동으로 업데이트 확인";
+"DragonKit.updates.autoDownload" = "자동으로 업데이트 다운로드";
+"DragonKit.updates.checkNow" = "업데이트 확인…";
+"DragonKit.updates.checkNowTitle" = "지금 업데이트 확인";
+"DragonKit.updates.lastChecked" = "마지막 확인";
+"DragonKit.updates.never" = "없음";
+
+"DragonKit.whatsNew.kind.added" = "추가";
+"DragonKit.whatsNew.kind.changed" = "변경";
+"DragonKit.whatsNew.kind.fixed" = "수정";
+"DragonKit.whatsNew.kind.removed" = "삭제";
+"DragonKit.whatsNew.kind.improved" = "개선";
+"DragonKit.whatsNew.kind.security" = "보안";

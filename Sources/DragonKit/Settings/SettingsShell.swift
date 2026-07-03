@@ -19,8 +19,12 @@ public struct SettingsShell: View {
             List(selection: $selection) {
                 Section {
                     ForEach(panes) { pane in
-                        Label(pane.title, systemImage: pane.systemImage)
-                            .tag(pane.id as String?)
+                        Label {
+                            Text(L(pane.title))
+                        } icon: {
+                            Image(systemName: pane.systemImage)
+                        }
+                        .tag(pane.id as String?)
                     }
                 } header: {
                     Text(appName)
