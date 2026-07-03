@@ -113,6 +113,54 @@ WhatsNewContent(
 WhatsNewSettingsPane(content: WhatsNewContent)  // drop-in SettingsPane (id "whatsnew", icon "sparkles")
 ```
 
+### App Settings (persistence + launch at login)
+```swift
+// Persist an app-defined Codable value as JSON in a named UserDefaults suite:
+let store = DragonSettingsStore(suiteName: "\(bundleID).settings", defaultValue: MySettings())
+var settings = store.load(); settings.foo = true; store.save(settings)
+
+LoginItem.isEnabled                 // launch-at-login state (SMAppService.mainApp)
+LoginItem.setEnabled(true)          // register / unregister
+```
+
+### Permissions module
+```swift
+PermissionsSettingsPane(permissions: [
+    .accessibility(),               // convenience factories (also .screenRecording())
+    DragonPermission(id: "custom", title: "…", check: { /* Bool */ }, request: { /* prompt */ }),
+])                                  // pane shows live status + Request / Open System Settings
+```
+
+### Backup & Restore module (backs up the settings suite)
+```swift
+BackupSettingsPane(config: BackupConfig(
+    appName: "My App",
+    suiteName: "\(bundleID).settings",     // the DragonSettingsStore suite
+    appVersion: "1.0.0",
+    relaunch: { /* re-open the app after a restore */ }
+))
+// Pure logic is also usable directly: DragonBackup.writeBackup(...) / .restore(...) / .prune(...)
+```
+
+### Uninstall module
+```swift
+UninstallSettingsPane(config: UninstallConfig(
+    appName: "My App",
+    suiteNames: ["\(bundleID).settings"],  // extra domains to wipe (bundle id is wiped too)
+    checklistItems: ["The app and its login item", "All settings"]
+))                                          // confirms, then DragonUninstaller.run(...)
+```
+
+### Check for Update module (`DragonKitUpdates` product — Sparkle)
+```swift
+import DragonKitUpdates
+let updater = DragonUpdater()               // lazily wraps SPUStandardUpdaterController
+UpdatesSettingsPane(updater: updater)       // auto-check/-download toggles, Check Now, last-checked
+updater.checkForUpdates()                   // e.g. from a menu item
+// Needs SUFeedURL (+ SUPublicEDKey) in Info.plist. Link DragonKitUpdates ONLY for
+// direct-download apps — Mac App Store apps must not bundle Sparkle.
+```
+
 ### Localization
 ```swift
 L("Some.Key")   // resolves DragonKit module bundle → app bundle → the key itself
@@ -159,7 +207,11 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "<TARGET>",
-            dependencies: [.product(name: "DragonKit", package: "dragon-kit")]
+            dependencies: [
+                .product(name: "DragonKit", package: "dragon-kit"),
+                // Add ONLY for direct-download (non-Mac-App-Store) apps that want Sparkle:
+                .product(name: "DragonKitUpdates", package: "dragon-kit"),
+            ]
         ),
     ]
 )
@@ -364,10 +416,10 @@ Once the shell runs:
 3. Add feature panes as `SettingsPane` conformers (like `GeneralPane`); use `DragonForm` /
    `DragonSection` / `.dragonAnnotation` for the look so it matches every other Dragon app.
 4. Keep `AboutConfig` / `WhatsNewConfig` updated per release.
-5. For anything DragonKit doesn't yet provide (e.g. Backup & Restore, Check for Update,
-   Uninstall) — those are **planned DragonKit modules**, not app-local code. If you need one
-   before it exists in the kit, flag it: it should be added to DragonKit and consumed, not
-   reimplemented per app.
+5. App Settings, Permissions, Backup & Restore, Check for Update, and Uninstall now ship
+   in DragonKit (see the cheat-sheet above; the `Example/` app wires up all of them). For
+   anything DragonKit still doesn't provide, flag it: it should be added to DragonKit and
+   consumed, not reimplemented per app.
 
 ## 5. Gotchas
 - Use `paneBody` (not `body`) in `SettingsPane` conformers.

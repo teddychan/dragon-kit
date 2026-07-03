@@ -2,3 +2,41 @@
 "DragonKit.selectSetting" = "Select a setting";
 "DragonKit.acknowledgements" = "Acknowledgements";
 "DragonKit.whatsNew.title" = "What's new in this version";
+
+"DragonKit.ok" = "OK";
+"DragonKit.cancel" = "Cancel";
+
+"DragonKit.permissions.granted" = "Granted";
+"DragonKit.permissions.notGranted" = "Not granted";
+"DragonKit.permissions.request" = "Request…";
+"DragonKit.permissions.openSettings" = "Open System Settings";
+"DragonKit.permissions.refresh" = "Refresh";
+"DragonKit.permissions.refreshHint" = "Re-checks the permission statuses above.";
+
+"DragonKit.backup.folderSection" = "Backup Folder";
+"DragonKit.backup.choose" = "Choose…";
+"DragonKit.backup.autoOnQuit" = "Back up automatically on quit";
+"DragonKit.backup.autoOnQuitHint" = "Write a fresh backup each time the app quits.";
+"DragonKit.backup.backupsSection" = "Backups";
+"DragonKit.backup.now" = "Back Up Now";
+"DragonKit.backup.reveal" = "Reveal in Finder";
+"DragonKit.backup.none" = "No backups yet.";
+"DragonKit.backup.restore" = "Restore";
+"DragonKit.backup.restoreConfirmTitle" = "Restore this backup?";
+"DragonKit.backup.restoreConfirmMessage" = "Your current settings will be replaced and the app will relaunch.";
+"DragonKit.backup.errorTitle" = "Backup Error";
+
+"DragonKit.uninstall.section" = "Uninstall";
+"DragonKit.uninstall.button" = "Uninstall…";
+"DragonKit.uninstall.buttonHint" = "Quit and remove the app and its settings completely.";
+"DragonKit.uninstall.title" = "Uninstall %@?";
+"DragonKit.uninstall.body" = "%@ will quit and remove itself completely. This will delete:";
+"DragonKit.uninstall.permissionsNote" = "Any permissions you granted must be removed by you in System Settings ▸ Privacy & Security — macOS does not let the app revoke them. This cannot be undone.";
+"DragonKit.uninstall.confirm" = "Uninstall";
+
+"DragonKit.updates.autoCheck" = "Automatically check for updates";
+"DragonKit.updates.autoDownload" = "Automatically download updates";
+"DragonKit.updates.checkNow" = "Check for Updates…";
+"DragonKit.updates.checkNowTitle" = "Check for updates now";
+"DragonKit.updates.lastChecked" = "Last checked";
+"DragonKit.updates.never" = "Never";

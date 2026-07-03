@@ -4,7 +4,7 @@ import DragonKit
 enum AboutConfig {
     static var content: AboutContent {
         AboutContent(
-            appName: "Dragon App",
+            appName: "DragonKit Sample",
             versionString: "0.1.0",
             copyright: "© 2026 Teddy Chan",
             links: [

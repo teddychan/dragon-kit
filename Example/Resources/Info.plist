@@ -3,11 +3,11 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleName</key>
-	<string>Dragon App</string>
+	<string>DragonKit Sample</string>
 	<key>CFBundleDisplayName</key>
-	<string>Dragon App</string>
+	<string>DragonKit Sample</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.dragonapp.template</string>
+	<string>com.dragonapp.dragonkit-sample</string>
 	<key>CFBundleShortVersionString</key>
 	<string>0.1.0</string>
 	<key>CFBundleVersion</key>
@@ -18,5 +18,9 @@
 	<string>26.0</string>
 	<key>LSUIElement</key>
 	<true/>
+	<key>SUFeedURL</key>
+	<string>https://www.dragonapp.com/dragonkit-sample/appcast.xml</string>
+	<key>SUEnableAutomaticChecks</key>
+	<false/>
 </dict>
 </plist>
