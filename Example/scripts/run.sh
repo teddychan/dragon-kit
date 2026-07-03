@@ -27,7 +27,9 @@ fi
 
 codesign --force --deep --sign - "$APP" >/dev/null 2>&1 || true
 
-pkill -f "$APP/Contents/MacOS/$BIN_NAME" 2>/dev/null || true
+# Quit any previously-launched instance — including an older-named build (e.g. a prior
+# "Dragon App.app") — so a stale menu-bar icon with an out-of-date menu doesn't linger.
+pkill -f "/Contents/MacOS/$BIN_NAME" 2>/dev/null || true
 sleep 1
 open "$APP"
 echo "Launched $APP"
