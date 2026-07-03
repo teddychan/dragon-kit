@@ -2,3 +2,6 @@
 .build/
 *.xcodeproj
 Example/.build/
+# SwiftPM lock file — regenerated on build; not tracked for a library package.
+Package.resolved
+Example/Package.resolved
