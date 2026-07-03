@@ -11,6 +11,7 @@ enum AboutConfig {
         return "\(short) (\(build))"
     }
 
+    @MainActor
     static var content: AboutContent {
         AboutContent(
             appName: "DragonKit Sample",
@@ -18,21 +19,21 @@ enum AboutConfig {
             copyright: "© 2026 Teddy Chan",
             links: [
                 AboutLink(
-                    title: "Website",
+                    title: L("app.about.website"),
                     detail: "dragonapp.com",
                     systemImage: "globe",
                     url: URL(string: "https://www.dragonapp.com")!
                 ),
                 AboutLink(
-                    title: "Source",
+                    title: L("app.about.source"),
                     detail: "teddychan/dragon-kit",
                     systemImage: "chevron.left.forwardslash.chevron.right",
                     url: URL(string: "https://github.com/teddychan/dragon-kit")!
                 ),
             ],
             credits: [
-                (label: "Built with", value: "DragonKit"),
-                (label: "License", value: "MIT"),
+                (label: L("app.about.builtWith"), value: "DragonKit"),
+                (label: L("app.about.license"), value: "MIT"),
             ]
         )
     }

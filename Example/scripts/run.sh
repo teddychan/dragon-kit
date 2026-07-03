@@ -23,6 +23,10 @@ BUILD="$(git rev-list --count HEAD 2>/dev/null || echo 1)"
   || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string $BUILD" "$APP/Contents/Info.plist"
 cp -R "$BIN_DIR"/*.bundle "$APP/Contents/MacOS/" 2>/dev/null || true
 
+# Copy the app's own localizations (each <lang>.lproj/Localizable.strings) into the bundle so
+# `Bundle.main` resolves them — DragonKit's own strings ship inside its resource bundle.
+cp -R Resources/*.lproj "$APP/Contents/Resources/" 2>/dev/null || true
+
 # Embed Sparkle.framework (linked by DragonKitUpdates) so the relocated .app finds it at
 # runtime — SwiftPM otherwise leaves it in the artifacts dir, which the moved app can't reach.
 SPARKLE_FW="$(find "$(pwd)/.build" -type d -name 'Sparkle.framework' -path '*macos*' 2>/dev/null | head -1)"

@@ -21,11 +21,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let selection = SampleSettingsSelection()
 
     private lazy var settingsController: DragonSettingsWindowController = {
-        let panes = settingsPanes
-        if selection.paneID == nil { selection.paneID = panes.first?.id }
+        if selection.paneID == nil { selection.paneID = "general" }
         return DragonSettingsWindowController(
             title: "\(appName) Settings",
-            rootView: SampleSettingsRoot(appName: appName, panes: panes, selection: selection)
+            rootView: SampleSettingsRoot(
+                appName: appName,
+                panesBuilder: { [weak self] in self?.settingsPanes ?? [] },
+                selection: selection
+            )
         )
     }()
 
@@ -58,9 +61,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             bundleID: bundleID,
             suiteNames: [SettingsModel.suiteName],
             checklistItems: [
-                "The app and its login item",
-                "All settings",
-                "Saved application state",
+                L("app.uninstall.item.app"),
+                L("app.uninstall.item.settings"),
+                L("app.uninstall.item.state"),
             ]
         )
     }
@@ -73,19 +76,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             button.font = .systemFont(ofSize: 15, weight: .heavy)
         }
 
-        let menu = NSMenu()
-        let settings = NSMenuItem(title: "Settings", action: #selector(openSettings), keyEquivalent: ",")
-        settings.target = self
-        menu.addItem(settings)
-        let checkUpdates = NSMenuItem(title: "Check for Updates", action: #selector(checkForUpdates), keyEquivalent: "")
-        checkUpdates.target = self
-        menu.addItem(checkUpdates)
-        let about = NSMenuItem(title: "About", action: #selector(openAbout), keyEquivalent: "")
-        about.target = self
-        menu.addItem(about)
-        menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
-        item.menu = menu
+        item.menu = buildMenu()
         item.isVisible = model.showInMenuBar
         self.statusItem = item
 
@@ -95,12 +86,40 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             name: .sampleShowInMenuBarChanged,
             object: nil
         )
+        // Rebuild the menu when the language changes so its titles switch live.
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(languageChanged),
+            name: .dragonLanguageChanged,
+            object: nil
+        )
 
         // Never trap the user: if the icon is hidden at launch, open Settings so they can
         // toggle it back on.
         if !model.showInMenuBar {
             settingsController.show()
         }
+    }
+
+    /// Build the menu-bar menu with localized titles. Rebuilt on language change.
+    private func buildMenu() -> NSMenu {
+        let menu = NSMenu()
+        let settings = NSMenuItem(title: L("app.menu.settings"), action: #selector(openSettings), keyEquivalent: ",")
+        settings.target = self
+        menu.addItem(settings)
+        let checkUpdates = NSMenuItem(title: L("app.menu.checkForUpdates"), action: #selector(checkForUpdates), keyEquivalent: "")
+        checkUpdates.target = self
+        menu.addItem(checkUpdates)
+        let about = NSMenuItem(title: L("app.menu.about"), action: #selector(openAbout), keyEquivalent: "")
+        about.target = self
+        menu.addItem(about)
+        menu.addItem(.separator())
+        menu.addItem(NSMenuItem(title: L("app.menu.quit"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+        return menu
+    }
+
+    @objc private func languageChanged() {
+        statusItem?.menu = buildMenu()
     }
 
     @objc private func openSettings() {
@@ -144,10 +163,28 @@ final class SampleSettingsSelection {
     var paneID: String?
 }
 
-/// Settings root wired to the host's ``SampleSettingsSelection``. Uses ``SettingsShell``
-/// (host-owned selection) rather than ``ManagedSettingsShell`` (self-owned) for exactly this
-/// reason.
+/// Settings root wired to the host's ``SampleSettingsSelection``. Observes
+/// ``LocalizationManager`` and rebuilds the panes (so host-supplied content like About and
+/// What's New re-localizes) whenever the language changes, then applies `.dragonLocalized()`
+/// so the whole window switches language live — without a restart. Uses ``SettingsShell``
+/// (host-owned selection) so the menu can open directly to a specific pane.
 private struct SampleSettingsRoot: View {
+    @ObservedObject private var localization = LocalizationManager.shared
+    let appName: String
+    let panesBuilder: () -> [AnySettingsPane]
+    let selection: SampleSettingsSelection
+
+    var body: some View {
+        // This view observes only the language, so `panesBuilder()` re-runs on a language
+        // change — not on every pane selection (which `SettingsPaneList` handles).
+        SettingsPaneList(appName: appName, panes: panesBuilder(), selection: selection)
+            .dragonLocalized()
+    }
+}
+
+/// Holds the (language-stable) pane list and binds selection, so switching panes re-renders
+/// the sidebar/detail without rebuilding every pane.
+private struct SettingsPaneList: View {
     let appName: String
     let panes: [AnySettingsPane]
     @Bindable var selection: SampleSettingsSelection

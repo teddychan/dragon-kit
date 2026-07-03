@@ -1,0 +1,57 @@
+"DragonKit.ping" = "pong";
+"DragonKit.selectSetting" = "設定を選択してください";
+"DragonKit.acknowledgements" = "謝辞";
+"DragonKit.whatsNew.title" = "このバージョンの新機能";
+
+"DragonKit.ok" = "OK";
+"DragonKit.cancel" = "キャンセル";
+
+"DragonKit.language.label" = "言語";
+"DragonKit.language.system" = "自動";
+
+"DragonKit.pane.about" = "情報";
+"DragonKit.pane.whatsNew" = "新機能";
+"DragonKit.pane.permissions" = "アクセス権";
+"DragonKit.pane.backup" = "バックアップと復元";
+"DragonKit.pane.updates" = "アップデート";
+"DragonKit.pane.uninstall" = "アンインストール";
+
+"DragonKit.permissions.granted" = "許可済み";
+"DragonKit.permissions.notGranted" = "未許可";
+"DragonKit.permissions.request" = "リクエスト…";
+"DragonKit.permissions.openSettings" = "システム設定を開く";
+"DragonKit.permissions.refresh" = "更新";
+"DragonKit.permissions.refreshHint" = "上のアクセス権の状態を再確認します。";
+
+"DragonKit.backup.folderSection" = "バックアップフォルダ";
+"DragonKit.backup.choose" = "選択…";
+"DragonKit.backup.autoOnQuit" = "終了時に自動でバックアップ";
+"DragonKit.backup.autoOnQuitHint" = "アプリを終了するたびに新しいバックアップを作成します。";
+"DragonKit.backup.backupsSection" = "バックアップ";
+"DragonKit.backup.now" = "今すぐバックアップ";
+"DragonKit.backup.reveal" = "Finderに表示";
+"DragonKit.backup.none" = "バックアップはまだありません。";
+"DragonKit.backup.restore" = "復元";
+"DragonKit.backup.restoreConfirmTitle" = "このバックアップを復元しますか？";
+"DragonKit.backup.restoreConfirmMessage" = "現在の設定は置き換えられ、アプリが再起動します。";
+"DragonKit.backup.errorTitle" = "バックアップエラー";
+
+"DragonKit.uninstall.section" = "アンインストール";
+"DragonKit.uninstall.title" = "%@をアンインストールしますか？";
+"DragonKit.uninstall.body" = "%@は終了し、完全に自身を削除します。次の項目が削除されます:";
+"DragonKit.uninstall.permissionsNote" = "許可した権限は、システム設定 ▸ プライバシーとセキュリティでご自身で削除してください。macOSではアプリが権限を取り消すことはできません。この操作は取り消せません。";
+"DragonKit.uninstall.confirm" = "アンインストール";
+
+"DragonKit.updates.autoCheck" = "自動的にアップデートを確認";
+"DragonKit.updates.autoDownload" = "自動的にアップデートをダウンロード";
+"DragonKit.updates.checkNow" = "アップデートを確認…";
+"DragonKit.updates.checkNowTitle" = "今すぐアップデートを確認";
+"DragonKit.updates.lastChecked" = "最終確認";
+"DragonKit.updates.never" = "なし";
+
+"DragonKit.whatsNew.kind.added" = "追加";
+"DragonKit.whatsNew.kind.changed" = "変更";
+"DragonKit.whatsNew.kind.fixed" = "修正";
+"DragonKit.whatsNew.kind.removed" = "削除";
+"DragonKit.whatsNew.kind.improved" = "改善";
+"DragonKit.whatsNew.kind.security" = "セキュリティ";

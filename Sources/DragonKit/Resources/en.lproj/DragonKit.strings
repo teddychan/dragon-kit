@@ -6,6 +6,16 @@
 "DragonKit.ok" = "OK";
 "DragonKit.cancel" = "Cancel";
 
+"DragonKit.language.label" = "Language";
+"DragonKit.language.system" = "Automatic";
+
+"DragonKit.pane.about" = "About";
+"DragonKit.pane.whatsNew" = "What's New";
+"DragonKit.pane.permissions" = "Permissions";
+"DragonKit.pane.backup" = "Backup & Restore";
+"DragonKit.pane.updates" = "Updates";
+"DragonKit.pane.uninstall" = "Uninstall";
+
 "DragonKit.permissions.granted" = "Granted";
 "DragonKit.permissions.notGranted" = "Not granted";
 "DragonKit.permissions.request" = "Request…";
@@ -27,8 +37,6 @@
 "DragonKit.backup.errorTitle" = "Backup Error";
 
 "DragonKit.uninstall.section" = "Uninstall";
-"DragonKit.uninstall.button" = "Uninstall…";
-"DragonKit.uninstall.buttonHint" = "Quit and remove the app and its settings completely.";
 "DragonKit.uninstall.title" = "Uninstall %@?";
 "DragonKit.uninstall.body" = "%@ will quit and remove itself completely. This will delete:";
 "DragonKit.uninstall.permissionsNote" = "Any permissions you granted must be removed by you in System Settings ▸ Privacy & Security — macOS does not let the app revoke them. This cannot be undone.";
@@ -40,3 +48,10 @@
 "DragonKit.updates.checkNowTitle" = "Check for updates now";
 "DragonKit.updates.lastChecked" = "Last checked";
 "DragonKit.updates.never" = "Never";
+
+"DragonKit.whatsNew.kind.added" = "Added";
+"DragonKit.whatsNew.kind.changed" = "Changed";
+"DragonKit.whatsNew.kind.fixed" = "Fixed";
+"DragonKit.whatsNew.kind.removed" = "Removed";
+"DragonKit.whatsNew.kind.improved" = "Improved";
+"DragonKit.whatsNew.kind.security" = "Security";

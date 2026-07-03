@@ -5,7 +5,7 @@ import DragonKit
 /// toggle exists so Backup & Restore has app-specific data to save and bring back.
 struct GeneralPane: SettingsPane {
     let id = "general"
-    let title: LocalizedStringKey = "General"
+    let title = "app.pane.general"
     let systemImage = "gearshape"
     let model: SettingsModel
 
@@ -17,17 +17,22 @@ private struct GeneralPaneView: View {
 
     var body: some View {
         DragonForm {
-            DragonSection("Startup") {
-                Toggle("Launch at login", isOn: $model.launchAtLogin)
-                    .dragonAnnotation("Start DragonKit Sample automatically when you log in.")
+            DragonSection(LocalizedStringKey(L("app.general.startup"))) {
+                Toggle(L("app.general.launchAtLogin"), isOn: $model.launchAtLogin)
+                    .dragonAnnotation(LocalizedStringKey(L("app.general.launchAtLoginHint")))
             }
-            DragonSection("Menu Bar") {
-                Toggle("Show in menu bar", isOn: $model.showInMenuBar)
-                    .dragonAnnotation("Hide the menu-bar icon. If it's hidden at launch, Settings opens automatically so you can turn it back on.")
+            DragonSection(LocalizedStringKey(L("app.general.menuBar"))) {
+                Toggle(L("app.general.showInMenuBar"), isOn: $model.showInMenuBar)
+                    .dragonAnnotation(LocalizedStringKey(L("app.general.showInMenuBarHint")))
             }
-            DragonSection("Demo") {
-                Toggle("Play sound on action", isOn: $model.playSound)
-                    .dragonAnnotation("A sample app-specific setting — included so Backup & Restore has real data to save.")
+            DragonSection(LocalizedStringKey(L("app.general.demo"))) {
+                Toggle(L("app.general.playSound"), isOn: $model.playSound)
+                    .dragonAnnotation(LocalizedStringKey(L("app.general.playSoundHint")))
+            }
+            // The shared language picker — every DragonKit app drops this in to get the
+            // full 7-language switcher (live, no restart).
+            DragonSection(LocalizedStringKey(L("app.general.languageSection"))) {
+                LanguagePicker()
             }
         }
     }

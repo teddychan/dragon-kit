@@ -79,7 +79,7 @@ public struct AboutPane: View {
 /// Drop-in About pane for the settings shell.
 public struct AboutSettingsPane: SettingsPane {
     public let id = "about"
-    public let title: LocalizedStringKey = "About"
+    public let title = "DragonKit.pane.about"
     public let systemImage = "info.circle"
     private let content: AboutContent
 

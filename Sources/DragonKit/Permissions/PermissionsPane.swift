@@ -79,7 +79,7 @@ private struct PermissionsPaneView: View {
 /// (e.g. `[.accessibility()]`).
 public struct PermissionsSettingsPane: SettingsPane {
     public let id = "permissions"
-    public let title: LocalizedStringKey = "Permissions"
+    public let title = "DragonKit.pane.permissions"
     public let systemImage = "lock.shield"
     private let permissions: [DragonPermission]
 

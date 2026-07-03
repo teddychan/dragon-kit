@@ -31,7 +31,7 @@ public struct WhatsNewPane: View {
                 .padding(.vertical, 4)
             }
             ForEach(content.sections) { section in
-                DragonSection(LocalizedStringKey(section.kind.label)) {
+                DragonSection(LocalizedStringKey(L(section.kind.localizationKey))) {
                     ForEach(section.entries, id: \.self) { entry in
                         Label {
                             Text(entry).fixedSize(horizontal: false, vertical: true)
@@ -49,7 +49,7 @@ public struct WhatsNewPane: View {
 /// Drop-in What's New pane for the settings shell.
 public struct WhatsNewSettingsPane: SettingsPane {
     public let id = "whatsnew"
-    public let title: LocalizedStringKey = "What's New"
+    public let title = "DragonKit.pane.whatsNew"
     public let systemImage = "sparkles"
     private let content: WhatsNewContent
 
