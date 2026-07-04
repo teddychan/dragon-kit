@@ -35,8 +35,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var settingsPanes: [AnySettingsPane] {
         [
             AnySettingsPane(GeneralPane(model: model)),
-            AnySettingsPane(BackupSettingsPane(config: backupConfig)),
             AnySettingsPane(PermissionsSettingsPane(permissions: [.accessibility()])),
+            AnySettingsPane(BackupSettingsPane(config: backupConfig)),
             AnySettingsPane(WhatsNewSettingsPane(content: WhatsNewConfig.content)),
             AnySettingsPane(UpdatesSettingsPane(updater: updater)),
             AnySettingsPane(AboutSettingsPane(content: AboutConfig.content)),

@@ -49,6 +49,11 @@ modules, supplying only this app's own content/config. Use:
                         switches language LIVE, no restart. This app supplies its own
                         Localizable.strings per language and drops in LanguagePicker.
 
+Settings pane (sidebar) order — list panes in settingsPanes in this order, so every
+Dragon app's Settings sidebar matches (the order is host-owned; the shell just renders
+what you give it):
+  General → (this app's own panes) → Permissions → Sync & Backup → What's New → Updates → About → Uninstall
+
 Menu-bar wiring to copy from Example/AppDelegate.swift:
   • NSStatusItem menu with localized titles, rebuilt on .dragonLanguageChanged.
   • Host-owned selection so a menu item can open Settings directly on a specific pane
