@@ -14,7 +14,7 @@ enum AboutConfig {
     @MainActor
     static var content: AboutContent {
         AboutContent(
-            appName: "DragonKit Sample",
+            appName: "Dragon Sample App",
             versionString: versionString,
             copyright: "© 2026 Teddy Chan",
             links: [

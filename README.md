@@ -35,7 +35,7 @@ Modules:
   `LocalizationManager` + `LanguagePicker` and `.dragonLocalized()`. Ships **7 languages**
   (en, es, fr, ja, ko, zh-Hans, zh-Hant); switches **live, no restart**. Apps add their own
   `Localizable.strings` per language and drop in `LanguagePicker`.
-- **Example/** — a runnable **reference app** wiring up every module end-to-end:
+- **Example/** — the **Dragon Sample App**, a runnable, installable **reference app** wiring up every module end-to-end:
   General (real persisted toggles), Permissions, Updates, Backup & Restore, Uninstall,
   About, What's New, plus Check-for-Updates and Quit in the menu.
 
@@ -62,7 +62,19 @@ let controller = DragonSettingsWindowController(
 controller.show()
 ```
 
-## Run the template
+## Try it: the Dragon Sample App
+
+DragonKit ships a real, installable reference app — **Dragon Sample App** — that wires up
+every module (Settings, Permissions, Backup & Restore, Updates, Uninstall, About, What's New,
+live localization). Install the released build with Homebrew:
+
+```bash
+brew install --cask teddychan/tap/dragon-sample-app
+```
+
+Or build and run it locally from source. `run.sh` produces a separate **Dragon Sample App
+Debug** build (`com.dragonapp.dragon-sample-app.debug`) so it won't collide with an installed
+copy's permissions or settings:
 
 ```bash
 cd Example && ./scripts/run.sh

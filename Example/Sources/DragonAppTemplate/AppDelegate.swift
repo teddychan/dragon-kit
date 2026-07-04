@@ -5,8 +5,8 @@ import DragonKitUpdates
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    private let appName = "DragonKit Sample"
-    private var bundleID: String { Bundle.main.bundleIdentifier ?? "com.dragonapp.dragonkit-sample" }
+    private let appName = "Dragon Sample App"
+    private var bundleID: String { Bundle.main.bundleIdentifier ?? "com.dragonapp.dragon-sample-app" }
     private var appVersion: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.1.0"
     }
@@ -80,6 +80,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // The app's own Localizable.strings ship in the SwiftPM resource bundle
+        // (Package.swift `resources: [.process("Resources")]`), so resolve app keys from
+        // .module rather than the default Bundle.main — this is what lets the release CI
+        // build (which copies the SwiftPM bundle, not loose .lproj) show localized strings.
+        LocalizationManager.shared.appStringsBundle = .module
+
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         // A plain "D" marks this as the DragonKit sample app in the menu bar.
         if let button = item.button {

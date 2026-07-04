@@ -1,7 +1,7 @@
 "app.pane.general" = "通用";
 "app.general.startup" = "启动";
 "app.general.launchAtLogin" = "登录时打开";
-"app.general.launchAtLoginHint" = "登录时自动启动 DragonKit Sample。";
+"app.general.launchAtLoginHint" = "登录时自动启动 Dragon Sample App。";
 "app.general.menuBar" = "菜单栏";
 "app.general.showInMenuBar" = "在菜单栏中显示";
 "app.general.showInMenuBarHint" = "隐藏菜单栏图标。如果启动时被隐藏，将自动打开设置以便重新开启。";

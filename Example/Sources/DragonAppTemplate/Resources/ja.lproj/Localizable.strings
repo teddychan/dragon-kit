@@ -1,7 +1,7 @@
 "app.pane.general" = "一般";
 "app.general.startup" = "起動";
 "app.general.launchAtLogin" = "ログイン時に開く";
-"app.general.launchAtLoginHint" = "ログイン時にDragonKit Sampleを自動的に起動します。";
+"app.general.launchAtLoginHint" = "ログイン時にDragon Sample Appを自動的に起動します。";
 "app.general.menuBar" = "メニューバー";
 "app.general.showInMenuBar" = "メニューバーに表示";
 "app.general.showInMenuBarHint" = "メニューバーアイコンを非表示にします。起動時に非表示の場合、設定が自動的に開き、再び表示できます。";
