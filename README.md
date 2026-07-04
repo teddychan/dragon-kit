@@ -36,8 +36,8 @@ Modules:
   (en, es, fr, ja, ko, zh-Hans, zh-Hant); switches **live, no restart**. Apps add their own
   `Localizable.strings` per language and drop in `LanguagePicker`.
 - **Example/** — the **Dragon Sample App**, a runnable, installable **reference app** wiring up every module end-to-end:
-  General (real persisted toggles), Permissions, Updates, Backup & Restore, Uninstall,
-  About, What's New, plus Check-for-Updates and Quit in the menu.
+  General (real persisted toggles), Permissions, Backup & Restore, What's New, Updates,
+  About, Uninstall, plus Check-for-Updates and Quit in the menu.
 
 ## Requirements
 macOS 26+, Swift 6.1.
@@ -61,6 +61,19 @@ let controller = DragonSettingsWindowController(
 )
 controller.show()
 ```
+
+## Settings pane order
+
+Every Dragon app lists its settings panes in the same sidebar order, so the apps
+feel like one family. The order is **host-owned** — `SettingsShell` renders panes in
+the order the app puts them in its `settingsPanes` list, so each app is responsible
+for following this convention:
+
+```
+General → (the app's own panes) → Permissions → Sync & Backup → What's New → Updates → About → Uninstall
+```
+
+The Dragon Sample App (`Example/`) wires its panes up in this order — mirror it in new apps.
 
 ## Try it: the Dragon Sample App
 
