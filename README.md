@@ -3,7 +3,7 @@
 Shared SwiftUI foundations for [Dragon App](https://www.dragonapp.com) macOS
 menu-bar apps (ice-2, clipmenu-2, KeyKey) — built and updated once.
 
-## Status: v1.1.0 — the first template
+## Status: v1.2.0 — uninstall learns about user data
 
 Two products in one package:
 
@@ -27,7 +27,8 @@ Modules:
 - **Backup & Restore** — `DragonBackup` (snapshot/restore a UserDefaults suite) +
   `BackupSettingsPane` (`BackupConfig`).
 - **Uninstall** — `DragonUninstaller` + `UninstallView` / `UninstallSettingsPane`
-  (`UninstallConfig`).
+  (`UninstallConfig`) — incl. an optional, default-off "also delete user data" toggle
+  (`optionalDataToggle`) and always-removed `extraCleanupPaths` (caches, support files).
 - **Updates** (`DragonKitUpdates`) — `DragonUpdater` (Sparkle wrapper) +
   `UpdatesSettingsPane`.
 - **Localization** — `L(_:)` (module bundle → app bundle → key) with a runtime
@@ -111,6 +112,12 @@ it from the app's `Info.plist` (`CFBundleShortVersionString`) — never hardcode
 Done: App Settings, Permissions, Backup & Restore, Check for Update, Uninstall (all
 demonstrated in `Example/`). Next: migrate ice-2 / clipmenu-2 onto the kit →
 settings-shell hardening → KeyKey onboarding.
+
+Deferred, deliberately: a generalized **folder-based versioned backup** pane
+(user-picked folder with a security-scoped bookmark, versioned snapshot files,
+retention, restore list — the shape clipmenu-2 ships app-side). Generalize it here
+only when a second app (KeyKey / ice-2) needs that same shape; until then
+`DragonBackup` stays UserDefaults-suite-only.
 
 ## License
 MIT.

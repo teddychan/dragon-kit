@@ -17,10 +17,11 @@
 "app.about.source" = "소스";
 "app.about.builtWith" = "사용 기술";
 "app.about.license" = "라이선스";
-"app.whatsNew.summary" = "이제 DragonKit 앱이 7개 언어를 지원하며 즉시 전환할 수 있습니다.";
-"app.whatsNew.added1" = "7개 언어: 영어, 스페인어, 프랑스어, 일본어, 한국어, 중국어 간체 및 번체.";
-"app.whatsNew.added2" = "일반에 언어 선택기 추가 — 재시작 없이 즉시 전환.";
-"app.whatsNew.improved1" = "모든 설정 창, 메뉴 막대, 대화상자가 완전히 현지화되었습니다.";
+"app.whatsNew.summary" = "이제 제거 시 사용자 데이터 삭제를 선택할 수 있고, 앱 폴더는 항상 정리됩니다.";
+"app.whatsNew.added1" = "제거 창에 기본적으로 꺼져 있는 “사용자 데이터도 삭제” 옵션 추가.";
+"app.whatsNew.added2" = "앱이 추가 정리 경로를 지정할 수 있음 — 제거할 때마다 캐시와 지원 파일 삭제.";
+"app.whatsNew.improved1" = "샘플 앱이 두 가지 새 제거 옵션을 시연합니다.";
 "app.uninstall.item.app" = "앱 및 로그인 항목";
 "app.uninstall.item.settings" = "모든 설정";
 "app.uninstall.item.state" = "저장된 응용 프로그램 상태";
+"app.uninstall.optionalData" = "샘플 데이터도 삭제";

@@ -147,7 +147,15 @@ BackupSettingsPane(config: BackupConfig(
 UninstallSettingsPane(config: UninstallConfig(
     appName: "My App",
     suiteNames: ["\(bundleID).settings"],  // extra domains to wipe (bundle id is wiped too)
-    checklistItems: ["The app and its login item", "All settings"]
+    checklistItems: ["The app and its login item", "All settings"],
+    optionalDataToggle: (                  // optional, default-off toggle in the confirmation;
+        label: "Also delete my data",      // its paths are deleted only if the user opts in
+        paths: [appSupportFolder]
+    ),
+    extraCleanupPaths: [                   // always removed on uninstall
+        library.appending(path: "Caches/\(bundleID)"),
+        library.appending(path: "HTTPStorages/\(bundleID)"),
+    ]
 ))                                          // confirms, then DragonUninstaller.run(...)
 ```
 

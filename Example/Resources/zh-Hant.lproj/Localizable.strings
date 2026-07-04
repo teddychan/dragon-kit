@@ -17,10 +17,11 @@
 "app.about.source" = "原始碼";
 "app.about.builtWith" = "建置於";
 "app.about.license" = "授權";
-"app.whatsNew.summary" = "DragonKit App 現已支援七種語言，可即時切換。";
-"app.whatsNew.added1" = "七種語言：英語、西班牙語、法語、日語、韓語，以及簡體與繁體中文。";
-"app.whatsNew.added2" = "在「一般」中新增語言選擇器——無需重新啟動，即時切換。";
-"app.whatsNew.improved1" = "每個設定面板、選單列與對話框皆已完整在地化。";
+"app.whatsNew.summary" = "解除安裝現在可選擇同時刪除使用者資料，並一律清理 App 資料夾。";
+"app.whatsNew.added1" = "解除安裝面板新增預設關閉的「同時刪除使用者資料」選項。";
+"app.whatsNew.added2" = "App 可宣告額外清理路徑——每次解除安裝都會移除快取與支援檔案。";
+"app.whatsNew.improved1" = "範例 App 示範兩個新的解除安裝選項。";
 "app.uninstall.item.app" = "App 及其登入項目";
 "app.uninstall.item.settings" = "所有設定";
 "app.uninstall.item.state" = "已儲存的 App 狀態";
+"app.uninstall.optionalData" = "同時刪除範例資料";

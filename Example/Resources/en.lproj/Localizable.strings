@@ -17,10 +17,11 @@
 "app.about.source" = "Source";
 "app.about.builtWith" = "Built with";
 "app.about.license" = "License";
-"app.whatsNew.summary" = "DragonKit apps now speak seven languages, switchable on the fly.";
-"app.whatsNew.added1" = "Seven languages: English, Spanish, French, Japanese, Korean, and Simplified & Traditional Chinese.";
-"app.whatsNew.added2" = "Language picker in General — switch instantly, no restart.";
-"app.whatsNew.improved1" = "Every settings pane, menu bar, and dialog is fully localized.";
+"app.whatsNew.summary" = "Uninstall can now offer to delete user data and always cleans up app folders.";
+"app.whatsNew.added1" = "Optional, default-off “also delete user data” choice in the Uninstall pane.";
+"app.whatsNew.added2" = "Apps declare extra cleanup paths — caches and support files removed on every uninstall.";
+"app.whatsNew.improved1" = "The sample app demonstrates both new uninstall options.";
 "app.uninstall.item.app" = "The app and its login item";
 "app.uninstall.item.settings" = "All settings";
 "app.uninstall.item.state" = "Saved application state";
+"app.uninstall.optionalData" = "Also delete sample data";
