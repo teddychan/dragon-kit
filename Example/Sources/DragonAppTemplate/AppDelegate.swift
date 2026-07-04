@@ -82,9 +82,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         // The app's own Localizable.strings ship in the SwiftPM resource bundle
         // (Package.swift `resources: [.process("Resources")]`), so resolve app keys from
-        // .module rather than the default Bundle.main — this is what lets the release CI
+        // that bundle rather than the default Bundle.main — this is what lets the release CI
         // build (which copies the SwiftPM bundle, not loose .lproj) show localized strings.
-        LocalizationManager.shared.appStringsBundle = .module
+        // Use AppResources (not raw .module): in a packaged .app the bundle lives in
+        // Contents/Resources, which SwiftPM's .module accessor misses and fatalErrors on.
+        LocalizationManager.shared.appStringsBundle = AppResources.stringsBundle
 
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         // A plain "D" marks this as the DragonKit sample app in the menu bar.
