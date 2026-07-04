@@ -89,6 +89,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         LocalizationManager.shared.appStringsBundle = AppResources.stringsBundle
 
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        // Per-bundle-id autosave name: without one the item persists anonymously as "Item-0"
+        // in whatever defaults domain launched it, so debug/release builds (and agent-exec'd
+        // runs) pollute each other's macOS menu-bar visibility store.
+        item.autosaveName = "DragonKitSampleStatusItem-\(bundleID)"
         // A plain "D" marks this as the DragonKit sample app in the menu bar.
         if let button = item.button {
             button.title = "D"
