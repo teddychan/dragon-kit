@@ -8,7 +8,7 @@ import Foundation
 public func L(_ key: String, table: String = "DragonKit") -> String {
     let sentinel = "\u{0}"
     let manager = LocalizationManager.shared
-    let moduleBundle = manager.localizedBundle(for: .module)
+    let moduleBundle = manager.localizedBundle(for: DragonKitResources.bundle)
     let fromModule = moduleBundle.localizedString(forKey: key, value: sentinel, table: table)
     if fromModule != sentinel { return fromModule }
     let appBundle = manager.localizedBundle(for: manager.appStringsBundle)
