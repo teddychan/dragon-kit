@@ -2,7 +2,8 @@ name: Release Dragon Sample App
 
 # Tagging sample-vX.Y.Z (kept separate from the library's vX.Y.Z tags) builds, signs,
 # notarizes and publishes the Dragon Sample App: a GitHub Release on this repo, a signed
-# Sparkle appcast to www.dragonapp.com/dragon-sample-app/, and a Homebrew cask bump in
+# Sparkle appcast committed to THIS repo (docs/dragon-sample-app/appcast.xml, served via
+# raw.githubusercontent — the marketing site is not involved), and a Homebrew cask bump in
 # teddychan/homebrew-tap. Thin caller of the shared reusable workflow.
 on:
   push:
@@ -15,11 +16,12 @@ permissions:
 
 jobs:
   release:
-    uses: teddychan/dragon-release-ci/.github/workflows/release-macos.yml@v3
+    uses: teddychan/dragon-release-ci/.github/workflows/release-macos.yml@v4
     secrets: inherit
     with:
       build_kind: swiftpm
       app_slug: dragon-sample-app
+      appcast_repo: teddychan/dragon-kit
       swiftpm_working_directory: Example
       swiftpm_product_name: DragonAppTemplate
       swiftpm_app_name_template: 'Dragon Sample App'
