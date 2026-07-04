@@ -21,7 +21,14 @@ let package = Package(
             // DragonAppTemplate_DragonAppTemplate.bundle so both run.sh and the release CI
             // ship them via the standard SwiftPM resource-bundle copy. Resolved at runtime
             // through LocalizationManager.appStringsBundle = .module (set in AppDelegate).
-            resources: [.process("Resources")]
+            resources: [.process("Resources")],
+            // Embed the rpath the release CI relies on to locate the bundled
+            // Sparkle.framework at Contents/Frameworks/. Without this the packaged .app only
+            // carries the default @loader_path rpath, so dyld looks for Sparkle in
+            // Contents/MacOS/ and the app crashes on launch (Library not loaded: Sparkle).
+            linkerSettings: [
+                .unsafeFlags(["-Xlinker", "-rpath", "-Xlinker", "@loader_path/../Frameworks"])
+            ]
         ),
     ]
 )
