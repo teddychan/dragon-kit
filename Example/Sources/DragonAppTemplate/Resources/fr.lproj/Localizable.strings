@@ -1,7 +1,7 @@
 "app.pane.general" = "Général";
 "app.general.startup" = "Démarrage";
 "app.general.launchAtLogin" = "Ouvrir à la connexion";
-"app.general.launchAtLoginHint" = "Lance DragonKit Sample automatiquement à la connexion.";
+"app.general.launchAtLoginHint" = "Lance Dragon Sample App automatiquement à la connexion.";
 "app.general.menuBar" = "Barre des menus";
 "app.general.showInMenuBar" = "Afficher dans la barre des menus";
 "app.general.showInMenuBarHint" = "Masque l’icône de la barre des menus. Si elle est masquée au lancement, les Réglages s’ouvrent automatiquement pour la réactiver.";

@@ -1,7 +1,7 @@
 "app.pane.general" = "一般";
 "app.general.startup" = "啟動";
 "app.general.launchAtLogin" = "登入時打開";
-"app.general.launchAtLoginHint" = "登入時自動啟動 DragonKit Sample。";
+"app.general.launchAtLoginHint" = "登入時自動啟動 Dragon Sample App。";
 "app.general.menuBar" = "選單列";
 "app.general.showInMenuBar" = "在選單列中顯示";
 "app.general.showInMenuBarHint" = "隱藏選單列圖像。若啟動時被隱藏，將自動打開設定以便重新開啟。";

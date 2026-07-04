@@ -1,7 +1,7 @@
 "app.pane.general" = "General";
 "app.general.startup" = "Startup";
 "app.general.launchAtLogin" = "Launch at login";
-"app.general.launchAtLoginHint" = "Start DragonKit Sample automatically when you log in.";
+"app.general.launchAtLoginHint" = "Start Dragon Sample App automatically when you log in.";
 "app.general.menuBar" = "Menu Bar";
 "app.general.showInMenuBar" = "Show in menu bar";
 "app.general.showInMenuBarHint" = "Hide the menu-bar icon. If it's hidden at launch, Settings opens automatically so you can turn it back on.";

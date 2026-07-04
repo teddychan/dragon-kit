@@ -1,7 +1,7 @@
 "app.pane.general" = "General";
 "app.general.startup" = "Inicio";
 "app.general.launchAtLogin" = "Abrir al iniciar sesión";
-"app.general.launchAtLoginHint" = "Inicia DragonKit Sample automáticamente al iniciar sesión.";
+"app.general.launchAtLoginHint" = "Inicia Dragon Sample App automáticamente al iniciar sesión.";
 "app.general.menuBar" = "Barra de menús";
 "app.general.showInMenuBar" = "Mostrar en la barra de menús";
 "app.general.showInMenuBarHint" = "Oculta el icono de la barra de menús. Si está oculto al inicio, los Ajustes se abren automáticamente para que puedas volver a activarlo.";
