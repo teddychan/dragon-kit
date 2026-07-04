@@ -56,7 +56,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private var uninstallConfig: UninstallConfig {
-        UninstallConfig(
+        let library = FileManager.default.homeDirectoryForCurrentUser.appending(path: "Library")
+        return UninstallConfig(
             appName: appName,
             bundleID: bundleID,
             suiteNames: [SettingsModel.suiteName],
@@ -64,6 +65,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 L("app.uninstall.item.app"),
                 L("app.uninstall.item.settings"),
                 L("app.uninstall.item.state"),
+            ],
+            // Default-off: user data survives unless the user opts in.
+            optionalDataToggle: (
+                label: L("app.uninstall.optionalData"),
+                paths: [library.appending(path: "Application Support/\(appName)")]
+            ),
+            // Always removed — transient state no uninstall should leave behind.
+            extraCleanupPaths: [
+                library.appending(path: "Caches/\(bundleID)"),
+                library.appending(path: "HTTPStorages/\(bundleID)"),
             ]
         )
     }

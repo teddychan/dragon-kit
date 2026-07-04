@@ -9,17 +9,29 @@ public struct UninstallConfig {
     public let suiteNames: [String]
     /// What the confirmation sheet lists as being removed.
     public let checklistItems: [String]
+    /// Optional, default-off "also delete user data" choice rendered in the confirmation
+    /// (e.g. "Also delete clipboard history and snippets"). Only when the user turns it on
+    /// are `paths` deleted too. The label is shown as-is — localize it in the app.
+    public let optionalDataToggle: (label: String, paths: [URL])?
+    /// App-specific paths removed on every uninstall (e.g. support files under
+    /// `~/Library/Application Support/<app>`, `Caches/<bundle-id>`,
+    /// `HTTPStorages/<bundle-id>`) — things the shared teardown can't know about.
+    public let extraCleanupPaths: [URL]
 
     public init(
         appName: String,
         bundleID: String = Bundle.main.bundleIdentifier ?? "",
         suiteNames: [String] = [],
-        checklistItems: [String]
+        checklistItems: [String],
+        optionalDataToggle: (label: String, paths: [URL])? = nil,
+        extraCleanupPaths: [URL] = []
     ) {
         self.appName = appName
         self.bundleID = bundleID
         self.suiteNames = suiteNames
         self.checklistItems = checklistItems
+        self.optionalDataToggle = optionalDataToggle
+        self.extraCleanupPaths = extraCleanupPaths
     }
 }
 
@@ -30,11 +42,19 @@ public struct UninstallConfig {
 public enum DragonUninstaller {
     public static func run(
         config: UninstallConfig,
+        deleteOptionalData: Bool = false,
         onComplete: @escaping @MainActor () -> Void = { NSApp.terminate(nil) }
     ) {
         LoginItem.setEnabled(false)
 
         let fileManager = FileManager.default
+
+        // App-specific cleanup first (support files, caches — and, when the user opted in,
+        // their data), best-effort so a locked file can't strand a half-uninstalled app.
+        for url in cleanupPaths(config: config, deleteOptionalData: deleteOptionalData) {
+            try? fileManager.removeItem(at: url)
+        }
+
         var domains = config.suiteNames
         if !config.bundleID.isEmpty { domains.append(config.bundleID) }
         for name in domains {
@@ -66,6 +86,17 @@ public enum DragonUninstaller {
         var paths = domains.map { library.appending(path: "Preferences/\($0).plist") }
         if !bundleID.isEmpty {
             paths.append(library.appending(path: "Saved Application State/\(bundleID).savedState"))
+        }
+        return paths
+    }
+
+    /// The app-specific paths to remove: `extraCleanupPaths` always, plus the optional-data
+    /// paths when the user opted in. Factored out so the coverage can be tested without
+    /// side effects.
+    static func cleanupPaths(config: UninstallConfig, deleteOptionalData: Bool) -> [URL] {
+        var paths = config.extraCleanupPaths
+        if deleteOptionalData, let toggle = config.optionalDataToggle {
+            paths += toggle.paths
         }
         return paths
     }
@@ -197,6 +228,7 @@ public struct UninstallSettingsPane: SettingsPane {
 private struct UninstallPaneView: View {
     let config: UninstallConfig
     let onCancel: (() -> Void)?
+    @State private var deleteOptionalData = false
 
     var body: some View {
         DragonForm {
@@ -217,13 +249,18 @@ private struct UninstallPaneView: View {
                         }
                     }
 
+                    if let toggle = config.optionalDataToggle {
+                        Toggle(toggle.label, isOn: $deleteOptionalData)
+                            .toggleStyle(.switch)
+                    }
+
                     Text(L("DragonKit.uninstall.permissionsNote"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
                     HStack(spacing: 12) {
                         Button(role: .destructive) {
-                            DragonUninstaller.run(config: config)
+                            DragonUninstaller.run(config: config, deleteOptionalData: deleteOptionalData)
                         } label: {
                             Text(L("DragonKit.uninstall.confirm"))
                         }

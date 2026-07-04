@@ -119,4 +119,27 @@ import Foundation
         #expect(paths.contains { $0.hasSuffix("Preferences/com.acme.app.settings.plist") })
         #expect(paths.contains { $0.hasSuffix("Saved Application State/com.acme.app.savedState") })
     }
+
+    @MainActor @Test func cleanupPathsIncludeOptionalDataOnlyWhenChosen() {
+        let support = URL(fileURLWithPath: "/Users/x/Library/Application Support/Acme", isDirectory: true)
+        let caches = URL(fileURLWithPath: "/Users/x/Library/Caches/com.acme.app", isDirectory: true)
+        let config = UninstallConfig(
+            appName: "Acme",
+            bundleID: "com.acme.app",
+            checklistItems: ["x"],
+            optionalDataToggle: (label: "Also delete data", paths: [support]),
+            extraCleanupPaths: [caches]
+        )
+
+        #expect(DragonUninstaller.cleanupPaths(config: config, deleteOptionalData: false) == [caches])
+        #expect(DragonUninstaller.cleanupPaths(config: config, deleteOptionalData: true) == [caches, support])
+    }
+
+    @MainActor @Test func configDefaultsToNoExtraCleanup() {
+        let config = UninstallConfig(appName: "Acme", checklistItems: ["x"])
+        #expect(config.optionalDataToggle == nil)
+        #expect(config.extraCleanupPaths.isEmpty)
+        // With nothing configured, even the opt-in deletes nothing extra.
+        #expect(DragonUninstaller.cleanupPaths(config: config, deleteOptionalData: true).isEmpty)
+    }
 }

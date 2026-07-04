@@ -17,10 +17,11 @@
 "app.about.source" = "ソース";
 "app.about.builtWith" = "使用技術";
 "app.about.license" = "ライセンス";
-"app.whatsNew.summary" = "DragonKitアプリが7言語に対応し、その場で切り替えられます。";
-"app.whatsNew.added1" = "7言語: 英語、スペイン語、フランス語、日本語、韓国語、簡体字・繁体字中国語。";
-"app.whatsNew.added2" = "「一般」に言語ピッカーを追加。再起動なしで即座に切り替え。";
-"app.whatsNew.improved1" = "すべての設定ペイン、メニューバー、ダイアログを完全にローカライズ。";
+"app.whatsNew.summary" = "アンインストール時にユーザーデータの削除を選べるようになり、アプリのフォルダも常にクリーンアップされます。";
+"app.whatsNew.added1" = "アンインストールペインに、デフォルトでオフの「ユーザーデータも削除」オプションを追加。";
+"app.whatsNew.added2" = "アプリが追加のクリーンアップパスを指定可能に。キャッシュやサポートファイルを毎回削除。";
+"app.whatsNew.improved1" = "サンプルアプリが2つの新しいアンインストールオプションを実演。";
 "app.uninstall.item.app" = "アプリとそのログイン項目";
 "app.uninstall.item.settings" = "すべての設定";
 "app.uninstall.item.state" = "保存されたアプリケーションの状態";
+"app.uninstall.optionalData" = "サンプルデータも削除";
