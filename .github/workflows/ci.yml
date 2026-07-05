@@ -8,7 +8,7 @@ jobs:
   build-test:
     runs-on: macos-26
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build & test DragonKit
         run: swift test
       - name: Build Example app
