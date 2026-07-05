@@ -15,7 +15,7 @@ DragonKit is our published SwiftPM package that owns the shared parts of every D
 menu-bar app, so each app builds them once and updates them centrally.
 - Repo: https://github.com/teddychan/dragon-kit  (local clone: ~/git/dragon-kit)
 - Depend on it at a version tag — DO NOT copy its source into this app:
-      .package(url: "https://github.com/teddychan/dragon-kit", from: "1.1.0")
+      .package(url: "https://github.com/teddychan/dragon-kit", from: "1.2.1")
 - Two products:
     • DragonKit         — core, no external deps
     • DragonKitUpdates  — adds Sparkle; link ONLY in a direct-download build,
@@ -85,4 +85,27 @@ to which modules, what config each needs) before changing code.
   MAS target links `DragonKit` only. For a direct-download-only app, link both everywhere.
 - **Permission type** — name the permission the app actually needs (e.g. `.accessibility()`
   for KeyKey/Ice) instead of the generic placeholder.
-- **Version pin** — bump `from: "1.1.0"` to whatever the latest DragonKit tag is.
+- **Version pin** — bump `from: "1.2.1"` to whatever the latest DragonKit tag is.
+
+## Input-method (IMK) & non-SwiftPM apps
+
+The prompt above assumes a SwiftPM/Xcode app with an `NSStatusItem` menu bar. Some Dragon
+apps aren't shaped that way — e.g. **Yahoo! KeyKey** is an Input Method Kit (IMK) app built
+by a hand-rolled `swiftc` script, with no `.xcodeproj` and no top-level `Package.swift`. For
+those, adapt before pasting:
+
+- **Entry point / menu** — an IMK app has no `NSStatusItem`; its menu is
+  `override func menu()` on the `InputMethodServerControllerClass`. Route that input-menu's
+  About / Settings / Check for Updates / Uninstall items to the DragonKit windows/panes
+  instead of copying Example's `NSStatusItem` wiring.
+- **Build integration (no SPM graph)** — if the app is built with `swiftc` (not SPM/Xcode),
+  a remote `.package(url:…, from:…)` line can't be resolved. Instead **vendor-build DragonKit
+  at a tag**: check out `dragon-kit` at the tag (pinned clone/submodule under a build dir —
+  not copied into the app's own sources), compile `DragonKit`/`DragonKitUpdates` to static
+  libs + `.swiftmodule`s the same way the app already builds its local packages, and link with
+  `-I/-L/-l`. Still pinned to a version, still no source copied.
+- **Permissions** — don't add a Permissions pane an app doesn't need. An IME receives
+  keystrokes through the IMK server, so it needs no Accessibility/Input-Monitoring grant;
+  omit `DragonPermission` / `PermissionsSettingsPane` unless the app actually uses those APIs.
+- **Distribution** — a third-party input method can't ship on the Mac App Store, so it stays
+  direct-download + Homebrew: link **both** `DragonKit` and `DragonKitUpdates` and keep Sparkle.
