@@ -87,7 +87,7 @@ controller.show()   // flips app to .regular + fronts the window; back to .acces
 ```swift
 AboutContent(
     appName: "My App",
-    versionString: "1.0.0 (1)",
+    versionString: DragonAbout.versionString(), // "v1.0.0 (1) · 2026-Jul-06 13:34:56 UTC"
     copyright: "© 2026 Teddy Chan",
     appIcon: NSImage? = <app icon by default>,
     links: [AboutLink(title: "Website", detail: "dragonapp.com", systemImage: "globe", url: URL(...))],
@@ -314,7 +314,7 @@ enum AboutConfig {
     static var content: AboutContent {
         AboutContent(
             appName: "<APP_DISPLAY>",
-            versionString: "0.1.0",
+            versionString: DragonAbout.versionString(), // v<short> (<build>) · <UTC build time>
             copyright: "© 2026 Teddy Chan",
             links: [
                 AboutLink(title: "Website", detail: "dragonapp.com",

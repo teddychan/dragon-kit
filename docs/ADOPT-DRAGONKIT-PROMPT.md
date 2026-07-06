@@ -61,7 +61,8 @@ Menu-bar wiring to copy from Example/AppDelegate.swift:
   • Apply .dragonLocalized() at the settings root so the window switches language live;
     rebuild the panes on language change so injected content (About/What's New) re-localizes.
   • Version is single-sourced from Info.plist (CFBundleShortVersionString /
-    CFBundleVersion) — never hardcode it.
+    CFBundleVersion) — never hardcode it. Use DragonAbout.versionString() for the About
+    pane; it formats as "v<short> (<build>) · <UTC build time>".
 
 CONSTRAINTS:
   • Depend on DragonKit; never fork or re-implement its shared behavior. If a shared
