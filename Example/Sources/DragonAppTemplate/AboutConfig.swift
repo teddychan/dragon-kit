@@ -2,13 +2,12 @@ import Foundation
 import DragonKit
 
 enum AboutConfig {
-    /// The single source of truth for the app version: the bundle's Info.plist. Never
-    /// hardcode it — bump `CFBundleShortVersionString` / `CFBundleVersion` and About,
-    /// backups, and update checks all read the same value.
+    /// The single source of truth for the app version: the bundle's Info.plist, formatted by
+    /// DragonKit as `v2.3.0 (23) · 2026-Jul-06 13:34:56 UTC`. Never hardcode it — bump
+    /// `CFBundleShortVersionString` / `CFBundleVersion` and About, backups, and update checks
+    /// all read the same value.
     static var versionString: String {
-        let short = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0.0"
-        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "1"
-        return "\(short) (\(build))"
+        DragonAbout.versionString()
     }
 
     @MainActor

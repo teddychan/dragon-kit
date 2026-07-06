@@ -1,28 +1,76 @@
+import AppKit
 import DragonKit
 import Foundation
 import Sparkle
 import SwiftUI
 
-/// Thin wrapper around Sparkle's `SPUStandardUpdaterController`. The controller is created
-/// lazily on first use — never at launch — because Sparkle touches the app bundle/XPC
-/// services on init, which an ad-hoc dev build may not embed; deferring keeps launch safe.
-/// Ported from ice-2's `UpdatesController`, extended to expose the settings the pane binds.
+/// Sparkle's standard user driver with one change: the "no update found" alert is reworded to
+/// `<App> is up to date` / `v<version> is currently the newest version available.`, matching
+/// DragonKit's About wording. Sparkle's own copy for this alert lives in the Sparkle framework
+/// bundle and can't be overridden from the app, so we replace just this one alert and forward
+/// everything else to `SPUStandardUserDriver`.
+private final class DragonUpdaterUserDriver: SPUStandardUserDriver {
+    override func showUpdateNotFoundWithError(_ error: any Error) async {
+        // Sparkle reports "no update" both when we're genuinely on the latest version and when
+        // an update exists but can't be installed here (OS too old/new, non-ARM64 Mac). Only
+        // reword the former; defer to Sparkle's accurate message for the latter.
+        let blockedReasons: Set<Int32> = [
+            SPUNoUpdateFoundReason.systemIsTooOld.rawValue,
+            SPUNoUpdateFoundReason.systemIsTooNew.rawValue,
+            SPUNoUpdateFoundReason.hardwareDoesNotSupportARM64.rawValue,
+        ]
+        let reason = ((error as NSError).userInfo[SPUNoUpdateFoundReasonKey] as? NSNumber)?.int32Value
+        if let reason, blockedReasons.contains(reason) {
+            await super.showUpdateNotFoundWithError(error)
+            return
+        }
+
+        let bundle = Bundle.main
+        let appName = bundle.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
+            ?? bundle.object(forInfoDictionaryKey: "CFBundleName") as? String
+            ?? ProcessInfo.processInfo.processName
+        let short = bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
+
+        let alert = NSAlert()
+        alert.messageText = "\(appName) is up to date"
+        alert.informativeText = "v\(short) is currently the newest version available."
+        alert.addButton(withTitle: "OK")
+        if let icon = NSApp.applicationIconImage { alert.icon = icon }
+        alert.runModal()
+    }
+}
+
+/// Thin wrapper around a Sparkle `SPUUpdater`. The updater is created lazily on first use —
+/// never at launch — because Sparkle touches the app bundle/XPC services on init, which an
+/// ad-hoc dev build may not embed; deferring keeps launch safe. Ported from ice-2's
+/// `UpdatesController`, extended to expose the settings the pane binds and to reskin the
+/// "no update found" alert via ``DragonUpdaterUserDriver``.
 @MainActor
 public final class DragonUpdater: ObservableObject {
-    private var controller: SPUStandardUpdaterController?
+    private var updaterInstance: SPUUpdater?
+    private var userDriver: DragonUpdaterUserDriver?
 
     public init() {}
 
     private var updater: SPUUpdater? {
         guard Bundle.main.bundleIdentifier != nil else { return nil }
-        if controller == nil {
-            controller = SPUStandardUpdaterController(
-                startingUpdater: true,
-                updaterDelegate: nil,
-                userDriverDelegate: nil
+        if updaterInstance == nil {
+            let driver = DragonUpdaterUserDriver(hostBundle: .main, delegate: nil)
+            let instance = SPUUpdater(
+                hostBundle: .main,
+                applicationBundle: .main,
+                userDriver: driver,
+                delegate: nil
             )
+            do {
+                try instance.start()
+                userDriver = driver
+                updaterInstance = instance
+            } catch {
+                return nil
+            }
         }
-        return controller?.updater
+        return updaterInstance
     }
 
     /// Whether an update check can currently run.
