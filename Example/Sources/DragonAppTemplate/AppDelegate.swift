@@ -124,21 +124,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    /// Build the menu-bar menu with localized titles. Rebuilt on language change.
+    /// Build the canonical Dragon menu-bar menu via `DragonAppMenu` — the single source of
+    /// truth for order and naming, so this sample app stays the reference every app mirrors.
+    /// Rebuilt on language change.
     private func buildMenu() -> NSMenu {
-        let menu = NSMenu()
-        let settings = NSMenuItem(title: L("app.menu.settings"), action: #selector(openSettings), keyEquivalent: ",")
-        settings.target = self
-        menu.addItem(settings)
-        let checkUpdates = NSMenuItem(title: L("app.menu.checkForUpdates"), action: #selector(checkForUpdates), keyEquivalent: "")
-        checkUpdates.target = self
-        menu.addItem(checkUpdates)
-        let about = NSMenuItem(title: L("app.menu.about"), action: #selector(openAbout), keyEquivalent: "")
-        about.target = self
-        menu.addItem(about)
-        menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: L("app.menu.quit"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
-        return menu
+        DragonAppMenu.menu(DragonAppMenu.Config(
+            appName: appName,
+            onAbout: { [weak self] in self?.openAbout() },
+            onSettings: { [weak self] in self?.openSettings() },
+            onCheckForUpdates: { [weak self] in self?.checkForUpdates() },
+            onUninstall: { [weak self] in self?.openUninstall() }
+        ))
     }
 
     @objc private func languageChanged() {
@@ -161,6 +157,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Set the pane before showing so it always lands on About (matches
         // `AboutSettingsPane().id`), even on the first, lazy open of the window.
         selection.paneID = "about"
+        settingsController.show()
+    }
+
+    private func openUninstall() {
+        // Land directly on the Uninstall pane (matches `UninstallSettingsPane().id`).
+        selection.paneID = "uninstall"
         settingsController.show()
     }
 

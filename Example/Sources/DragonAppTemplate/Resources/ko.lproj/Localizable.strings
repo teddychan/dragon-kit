@@ -9,10 +9,6 @@
 "app.general.playSound" = "동작 시 소리 재생";
 "app.general.playSoundHint" = "앱 고유의 예시 설정으로, 백업 및 복원에 저장할 실제 데이터를 위해 포함되었습니다.";
 "app.general.languageSection" = "언어";
-"app.menu.settings" = "설정";
-"app.menu.checkForUpdates" = "업데이트 확인";
-"app.menu.about" = "정보";
-"app.menu.quit" = "종료";
 "app.about.website" = "웹사이트";
 "app.about.source" = "소스";
 "app.about.builtWith" = "사용 기술";

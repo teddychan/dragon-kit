@@ -14,6 +14,8 @@ Modules:
 
 - **Design primitives** — `DragonForm`, `DragonSection`, `.dragonAnnotation`
   (source-compatible ports of ice-2's grouped-`Form` look).
+- **Menu** — `DragonAppMenu` builds the canonical status-item dropdown (About, Check for
+  Updates, Settings, Uninstall, Quit) so every app's menu order and naming match.
 - **Settings** — `SettingsShell` (host-owned selection) + `ManagedSettingsShell`;
   `DragonSettingsWindowController` opens it reliably for accessory apps; modules
   conform to `SettingsPane`.
@@ -74,6 +76,27 @@ General → (the app's own panes) → Permissions → Sync & Backup → What's N
 ```
 
 The Dragon Sample App (`Example/`) wires its panes up in this order — mirror it in new apps.
+
+## Menu-bar dropdown order
+
+Every Dragon app builds its status-item dropdown from **`DragonAppMenu`** — one source of
+truth for order and naming, so the menus can't drift the way hand-rolled `NSMenu`s did. The
+canonical order and naming (macOS title-case, ellipsis on items that open a window/dialog,
+app name appended to About / Uninstall / Quit):
+
+```
+About <App>
+Check for Updates…        (omit for Mac App Store builds — pass onCheckForUpdates: nil)
+Settings…            ⌘,
+──────────
+Uninstall <App>…          (omit if the app ships no uninstall flow)
+Quit <App>           ⌘Q   (omit for an IME — pass includeQuit: false)
+```
+
+Apps whose dropdown is only these items use `DragonAppMenu.menu(_:)`; apps with their own
+content above (clipboard history, input-method toggles, …) build that and append
+`DragonAppMenu.items(_:)` after their own separator. The Dragon Sample App (`Example/`) uses
+`DragonAppMenu.menu(_:)` — mirror it in new apps.
 
 ## Try it: the Dragon Sample App
 

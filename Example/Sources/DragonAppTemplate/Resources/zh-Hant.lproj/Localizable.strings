@@ -9,10 +9,6 @@
 "app.general.playSound" = "操作時播放聲音";
 "app.general.playSoundHint" = "一個 App 專屬的範例設定——包含它是為了讓備份與還原有真實資料可儲存。";
 "app.general.languageSection" = "語言";
-"app.menu.settings" = "設定";
-"app.menu.checkForUpdates" = "檢查更新";
-"app.menu.about" = "關於";
-"app.menu.quit" = "結束";
 "app.about.website" = "網站";
 "app.about.source" = "原始碼";
 "app.about.builtWith" = "建置於";
