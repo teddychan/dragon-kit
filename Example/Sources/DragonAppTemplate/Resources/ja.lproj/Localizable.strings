@@ -9,10 +9,6 @@
 "app.general.playSound" = "操作時にサウンドを再生";
 "app.general.playSoundHint" = "アプリ独自のサンプル設定です。バックアップと復元に保存する実データを用意するために含まれています。";
 "app.general.languageSection" = "言語";
-"app.menu.settings" = "設定";
-"app.menu.checkForUpdates" = "アップデートを確認";
-"app.menu.about" = "情報";
-"app.menu.quit" = "終了";
 "app.about.website" = "ウェブサイト";
 "app.about.source" = "ソース";
 "app.about.builtWith" = "使用技術";

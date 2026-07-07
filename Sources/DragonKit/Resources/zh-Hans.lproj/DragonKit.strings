@@ -55,3 +55,9 @@
 "DragonKit.whatsNew.kind.removed" = "移除";
 "DragonKit.whatsNew.kind.improved" = "改进";
 "DragonKit.whatsNew.kind.security" = "安全";
+
+"DragonKit.menu.about" = "关于 %@";
+"DragonKit.menu.checkForUpdates" = "检查更新…";
+"DragonKit.menu.settings" = "设置…";
+"DragonKit.menu.uninstall" = "卸载 %@…";
+"DragonKit.menu.quit" = "退出 %@";

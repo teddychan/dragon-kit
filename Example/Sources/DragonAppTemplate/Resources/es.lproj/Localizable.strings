@@ -9,10 +9,6 @@
 "app.general.playSound" = "Reproducir sonido al actuar";
 "app.general.playSoundHint" = "Un ajuste de ejemplo específico de la app, incluido para que Copia de seguridad tenga datos reales que guardar.";
 "app.general.languageSection" = "Idioma";
-"app.menu.settings" = "Ajustes";
-"app.menu.checkForUpdates" = "Buscar actualizaciones";
-"app.menu.about" = "Acerca de";
-"app.menu.quit" = "Salir";
 "app.about.website" = "Sitio web";
 "app.about.source" = "Código";
 "app.about.builtWith" = "Creado con";

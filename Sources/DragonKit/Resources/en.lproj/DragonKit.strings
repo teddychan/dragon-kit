@@ -55,3 +55,9 @@
 "DragonKit.whatsNew.kind.removed" = "Removed";
 "DragonKit.whatsNew.kind.improved" = "Improved";
 "DragonKit.whatsNew.kind.security" = "Security";
+
+"DragonKit.menu.about" = "About %@";
+"DragonKit.menu.checkForUpdates" = "Check for Updates…";
+"DragonKit.menu.settings" = "Settings…";
+"DragonKit.menu.uninstall" = "Uninstall %@…";
+"DragonKit.menu.quit" = "Quit %@";

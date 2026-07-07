@@ -9,10 +9,6 @@
 "app.general.playSound" = "Play sound on action";
 "app.general.playSoundHint" = "A sample app-specific setting — included so Backup & Restore has real data to save.";
 "app.general.languageSection" = "Language";
-"app.menu.settings" = "Settings";
-"app.menu.checkForUpdates" = "Check for Updates";
-"app.menu.about" = "About";
-"app.menu.quit" = "Quit";
 "app.about.website" = "Website";
 "app.about.source" = "Source";
 "app.about.builtWith" = "Built with";

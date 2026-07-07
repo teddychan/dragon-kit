@@ -55,3 +55,9 @@
 "DragonKit.whatsNew.kind.removed" = "削除";
 "DragonKit.whatsNew.kind.improved" = "改善";
 "DragonKit.whatsNew.kind.security" = "セキュリティ";
+
+"DragonKit.menu.about" = "%@ について";
+"DragonKit.menu.checkForUpdates" = "アップデートを確認…";
+"DragonKit.menu.settings" = "設定…";
+"DragonKit.menu.uninstall" = "%@ をアンインストール…";
+"DragonKit.menu.quit" = "%@ を終了";
