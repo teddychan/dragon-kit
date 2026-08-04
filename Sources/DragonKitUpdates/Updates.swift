@@ -40,6 +40,63 @@ private final class DragonUpdaterUserDriver: SPUStandardUserDriver {
     }
 }
 
+/// How an app wants scheduled (non-user-initiated) update checks to behave.
+///
+/// Both settings live on Sparkle's *user driver* delegate, which ``DragonUpdater`` used to pass
+/// as `nil` — so an app adopting the kit silently lost them. ice-2 hit exactly that when it
+/// migrated off its own Sparkle wiring: its gentle reminders and its own "update available"
+/// notification both stopped, and the notification subsystem became dead code.
+public struct DragonUpdaterConfig: Sendable {
+    /// Opt into Sparkle's non-intrusive reminders for scheduled checks, instead of a modal
+    /// window arriving unprompted.
+    public var usesGentleScheduledReminders: Bool
+
+    /// Called when a *scheduled* check finds an update the user didn't ask for, so the app can
+    /// post its own notification. Sparkle still shows its standard window and activates the
+    /// app, so no update is ever lost by ignoring this.
+    public var onUpdateFoundInBackground: (@MainActor @Sendable () -> Void)?
+
+    public init(
+        usesGentleScheduledReminders: Bool = false,
+        onUpdateFoundInBackground: (@MainActor @Sendable () -> Void)? = nil
+    ) {
+        self.usesGentleScheduledReminders = usesGentleScheduledReminders
+        self.onUpdateFoundInBackground = onUpdateFoundInBackground
+    }
+}
+
+/// Bridges ``DragonUpdaterConfig`` onto Sparkle's `SPUStandardUserDriverDelegate`, which is an
+/// `@objc` protocol and so needs an `NSObject` subclass.
+private final class DragonUserDriverDelegate: NSObject, SPUStandardUserDriverDelegate {
+    // Stored as separate values rather than holding the config: Sparkle calls these methods
+    // from a non-isolated context, so reaching through `self` inside `assumeIsolated` would be
+    // a data race. A `@Sendable` closure copied into a local is safe to hop with.
+    private let gentleReminders: Bool
+    private let onUpdateFoundInBackground: (@MainActor @Sendable () -> Void)?
+
+    init(config: DragonUpdaterConfig) {
+        self.gentleReminders = config.usesGentleScheduledReminders
+        self.onUpdateFoundInBackground = config.onUpdateFoundInBackground
+        super.init()
+    }
+
+    var supportsGentleScheduledUpdateReminders: Bool { gentleReminders }
+
+    func standardUserDriverWillHandleShowingUpdate(
+        _ handleShowingUpdate: Bool,
+        forUpdate update: SUAppcastItem,
+        state: SPUUserUpdateState
+    ) {
+        // Only for checks the user didn't initiate — a user who just clicked "Check for
+        // Updates…" is already looking at the result and doesn't need a notification.
+        guard !state.userInitiated else { return }
+        guard let handler = onUpdateFoundInBackground else { return }
+        // Sparkle calls this on the main thread; assert that rather than hopping, so the
+        // notification fires before its window appears.
+        MainActor.assumeIsolated { handler() }
+    }
+}
+
 /// Thin wrapper around a Sparkle `SPUUpdater`. The updater is created lazily on first use —
 /// never at launch — because Sparkle touches the app bundle/XPC services on init, which an
 /// ad-hoc dev build may not embed; deferring keeps launch safe. Ported from ice-2's
@@ -49,13 +106,27 @@ private final class DragonUpdaterUserDriver: SPUStandardUserDriver {
 public final class DragonUpdater: ObservableObject {
     private var updaterInstance: SPUUpdater?
     private var userDriver: DragonUpdaterUserDriver?
+    private let config: DragonUpdaterConfig
+    /// Retained for the updater's lifetime — Sparkle holds the delegate weakly.
+    private var driverDelegate: DragonUserDriverDelegate?
 
-    public init() {}
+    public init(config: DragonUpdaterConfig = DragonUpdaterConfig()) {
+        self.config = config
+    }
+
+    /// Force Sparkle to initialize and begin its scheduled-check timer. Without this the
+    /// updater only wakes on first property access, so an app that never reads one would never
+    /// schedule a background check — apps previously had to poke `canCheckForUpdates` to get
+    /// the same effect. Safe and idempotent; no-ops when Sparkle can't initialize.
+    public func start() {
+        _ = updater
+    }
 
     private var updater: SPUUpdater? {
         guard Bundle.main.bundleIdentifier != nil else { return nil }
         if updaterInstance == nil {
-            let driver = DragonUpdaterUserDriver(hostBundle: .main, delegate: nil)
+            let delegate = DragonUserDriverDelegate(config: config)
+            let driver = DragonUpdaterUserDriver(hostBundle: .main, delegate: delegate)
             let instance = SPUUpdater(
                 hostBundle: .main,
                 applicationBundle: .main,
@@ -65,6 +136,7 @@ public final class DragonUpdater: ObservableObject {
             do {
                 try instance.start()
                 userDriver = driver
+                driverDelegate = delegate
                 updaterInstance = instance
             } catch {
                 return nil
