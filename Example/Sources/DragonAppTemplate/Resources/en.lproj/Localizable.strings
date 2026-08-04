@@ -13,11 +13,9 @@
 "app.about.source" = "Source";
 "app.about.builtWith" = "Built with";
 "app.about.license" = "License";
-"app.whatsNew.summary" = "The menu-bar dropdown now comes from DragonKit, so every Dragon app's menu matches.";
-"app.whatsNew.added1" = "Canonical menu-bar dropdown — one shared source for item order and naming.";
-"app.whatsNew.added2" = "Every menu item now leads with an SF Symbol.";
-"app.whatsNew.improved1" = "About shows the build number and UTC build time next to the version.";
-"app.whatsNew.improved2" = "Clearer wording when a check for updates finds you're already up to date.";
+"app.whatsNew.summary" = "Uninstall has moved out of the menu-bar menu into Settings.";
+"app.whatsNew.removed1" = "Uninstall is no longer in the menu-bar dropdown, next to Quit.";
+"app.whatsNew.changed1" = "Find it as the last pane in Settings, where it confirms before removing anything.";
 "app.uninstall.item.app" = "The app and its login item";
 "app.uninstall.item.settings" = "All settings";
 "app.uninstall.item.state" = "Saved application state";

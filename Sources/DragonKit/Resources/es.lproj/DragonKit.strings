@@ -59,5 +59,4 @@
 "DragonKit.menu.about" = "Acerca de %@";
 "DragonKit.menu.checkForUpdates" = "Buscar actualizaciones…";
 "DragonKit.menu.settings" = "Ajustes…";
-"DragonKit.menu.uninstall" = "Desinstalar %@…";
 "DragonKit.menu.quit" = "Salir de %@";

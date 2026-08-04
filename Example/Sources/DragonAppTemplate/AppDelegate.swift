@@ -133,8 +133,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             appName: appName,
             onAbout: { [weak self] in self?.openAbout() },
             onSettings: { [weak self] in self?.openSettings() },
-            onCheckForUpdates: { [weak self] in self?.checkForUpdates() },
-            onUninstall: { [weak self] in self?.openUninstall() }
+            onCheckForUpdates: { [weak self] in self?.checkForUpdates() }
         ))
     }
 
@@ -158,12 +157,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Set the pane before showing so it always lands on About (matches
         // `AboutSettingsPane().id`), even on the first, lazy open of the window.
         selection.paneID = "about"
-        settingsController.show()
-    }
-
-    private func openUninstall() {
-        // Land directly on the Uninstall pane (matches `UninstallSettingsPane().id`).
-        selection.paneID = "uninstall"
         settingsController.show()
     }
 

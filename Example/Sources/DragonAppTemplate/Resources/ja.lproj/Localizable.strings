@@ -13,11 +13,9 @@
 "app.about.source" = "ソース";
 "app.about.builtWith" = "使用技術";
 "app.about.license" = "ライセンス";
-"app.whatsNew.summary" = "メニューバーのメニューを DragonKit が生成するようになり、すべての Dragon アプリでメニューが統一されます。";
-"app.whatsNew.added1" = "標準のメニューバーメニュー — 項目の順序と名称を共有の一元管理に。";
-"app.whatsNew.added2" = "すべてのメニュー項目の先頭に SF Symbol を表示。";
-"app.whatsNew.improved1" = "「このアプリについて」にバージョンと並んでビルド番号と UTC ビルド時刻を表示。";
-"app.whatsNew.improved2" = "アップデートが最新だった場合のメッセージをわかりやすく変更。";
+"app.whatsNew.summary" = "アンインストールがメニューバーのメニューから設定に移動しました。";
+"app.whatsNew.removed1" = "「終了」の隣にあったアンインストールをメニューバーのメニューから削除。";
+"app.whatsNew.changed1" = "設定の最後のペインに移動し、削除前に確認を求めます。";
 "app.uninstall.item.app" = "アプリとそのログイン項目";
 "app.uninstall.item.settings" = "すべての設定";
 "app.uninstall.item.state" = "保存されたアプリケーションの状態";

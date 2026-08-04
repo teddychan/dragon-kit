@@ -59,5 +59,4 @@
 "DragonKit.menu.about" = "關於 %@";
 "DragonKit.menu.checkForUpdates" = "檢查更新…";
 "DragonKit.menu.settings" = "設定…";
-"DragonKit.menu.uninstall" = "解除安裝 %@…";
 "DragonKit.menu.quit" = "結束 %@";

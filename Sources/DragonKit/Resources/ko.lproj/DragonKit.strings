@@ -59,5 +59,4 @@
 "DragonKit.menu.about" = "%@ 정보";
 "DragonKit.menu.checkForUpdates" = "업데이트 확인…";
 "DragonKit.menu.settings" = "설정…";
-"DragonKit.menu.uninstall" = "%@ 제거…";
 "DragonKit.menu.quit" = "%@ 종료";
