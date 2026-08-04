@@ -3,17 +3,21 @@ import AppKit
 /// The canonical menu-bar dropdown for every Dragon app — built once, here, so the apps
 /// can't drift apart the way hand-rolled `NSMenu`s did.
 ///
-/// Canonical order and naming (macOS title-case, ellipsis on items that open a window/dialog,
-/// app name appended to About / Uninstall / Quit):
+/// Canonical order, naming, and leading SF Symbol (macOS title-case, ellipsis on items that
+/// open a window/dialog, app name appended to About / Uninstall / Quit):
 ///
 /// ```
-/// About <App>
-/// Check for Updates…        (omitted when `onCheckForUpdates` is nil — e.g. Mac App Store)
-/// Settings…            ⌘,
+/// info.circle        About <App>
+/// arrow.down.circle  Check for Updates…   (omitted when `onCheckForUpdates` is nil — e.g. Mac App Store)
+/// gearshape          Settings…       ⌘,
 /// ──────────
-/// Uninstall <App>…          (omitted when `onUninstall` is nil)
-/// Quit <App>           ⌘Q   (omitted when `includeQuit` is false — e.g. an IME)
+/// trash              Uninstall <App>…     (omitted when `onUninstall` is nil)
+/// power              Quit <App>      ⌘Q   (omitted when `includeQuit` is false — e.g. an IME)
 /// ```
+///
+/// The symbols are fixed here rather than injected: the design spec is "lead every item with
+/// an SF Symbol … only the name string differs", so the icon is part of the canon, not per-app
+/// config. `arrow.down.circle` matches ``UpdatesSettingsPane``'s sidebar symbol.
 ///
 /// Apps whose dropdown is *only* these items use ``menu(_:)``. Apps with their own
 /// content above (a clipboard history, input-method toggles, …) build their menu and then
@@ -57,16 +61,19 @@ public enum DragonAppMenu {
 
         items.append(ClosureMenuItem(
             title: String(format: L("DragonKit.menu.about"), config.appName),
+            symbolName: "info.circle",
             handler: config.onAbout
         ))
         if let onCheckForUpdates = config.onCheckForUpdates {
             items.append(ClosureMenuItem(
                 title: L("DragonKit.menu.checkForUpdates"),
+                symbolName: "arrow.down.circle",
                 handler: onCheckForUpdates
             ))
         }
         items.append(ClosureMenuItem(
             title: L("DragonKit.menu.settings"),
+            symbolName: "gearshape",
             keyEquivalent: ",",
             handler: config.onSettings
         ))
@@ -79,6 +86,7 @@ public enum DragonAppMenu {
         if let onUninstall = config.onUninstall {
             items.append(ClosureMenuItem(
                 title: String(format: L("DragonKit.menu.uninstall"), config.appName),
+                symbolName: "trash",
                 handler: onUninstall
             ))
         }
@@ -88,6 +96,7 @@ public enum DragonAppMenu {
                 action: #selector(NSApplication.terminate(_:)),
                 keyEquivalent: "q"
             )
+            quit.image = NSImage(systemSymbolName: "power", accessibilityDescription: nil)
             items.append(quit)
         }
         return items
@@ -106,10 +115,11 @@ public enum DragonAppMenu {
 private final class ClosureMenuItem: NSMenuItem {
     private let handler: () -> Void
 
-    init(title: String, keyEquivalent: String = "", handler: @escaping () -> Void) {
+    init(title: String, symbolName: String, keyEquivalent: String = "", handler: @escaping () -> Void) {
         self.handler = handler
         super.init(title: title, action: #selector(invoke), keyEquivalent: keyEquivalent)
         self.target = self
+        self.image = NSImage(systemSymbolName: symbolName, accessibilityDescription: nil)
     }
 
     @available(*, unavailable)
