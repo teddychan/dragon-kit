@@ -11,7 +11,10 @@ let package = Package(
         .library(name: "DragonKitUpdates", targets: ["DragonKitUpdates"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.6.0"),
+        // 2.9.0, not 2.6.0: DragonKitUpdates overrides `showUpdateNotFoundWithError(_:) async`,
+        // which Sparkle only exposes from 2.9 (2.8 has the acknowledgement-block form). An app
+        // resolving 2.6–2.8 failed to compile the kit itself — ice-2 hit this.
+        .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.9.0"),
     ],
     targets: [
         .target(
