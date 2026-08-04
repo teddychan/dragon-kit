@@ -80,18 +80,21 @@ The Dragon Sample App (`Example/`) wires its panes up in this order — mirror i
 ## Menu-bar dropdown order
 
 Every Dragon app builds its status-item dropdown from **`DragonAppMenu`** — one source of
-truth for order and naming, so the menus can't drift the way hand-rolled `NSMenu`s did. The
-canonical order and naming (macOS title-case, ellipsis on items that open a window/dialog,
-app name appended to About / Uninstall / Quit):
+truth for order, naming, and icon, so the menus can't drift the way hand-rolled `NSMenu`s did.
+The canonical form (macOS title-case, leading SF Symbol on every item, ellipsis on items that
+open a window/dialog, app name appended to About / Uninstall / Quit):
 
 ```
-About <App>
-Check for Updates…        (omit for Mac App Store builds — pass onCheckForUpdates: nil)
-Settings…            ⌘,
+info.circle        About <App>
+arrow.down.circle  Check for Updates…   (omit for Mac App Store builds — pass onCheckForUpdates: nil)
+gearshape          Settings…       ⌘,
 ──────────
-Uninstall <App>…          (omit if the app ships no uninstall flow)
-Quit <App>           ⌘Q   (omit for an IME — pass includeQuit: false)
+trash              Uninstall <App>…     (omit if the app ships no uninstall flow)
+power              Quit <App>      ⌘Q   (omit for an IME — pass includeQuit: false)
 ```
+
+The symbols are fixed in the kit, not per-app config — the design spec is "lead every item
+with an SF Symbol … only the name string differs".
 
 Apps whose dropdown is only these items use `DragonAppMenu.menu(_:)`; apps with their own
 content above (clipboard history, input-method toggles, …) build that and append
