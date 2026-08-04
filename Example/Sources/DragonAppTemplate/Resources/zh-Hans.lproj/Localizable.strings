@@ -13,10 +13,11 @@
 "app.about.source" = "源代码";
 "app.about.builtWith" = "构建于";
 "app.about.license" = "许可证";
-"app.whatsNew.summary" = "卸载现在可选择同时删除用户数据，并始终清理应用文件夹。";
-"app.whatsNew.added1" = "卸载面板新增默认关闭的“同时删除用户数据”选项。";
-"app.whatsNew.added2" = "应用可声明额外清理路径——每次卸载都会移除缓存和支持文件。";
-"app.whatsNew.improved1" = "示例应用演示了两个新的卸载选项。";
+"app.whatsNew.summary" = "菜单栏菜单现在由 DragonKit 生成，因此所有 Dragon 应用的菜单保持一致。";
+"app.whatsNew.added1" = "标准菜单栏菜单——项目顺序和名称由共享来源统一管理。";
+"app.whatsNew.added2" = "每个菜单项现在都以 SF Symbol 图标开头。";
+"app.whatsNew.improved1" = "“关于”页面在版本旁显示构建号和 UTC 构建时间。";
+"app.whatsNew.improved2" = "检查更新时若已是最新版本，提示文字更清晰。";
 "app.uninstall.item.app" = "应用及其登录项";
 "app.uninstall.item.settings" = "所有设置";
 "app.uninstall.item.state" = "已保存的应用状态";

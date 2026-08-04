@@ -13,10 +13,11 @@
 "app.about.source" = "소스";
 "app.about.builtWith" = "사용 기술";
 "app.about.license" = "라이선스";
-"app.whatsNew.summary" = "이제 제거 시 사용자 데이터 삭제를 선택할 수 있고, 앱 폴더는 항상 정리됩니다.";
-"app.whatsNew.added1" = "제거 창에 기본적으로 꺼져 있는 “사용자 데이터도 삭제” 옵션 추가.";
-"app.whatsNew.added2" = "앱이 추가 정리 경로를 지정할 수 있음 — 제거할 때마다 캐시와 지원 파일 삭제.";
-"app.whatsNew.improved1" = "샘플 앱이 두 가지 새 제거 옵션을 시연합니다.";
+"app.whatsNew.summary" = "메뉴 막대 메뉴를 DragonKit이 생성하므로 모든 Dragon 앱의 메뉴가 일치합니다.";
+"app.whatsNew.added1" = "표준 메뉴 막대 메뉴 — 항목 순서와 이름을 공유 소스에서 일괄 관리.";
+"app.whatsNew.added2" = "이제 모든 메뉴 항목이 SF 심볼로 시작합니다.";
+"app.whatsNew.improved1" = "정보 창에 버전과 함께 빌드 번호와 UTC 빌드 시간을 표시.";
+"app.whatsNew.improved2" = "업데이트 확인 결과가 최신일 때 문구를 더 명확하게 변경.";
 "app.uninstall.item.app" = "앱 및 로그인 항목";
 "app.uninstall.item.settings" = "모든 설정";
 "app.uninstall.item.state" = "저장된 응용 프로그램 상태";

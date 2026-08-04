@@ -13,10 +13,11 @@
 "app.about.source" = "Code source";
 "app.about.builtWith" = "Conçu avec";
 "app.about.license" = "Licence";
-"app.whatsNew.summary" = "Désinstaller peut désormais proposer de supprimer les données utilisateur et nettoie toujours les dossiers de l’app.";
-"app.whatsNew.added1" = "Choix facultatif « supprimer aussi les données utilisateur » dans le volet Désinstaller, désactivé par défaut.";
-"app.whatsNew.added2" = "Les apps déclarent des chemins de nettoyage supplémentaires — caches et fichiers de support supprimés à chaque désinstallation.";
-"app.whatsNew.improved1" = "L’app d’exemple illustre les deux nouvelles options de désinstallation.";
+"app.whatsNew.summary" = "Le menu de la barre des menus est désormais généré par DragonKit : le menu de toutes les apps Dragon est identique.";
+"app.whatsNew.added1" = "Menu de la barre des menus canonique — une source partagée unique pour l’ordre et les intitulés.";
+"app.whatsNew.added2" = "Chaque élément de menu commence désormais par un symbole SF.";
+"app.whatsNew.improved1" = "À propos affiche le numéro de build et l’heure de build UTC à côté de la version.";
+"app.whatsNew.improved2" = "Formulation plus claire lorsque la recherche de mises à jour indique que tout est à jour.";
 "app.uninstall.item.app" = "L’app et son élément d’ouverture";
 "app.uninstall.item.settings" = "Tous les réglages";
 "app.uninstall.item.state" = "État enregistré de l’app";
