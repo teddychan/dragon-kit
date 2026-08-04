@@ -34,8 +34,15 @@ name: DragonKit conformance
 on: pull_request
 jobs:
   conformance:
-    uses: teddychan/dragon-kit/.github/workflows/conformance.yml@v2
+    uses: teddychan/dragon-kit/.github/workflows/conformance.yml@main
 ```
+
+`@main` is deliberate, and it's what all five apps use. The workflow reads the kit at
+its default branch anyway, so pinning it to a tag would freeze the *interface* while the
+*rules* still moved — the pin buys nothing and the version drifts out of date silently.
+If you ever want the workflow itself pinned, cut a floating `v2` tag on dragon-kit first
+(the way `dragon-release-ci` maintains `v5`); until then `@v2` does not resolve.
+
 
 Run it locally the same way CI does:
 
