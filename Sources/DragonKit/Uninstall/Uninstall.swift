@@ -269,6 +269,9 @@ private struct UninstallPaneView: View {
 
                         if let onCancel {
                             Button(L("DragonKit.cancel")) { onCancel() }
+                                // §5A: Cancel is the default action, so Return/Esc hits the
+                                // safe choice — matching ``UninstallView``, the window variant.
+                                .keyboardShortcut(.defaultAction)
                         }
                     }
                     .padding(.top, 4)
