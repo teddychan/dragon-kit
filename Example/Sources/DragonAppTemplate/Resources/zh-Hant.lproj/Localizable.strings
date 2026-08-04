@@ -13,10 +13,11 @@
 "app.about.source" = "原始碼";
 "app.about.builtWith" = "建置於";
 "app.about.license" = "授權";
-"app.whatsNew.summary" = "解除安裝現在可選擇同時刪除使用者資料，並一律清理 App 資料夾。";
-"app.whatsNew.added1" = "解除安裝面板新增預設關閉的「同時刪除使用者資料」選項。";
-"app.whatsNew.added2" = "App 可宣告額外清理路徑——每次解除安裝都會移除快取與支援檔案。";
-"app.whatsNew.improved1" = "範例 App 示範兩個新的解除安裝選項。";
+"app.whatsNew.summary" = "選單列選單現在由 DragonKit 產生，因此所有 Dragon App 的選單保持一致。";
+"app.whatsNew.added1" = "標準選單列選單——項目順序與名稱由共用來源統一管理。";
+"app.whatsNew.added2" = "每個選單項目現在都以 SF Symbol 圖示開頭。";
+"app.whatsNew.improved1" = "「關於」頁面在版本旁顯示建置號碼與 UTC 建置時間。";
+"app.whatsNew.improved2" = "檢查更新時若已是最新版本，提示文字更清楚。";
 "app.uninstall.item.app" = "App 及其登入項目";
 "app.uninstall.item.settings" = "所有設定";
 "app.uninstall.item.state" = "已儲存的 App 狀態";

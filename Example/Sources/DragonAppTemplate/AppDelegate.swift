@@ -125,7 +125,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// Build the canonical Dragon menu-bar menu via `DragonAppMenu` — the single source of
-    /// truth for order and naming, so this sample app stays the reference every app mirrors.
+    /// truth for order, naming, and icons, so this sample app stays the reference every app
+    /// mirrors.
     /// Rebuilt on language change.
     private func buildMenu() -> NSMenu {
         DragonAppMenu.menu(DragonAppMenu.Config(

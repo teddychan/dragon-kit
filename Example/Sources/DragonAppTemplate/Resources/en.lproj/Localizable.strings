@@ -13,10 +13,11 @@
 "app.about.source" = "Source";
 "app.about.builtWith" = "Built with";
 "app.about.license" = "License";
-"app.whatsNew.summary" = "Uninstall can now offer to delete user data and always cleans up app folders.";
-"app.whatsNew.added1" = "Optional, default-off “also delete user data” choice in the Uninstall pane.";
-"app.whatsNew.added2" = "Apps declare extra cleanup paths — caches and support files removed on every uninstall.";
-"app.whatsNew.improved1" = "The sample app demonstrates both new uninstall options.";
+"app.whatsNew.summary" = "The menu-bar dropdown now comes from DragonKit, so every Dragon app's menu matches.";
+"app.whatsNew.added1" = "Canonical menu-bar dropdown — one shared source for item order and naming.";
+"app.whatsNew.added2" = "Every menu item now leads with an SF Symbol.";
+"app.whatsNew.improved1" = "About shows the build number and UTC build time next to the version.";
+"app.whatsNew.improved2" = "Clearer wording when a check for updates finds you're already up to date.";
 "app.uninstall.item.app" = "The app and its login item";
 "app.uninstall.item.settings" = "All settings";
 "app.uninstall.item.state" = "Saved application state";
