@@ -41,14 +41,21 @@ CANONICAL_PANE_SLOTS = [
     ("About", ("AboutSettingsPane", "AboutPane", "about")),
     ("Uninstall", ("UninstallSettingsPane", "uninstall")),
 ]
-SWIFT_DECL = re.compile(r"^\s*(?:public\s+|internal\s+|private\s+|fileprivate\s+|final\s+)*"
+# Anchored at column 0 on purpose: only a TOP-LEVEL declaration can shadow a top-level kit
+# type. A nested type lives in its own namespace — ice-2's `SettingsBackup.BackupError` cannot
+# shadow `DragonBackup.BackupError`, and reporting it was a false positive.
+SWIFT_DECL = re.compile(r"^(?:public\s+|internal\s+|private\s+|fileprivate\s+|final\s+)*"
                         r"(?:struct|class|enum|protocol)\s+([A-Za-z_][A-Za-z0-9_]*)")
 # A settings layout primitive is a *generic view wrapper* — `struct IceForm<Content: View>: View`.
 # The name alone is far too broad a signal: ice-2's `MenuBarSection` is a menu-bar model and has
 # nothing to do with settings layout, so matching on the suffix alone produced a false positive.
+#
+# `GroupBox` is deliberately NOT in this list. ice-2's `IceGroupBox` was a bordered box, and the
+# kit has no equivalent — so the rule offered no compliant path except inlining it or renaming it
+# to dodge the check. A rule you can only satisfy by gaming it is a bad rule.
 LAYOUT_PRIMITIVE = re.compile(
     r"^\s*(?:public\s+|internal\s+|private\s+|fileprivate\s+|final\s+)*"
-    r"(?:struct|class)\s+([A-Za-z_][A-Za-z0-9_]*(?:Form|Section|GroupBox))\s*<[^>]*:\s*View")
+    r"(?:struct|class)\s+([A-Za-z_][A-Za-z0-9_]*(?:Form|Section))\s*<[^>]*:\s*View")
 # Directories that are never app source (agent worktrees, vendored kit, build output).
 SKIP_DIRS = {".git", ".build", "vendor", "build", "DerivedData", ".claude", "node_modules"}
 
@@ -114,7 +121,10 @@ def strip_comment(line: str) -> str:
 def kit_public_types(kit: str) -> set[str]:
     """Derive the kit's public type names from its sources, so the list can't go stale."""
     names: set[str] = set()
-    pattern = re.compile(r"public\s+(?:final\s+)?(?:struct|class|enum|protocol|actor)\s+"
+    # Column-0 anchored: only top-level public types are shadowable. Previously this scraped
+    # nested types too, which is why `Config` and `Kind` had to be hand-excluded — a symptom of
+    # this bug rather than a real exception.
+    pattern = re.compile(r"^public\s+(?:final\s+)?(?:struct|class|enum|protocol|actor)\s+"
                          r"([A-Za-z_][A-Za-z0-9_]*)")
     for dirpath, dirnames, filenames in os.walk(os.path.join(kit, "Sources")):
         dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
@@ -122,11 +132,10 @@ def kit_public_types(kit: str) -> set[str]:
             if not name.endswith(".swift"):
                 continue
             for line in read(os.path.join(dirpath, name)):
-                match = pattern.search(line)
+                match = pattern.match(line)
                 if match:
                     names.add(match.group(1))
-    # Nested helper names are too generic to be worth banning app-wide.
-    return names - {"Config", "Kind"}
+    return names
 
 
 def latest_kit_version(kit: str) -> tuple[int, int, int] | None:

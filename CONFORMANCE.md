@@ -58,6 +58,11 @@ deleting the file would be the easiest way to "pass").
   "strings": ["app/Sources/**/*.lproj/Localizable.strings"],
   "pin": {                               // where the DragonKit version is declared
     "file": "app/Package.swift",
+    // MUST anchor on dragon-kit. The pattern is one search over the whole file, so an
+    // unanchored version regex silently matches whichever dependency appears first. In an
+    // Xcode .pbxproj this is a live trap: `minimumVersion = ([0-9.]+)` matched Sparkle's
+    // 2.5.2 in ice-2 and compared *that* against DragonKit's tags. Anchor it:
+    //   "dragon-kit\";[^}]*minimumVersion = ([0-9.]+)"
     "pattern": "dragon-kit\", from: \"([0-9.]+)\""
   },
   "paneOrder": { "file": "app/Sources/ClipMenu/SettingsWindowController.swift" },

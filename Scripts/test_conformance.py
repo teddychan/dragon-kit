@@ -174,6 +174,19 @@ extension AppMenuController {
             tmp, extra={"Sources/Shadow.swift": "import SwiftUI\nstruct UninstallView {}\n"}
         ), "R3")
 
+        # Regression: R3 compared *nested* declarations against nested kit types, so ice-2's
+        # SettingsBackup.BackupError was reported as shadowing DragonBackup.BackupError. Different
+        # namespaces — it cannot shadow. Only top-level declarations can.
+        expect_pass("nested type sharing a nested kit type's name is not shadowing", make_app(
+            tmp, extra={"Sources/Backup.swift": """import Foundation
+enum SettingsBackup {
+    enum BackupError: Error { case unreadable }
+    struct Config { var path: String }
+}
+"""}))
+        expect_violation("top-level shadow is still caught", make_app(
+            tmp, extra={"Sources/Shadow.swift": "import Foundation\nenum DragonBackup {}\n"}), "R3")
+
         print("R4 — no re-implemented design primitives")
         expect_violation("app declares IceForm", make_app(
             tmp, extra={"Sources/IceForm.swift": """import SwiftUI
@@ -265,6 +278,31 @@ enum SettingsNavigationIdentifier: String {
         print("R10 — pin must be current")
         expect_violation("stale pin", make_app(tmp, package=(
             '.package(url: "https://github.com/teddychan/dragon-kit", from: "0.0.1"),\n')), "R10")
+        # Regression, and the reason §R0 now insists the pattern be anchored on dragon-kit.
+        # The pattern is one search over the whole file, so an unanchored version regex matches
+        # whichever dependency appears first. In ice-2's .pbxproj that was Sparkle at 2.5.2 —
+        # numerically ABOVE DragonKit's newest tag — so the rule reported a false PASS while the
+        # real DragonKit pin was stale. A false pass is worse than a false failure: it looks
+        # like the rule is protecting you.
+        STALE_PBXPROJ = """
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				minimumVersion = 2.5.2;
+			};
+			repositoryURL = "https://github.com/teddychan/dragon-kit";
+			requirement = {
+				minimumVersion = 1.0.0;
+			};
+"""
+        expect_violation("anchored pbxproj pattern catches the real stale DragonKit pin", make_app(
+            tmp, extra={"Proj.pbxproj": STALE_PBXPROJ},
+            config_over={"pin": {"file": "Proj.pbxproj",
+                                 "pattern": r'dragon-kit";[^}]*minimumVersion = ([0-9.]+)'}}),
+            "R10")
+        expect_pass("unanchored pattern silently reads Sparkle's version — the trap", make_app(
+            tmp, extra={"Proj.pbxproj": STALE_PBXPROJ},
+            config_over={"pin": {"file": "Proj.pbxproj",
+                                 "pattern": r'minimumVersion = ([0-9.]+)'}}))
 
         print("R11 — exceptions suppress a rule at a path")
         expect_pass("sanctioned exception is honored", make_app(
