@@ -4,16 +4,20 @@ import AppKit
 /// can't drift apart the way hand-rolled `NSMenu`s did.
 ///
 /// Canonical order, naming, and leading SF Symbol (macOS title-case, ellipsis on items that
-/// open a window/dialog, app name appended to About / Uninstall / Quit):
+/// open a window/dialog, app name appended to About / Quit):
 ///
 /// ```
 /// info.circle        About <App>
 /// arrow.down.circle  Check for Updates…   (omitted when `onCheckForUpdates` is nil — e.g. Mac App Store)
 /// gearshape          Settings…       ⌘,
 /// ──────────
-/// trash              Uninstall <App>…     (omitted when `onUninstall` is nil)
 /// power              Quit <App>      ⌘Q   (omitted when `includeQuit` is false — e.g. an IME)
 /// ```
+///
+/// **Uninstall is deliberately absent.** It lives in Settings, as `UninstallSettingsPane` —
+/// a rarely-used destructive action does not belong one click away in the everyday dropdown,
+/// next to Quit. Every app ships that pane in its Settings sidebar, so the flow is still one
+/// click from Settings…; the menu just stops advertising it.
 ///
 /// The symbols are fixed here rather than injected: the design spec is "lead every item with
 /// an SF Symbol … only the name string differs", so the icon is part of the canon, not per-app
@@ -25,14 +29,12 @@ import AppKit
 @MainActor
 public enum DragonAppMenu {
     public struct Config {
-        /// Display name substituted into About / Uninstall / Quit (e.g. "ClipMenu 2").
+        /// Display name substituted into About / Quit (e.g. "ClipMenu 2").
         public var appName: String
         public var onAbout: () -> Void
         public var onSettings: () -> Void
         /// `nil` omits the item — for builds without Sparkle (Mac App Store).
         public var onCheckForUpdates: (() -> Void)?
-        /// `nil` omits the item — for apps that don't ship an uninstall flow.
-        public var onUninstall: (() -> Void)?
         /// `false` omits Quit — an IME is quit by the system, not the user.
         public var includeQuit: Bool
 
@@ -41,14 +43,12 @@ public enum DragonAppMenu {
             onAbout: @escaping () -> Void,
             onSettings: @escaping () -> Void,
             onCheckForUpdates: (() -> Void)? = nil,
-            onUninstall: (() -> Void)? = nil,
             includeQuit: Bool = true
         ) {
             self.appName = appName
             self.onAbout = onAbout
             self.onSettings = onSettings
             self.onCheckForUpdates = onCheckForUpdates
-            self.onUninstall = onUninstall
             self.includeQuit = includeQuit
         }
     }
@@ -78,19 +78,10 @@ public enum DragonAppMenu {
             handler: config.onSettings
         ))
 
-        // Divider before the destructive / terminal group.
-        let hasTrailingGroup = config.onUninstall != nil || config.includeQuit
-        if hasTrailingGroup {
-            items.append(.separator())
-        }
-        if let onUninstall = config.onUninstall {
-            items.append(ClosureMenuItem(
-                title: String(format: L("DragonKit.menu.uninstall"), config.appName),
-                symbolName: "trash",
-                handler: onUninstall
-            ))
-        }
+        // Quit is the only item after the divider, so both are omitted together — an IME's
+        // menu must not end on a dangling separator.
         if config.includeQuit {
+            items.append(.separator())
             let quit = NSMenuItem(
                 title: String(format: L("DragonKit.menu.quit"), config.appName),
                 action: #selector(NSApplication.terminate(_:)),

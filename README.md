@@ -15,7 +15,8 @@ Modules:
 - **Design primitives** — `DragonForm`, `DragonSection`, `.dragonAnnotation`
   (source-compatible ports of ice-2's grouped-`Form` look).
 - **Menu** — `DragonAppMenu` builds the canonical status-item dropdown (About, Check for
-  Updates, Settings, Uninstall, Quit) so every app's menu order and naming match.
+  Updates, Settings, Quit) so every app's menu order, naming, and icons match. Uninstall is
+  deliberately excluded — it lives in Settings.
 - **Settings** — `SettingsShell` (host-owned selection) + `ManagedSettingsShell`;
   `DragonSettingsWindowController` opens it reliably for accessory apps; modules
   conform to `SettingsPane`.
@@ -39,7 +40,7 @@ Modules:
   `Localizable.strings` per language and drop in `LanguagePicker`.
 - **Example/** — the **Dragon Sample App**, a runnable, installable **reference app** wiring up every module end-to-end:
   General (real persisted toggles), Permissions, Backup & Restore, What's New, Updates,
-  About, Uninstall, plus Check-for-Updates and Quit in the menu.
+  About, Uninstall — plus About, Check-for-Updates, Settings and Quit in the menu.
 
 ## Requirements
 macOS 26+, Swift 6.1.
@@ -82,19 +83,23 @@ The Dragon Sample App (`Example/`) wires its panes up in this order — mirror i
 Every Dragon app builds its status-item dropdown from **`DragonAppMenu`** — one source of
 truth for order, naming, and icon, so the menus can't drift the way hand-rolled `NSMenu`s did.
 The canonical form (macOS title-case, leading SF Symbol on every item, ellipsis on items that
-open a window/dialog, app name appended to About / Uninstall / Quit):
+open a window/dialog, app name appended to About / Quit):
 
 ```
 info.circle        About <App>
 arrow.down.circle  Check for Updates…   (omit for Mac App Store builds — pass onCheckForUpdates: nil)
 gearshape          Settings…       ⌘,
 ──────────
-trash              Uninstall <App>…     (omit if the app ships no uninstall flow)
 power              Quit <App>      ⌘Q   (omit for an IME — pass includeQuit: false)
 ```
 
 The symbols are fixed in the kit, not per-app config — the design spec is "lead every item
 with an SF Symbol … only the name string differs".
+
+**Uninstall is deliberately not in this menu.** It lives in Settings as `UninstallSettingsPane`:
+a rarely-used destructive action doesn't belong one click away in the everyday dropdown, right
+next to Quit. Every app ships that pane in its sidebar, so uninstalling is still one click from
+`Settings…`. There is no flag to put it back — that's the point.
 
 Apps whose dropdown is only these items use `DragonAppMenu.menu(_:)`; apps with their own
 content above (clipboard history, input-method toggles, …) build that and append

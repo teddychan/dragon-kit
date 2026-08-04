@@ -6,7 +6,6 @@ import AppKit
 @Suite struct DragonAppMenuTests {
     private func config(
         onCheckForUpdates: (() -> Void)? = {},
-        onUninstall: (() -> Void)? = {},
         includeQuit: Bool = true
     ) -> DragonAppMenu.Config {
         DragonAppMenu.Config(
@@ -14,7 +13,6 @@ import AppKit
             onAbout: {},
             onSettings: {},
             onCheckForUpdates: onCheckForUpdates,
-            onUninstall: onUninstall,
             includeQuit: includeQuit
         )
     }
@@ -26,9 +24,18 @@ import AppKit
             "Check for Updates…",
             "Settings…",
             "", // separator
-            "Uninstall Test App…",
             "Quit Test App",
         ])
+    }
+
+    /// Uninstall is destructive and rare — it belongs in Settings (`UninstallSettingsPane`),
+    /// not one click away in the everyday dropdown next to Quit. This guards it from coming
+    /// back: there is no config flag that can reintroduce it.
+    @Test func noUninstallItemInAnyConfiguration() {
+        for cfg in [config(), config(onCheckForUpdates: nil), config(includeQuit: false)] {
+            let titles = DragonAppMenu.items(cfg).map(\.title)
+            #expect(!titles.contains { $0.localizedCaseInsensitiveContains("uninstall") })
+        }
     }
 
     /// §5A: "lead every item with an SF Symbol" — a missing symbol is the drift this guards.
@@ -50,11 +57,19 @@ import AppKit
         #expect(!titles.contains("Check for Updates…"))
     }
 
-    /// An IME is quit by the system, so it passes `includeQuit: false`.
+    /// An IME is quit by the system, so it passes `includeQuit: false`. Quit is the only item
+    /// after the divider, so the divider must go with it.
     @Test func anImeMenuHasNoQuitAndNoDanglingSeparator() {
-        let items = DragonAppMenu.items(config(onUninstall: nil, includeQuit: false))
+        let items = DragonAppMenu.items(config(includeQuit: false))
         #expect(items.map(\.title) == ["About Test App", "Check for Updates…", "Settings…"])
         #expect(!items.contains { $0.isSeparatorItem })
+    }
+
+    /// The trailing separator exists only to set Quit apart — never as the last item.
+    @Test func menuNeverEndsWithASeparator() {
+        for cfg in [config(), config(onCheckForUpdates: nil), config(includeQuit: false)] {
+            #expect(DragonAppMenu.items(cfg).last?.isSeparatorItem == false)
+        }
     }
 
     /// `menu(_:)` is the standalone case — it must not open with a dangling divider.

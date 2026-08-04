@@ -13,11 +13,9 @@
 "app.about.source" = "Código";
 "app.about.builtWith" = "Creado con";
 "app.about.license" = "Licencia";
-"app.whatsNew.summary" = "El menú de la barra de menús ahora lo genera DragonKit, así que el menú de todas las apps Dragon coincide.";
-"app.whatsNew.added1" = "Menú de la barra de menús canónico: una única fuente compartida para el orden y los nombres.";
-"app.whatsNew.added2" = "Cada elemento del menú ahora empieza con un símbolo SF.";
-"app.whatsNew.improved1" = "Acerca de muestra el número de compilación y la hora de compilación UTC junto a la versión.";
-"app.whatsNew.improved2" = "Texto más claro cuando la búsqueda de actualizaciones indica que ya está todo al día.";
+"app.whatsNew.summary" = "Desinstalar se ha movido del menú de la barra de menús a los Ajustes.";
+"app.whatsNew.removed1" = "Desinstalar ya no aparece en el menú de la barra de menús, junto a Salir.";
+"app.whatsNew.changed1" = "Ahora está en el último panel de Ajustes, donde pide confirmación antes de eliminar nada.";
 "app.uninstall.item.app" = "La app y su ítem de inicio de sesión";
 "app.uninstall.item.settings" = "Todos los ajustes";
 "app.uninstall.item.state" = "Estado guardado de la aplicación";

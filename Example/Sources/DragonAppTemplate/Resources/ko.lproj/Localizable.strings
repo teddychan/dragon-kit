@@ -13,11 +13,9 @@
 "app.about.source" = "소스";
 "app.about.builtWith" = "사용 기술";
 "app.about.license" = "라이선스";
-"app.whatsNew.summary" = "메뉴 막대 메뉴를 DragonKit이 생성하므로 모든 Dragon 앱의 메뉴가 일치합니다.";
-"app.whatsNew.added1" = "표준 메뉴 막대 메뉴 — 항목 순서와 이름을 공유 소스에서 일괄 관리.";
-"app.whatsNew.added2" = "이제 모든 메뉴 항목이 SF 심볼로 시작합니다.";
-"app.whatsNew.improved1" = "정보 창에 버전과 함께 빌드 번호와 UTC 빌드 시간을 표시.";
-"app.whatsNew.improved2" = "업데이트 확인 결과가 최신일 때 문구를 더 명확하게 변경.";
+"app.whatsNew.summary" = "제거가 메뉴 막대 메뉴에서 설정으로 이동했습니다.";
+"app.whatsNew.removed1" = "종료 옆에 있던 제거 항목을 메뉴 막대 메뉴에서 제거.";
+"app.whatsNew.changed1" = "이제 설정의 마지막 창에 있으며, 삭제 전에 확인을 요청합니다.";
 "app.uninstall.item.app" = "앱 및 로그인 항목";
 "app.uninstall.item.settings" = "모든 설정";
 "app.uninstall.item.state" = "저장된 응용 프로그램 상태";
