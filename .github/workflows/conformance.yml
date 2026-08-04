@@ -1,0 +1,39 @@
+name: DragonKit conformance
+
+# Reusable workflow. Each Dragon app calls it from its own CI:
+#
+#   jobs:
+#     conformance:
+#       uses: teddychan/dragon-kit/.github/workflows/conformance.yml@v2
+#
+# Rules live in dragon-kit (CONFORMANCE.md + Scripts/dragon-conformance.py) and only there, so
+# every app picks up new rules with no per-repo copies to drift — the same duplication problem
+# the spec exists to prevent.
+#
+# Deliberately takes no inputs. The kit is always checked out at its default branch, so a rule
+# added today applies to every app's next PR; the `@v2` pin covers this workflow's interface,
+# not the rule set. That also means no untrusted value ever reaches `ref:`.
+on:
+  workflow_call:
+
+jobs:
+  conformance:
+    runs-on: ubuntu-latest
+    steps:
+      # In a reusable workflow `github.repository` is the CALLER, so a bare checkout gets the
+      # app repo at the ref that triggered the PR.
+      - name: Check out the app
+        uses: actions/checkout@v7
+        with:
+          path: app
+
+      # Full history + tags: R10 compares the app's pin against the newest vX.Y.Z tag.
+      - name: Check out dragon-kit
+        uses: actions/checkout@v7
+        with:
+          repository: teddychan/dragon-kit
+          path: kit
+          fetch-depth: 0
+
+      - name: Check conformance
+        run: python3 kit/Scripts/dragon-conformance.py --app app --kit kit
