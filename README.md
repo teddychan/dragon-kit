@@ -38,7 +38,7 @@ Modules:
   `LocalizationManager` + `LanguagePicker` and `.dragonLocalized()`. Ships **7 languages**
   (en, es, fr, ja, ko, zh-Hans, zh-Hant); switches **live, no restart**. Apps add their own
   `Localizable.strings` per language and drop in `LanguagePicker`.
-- **Example/** — the **Dragon Sample App**, a runnable, installable **reference app** wiring up every module end-to-end:
+- **sample-app/** — the **Dragon Sample App**, a runnable, installable **reference app** wiring up every module end-to-end:
   General (real persisted toggles), Permissions, Backup & Restore, What's New, Updates,
   About, Uninstall — plus About, Check-for-Updates, Settings and Quit in the menu.
 
@@ -76,7 +76,7 @@ for following this convention:
 General → (the app's own panes) → Permissions → Sync & Backup → What's New → Updates → About → Uninstall
 ```
 
-The Dragon Sample App (`Example/`) wires its panes up in this order — mirror it in new apps.
+The Dragon Sample App (`sample-app/`) wires its panes up in this order — mirror it in new apps.
 
 ## Menu-bar dropdown order
 
@@ -103,7 +103,7 @@ next to Quit. Every app ships that pane in its sidebar, so uninstalling is still
 
 Apps whose dropdown is only these items use `DragonAppMenu.menu(_:)`; apps with their own
 content above (clipboard history, input-method toggles, …) build that and append
-`DragonAppMenu.items(_:)` after their own separator. The Dragon Sample App (`Example/`) uses
+`DragonAppMenu.items(_:)` after their own separator. The Dragon Sample App (`sample-app/`) uses
 `DragonAppMenu.menu(_:)` — mirror it in new apps.
 
 ## Try it: the Dragon Sample App
@@ -121,7 +121,7 @@ Debug** build (`com.dragonapp.dragon-sample-app.debug`) so it won't collide with
 copy's permissions or settings:
 
 ```bash
-cd Example && ./scripts/run.sh
+cd sample-app && ./scripts/run.sh
 ```
 
 ## Start a new app on DragonKit
@@ -134,7 +134,7 @@ DragonKit is a **published SwiftPM package** — the one place the shared parts 
 Dragon menu-bar app live. **Depend on it; never copy its code into your app.**
 
 1. Read [`docs/STARTING-A-NEW-APP.md`](docs/STARTING-A-NEW-APP.md) (self-contained) and the
-   `Example/` app — `Example/` is the reference wiring for every module.
+   `sample-app/` app — `sample-app/` is the reference wiring for every module.
 2. Create an SPM executable app that depends on `dragon-kit` at a version tag
    (`from: "1.0.0"`). Link `DragonKit`; add `DragonKitUpdates` **only** for
    direct-download (non-Mac-App-Store) apps.
@@ -161,12 +161,12 @@ So, for example, to change the **About pane's layout for every app**, edit `Abou
 `dragon-kit` and release a new tag. To change **one app's About content** (name, links),
 edit that app's `AboutConfig`. And the **version** is itself a single source of truth: read
 it from the app's `Info.plist` (`CFBundleShortVersionString`) — never hardcode it (see
-[`Example/Sources/DragonAppTemplate/AboutConfig.swift`](Example/Sources/DragonAppTemplate/AboutConfig.swift))
+[`sample-app/Sources/DragonAppTemplate/AboutConfig.swift`](sample-app/Sources/DragonAppTemplate/AboutConfig.swift))
 — so About, backups, and update checks all report the same value.
 
 ## Roadmap
 Done: App Settings, Permissions, Backup & Restore, Check for Update, Uninstall (all
-demonstrated in `Example/`). Next: migrate ice-2 / clipmenu-2 onto the kit →
+demonstrated in `sample-app/`). Next: migrate ice-2 / clipmenu-2 onto the kit →
 settings-shell hardening → KeyKey onboarding.
 
 Deferred, deliberately: a generalized **folder-based versioned backup** pane

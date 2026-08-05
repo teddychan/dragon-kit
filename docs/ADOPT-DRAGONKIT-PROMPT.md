@@ -23,8 +23,8 @@ menu-bar app, so each app builds them once and updates them centrally.
 
 FIRST, before writing code, read these (they are the source of truth):
   1. ~/git/dragon-kit/docs/STARTING-A-NEW-APP.md  — self-contained guide + starter files
-  2. ~/git/dragon-kit/Example/  — a runnable reference app wiring up EVERY module
-     end-to-end (esp. Example/Sources/DragonAppTemplate/AppDelegate.swift and the
+  2. ~/git/dragon-kit/sample-app/  — a runnable reference app wiring up EVERY module
+     end-to-end (esp. sample-app/Sources/DragonAppTemplate/AppDelegate.swift and the
      *Config.swift files). Mirror its patterns.
   3. ~/git/dragon-kit/README.md  — module list
 
@@ -54,7 +54,7 @@ Dragon app's Settings sidebar matches (the order is host-owned; the shell just r
 what you give it):
   General → (this app's own panes) → Permissions → Sync & Backup → What's New → Updates → About → Uninstall
 
-Menu-bar wiring to copy from Example/AppDelegate.swift:
+Menu-bar wiring to copy from sample-app/AppDelegate.swift:
   • NSStatusItem menu with localized titles, rebuilt on .dragonLanguageChanged.
   • Host-owned selection so a menu item can open Settings directly on a specific pane
     (e.g. About).
@@ -73,7 +73,7 @@ CONSTRAINTS:
   • Keep this app's existing feature logic intact — only swap the settings/About/What's New/
     Permissions/Backup/Uninstall/Updates/Localization UI over to DragonKit.
 
-Start by reading the docs + Example, then propose a short migration plan (which screens map
+Start by reading the docs + sample-app, then propose a short migration plan (which screens map
 to which modules, what config each needs) before changing code.
 ```
 

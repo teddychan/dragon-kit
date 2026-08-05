@@ -4,7 +4,7 @@ Normative rules every Dragon app must satisfy. The point is narrow and absolute:
 
 > **An app supplies content and app-domain logic. It never re-implements what DragonKit owns.**
 
-Five apps are in scope — `dragon-kit/Example` (Dragon Sample App), `clipmenu-2`, `ice-2`,
+Five apps are in scope — `dragon-kit/sample-app` (Dragon Sample App), `clipmenu-2`, `ice-2`,
 `spectacle-2`, `yahoo-keykey-2`.
 
 These rules are **machine-checked**, not review-enforced. `Scripts/dragon-conformance.py`
