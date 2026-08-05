@@ -13,12 +13,12 @@ jobs:
           fetch-depth: 0   # conformance R10 compares against the newest vX.Y.Z tag
       - name: Build & test DragonKit
         run: swift test
-      - name: Build Example app
-        run: cd Example && swift build
+      - name: Build the sample app
+        run: cd sample-app && swift build
       # The checker is the enforcement mechanism for all five apps, so a broken checker is
       # worse than no checker — it would silently pass everything.
       - name: Test the conformance checker
         run: python3 Scripts/test_conformance.py
       # The sample app is the reference every other app mirrors; it must pass its own spec.
       - name: Check the sample app's conformance
-        run: python3 Scripts/dragon-conformance.py --app Example --kit .
+        run: python3 Scripts/dragon-conformance.py --app sample-app --kit .

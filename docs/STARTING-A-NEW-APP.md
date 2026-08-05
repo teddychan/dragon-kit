@@ -425,7 +425,7 @@ Once the shell runs:
    `DragonSection` / `.dragonAnnotation` for the look so it matches every other Dragon app.
 4. Keep `AboutConfig` / `WhatsNewConfig` updated per release.
 5. App Settings, Permissions, Backup & Restore, Check for Update, and Uninstall now ship
-   in DragonKit (see the cheat-sheet above; the `Example/` app wires up all of them). For
+   in DragonKit (see the cheat-sheet above; the `sample-app/` app wires up all of them). For
    anything DragonKit still doesn't provide, flag it: it should be added to DragonKit and
    consumed, not reimplemented per app.
 

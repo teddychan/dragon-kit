@@ -1,7 +1,7 @@
 .DS_Store
 .build/
 *.xcodeproj
-Example/.build/
+sample-app/.build/
 # SwiftPM lock file — regenerated on build; not tracked for a library package.
 Package.resolved
-Example/Package.resolved
+sample-app/Package.resolved
