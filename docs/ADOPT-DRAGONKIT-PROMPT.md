@@ -122,3 +122,47 @@ output in that plan — it is the machine-readable version of this app's adoptio
   `includeQuit: false` for an IME. These are first-class `DragonAppMenu.Config` parameters —
   the canon's own omission rules, not a reason to hand-roll the menu. (yahoo-keykey-2
   additionally records its Quit omission as a sanctioned §R11 exception.)
+
+---
+
+## Input-method (IMK) & non-SwiftPM apps
+
+The prompt above assumes a SwiftPM/Xcode app with an `NSStatusItem` menu bar. Some Dragon apps
+aren't shaped that way — **yahoo-keykey-2** is an Input Method Kit app built by a hand-rolled
+`swiftc` script, with no `.xcodeproj` and no top-level `Package.swift`. Adapt these four points
+before pasting; none of them is a licence to skip a rule.
+
+- **Menu** — an IMK app has no `NSStatusItem`; its menu comes from `override func menu()` on
+  the `InputMethodServerControllerClass`. That changes where the menu is *hosted*, not what is
+  *in* it: build the app's own input-method items, add a separator, then append
+  `DragonAppMenu.items(DragonAppMenu.Config(…, includeQuit: false))`. §R1 applies to an IMK
+  menu exactly as it does to a status-item one — the lifecycle items still come from the kit.
+  `includeQuit: false` because an IME is quit by the system; quitting it only makes typing
+  unresponsive. **Do not route an Uninstall item into this menu** — §R2 forbids it everywhere,
+  and `DragonAppMenu.Config` has had no such parameter since v2.0.0. Uninstall is
+  `UninstallSettingsPane`, last in the Settings sidebar, for an IME too.
+
+- **Build integration (no SPM graph)** — if the app is built with `swiftc` rather than
+  SPM/Xcode, a remote `.package(url:…, from:…)` line has nothing to resolve it. **Vendor-build
+  DragonKit at a tag**: check out `dragon-kit` at that tag (pinned clone or submodule under a
+  build dir — *not* copied into the app's own sources), compile `DragonKit` / `DragonKitUpdates`
+  to static libs + `.swiftmodule`s the way the app already builds its local packages, and link
+  with `-I` / `-L` / `-l`. Still pinned to a version, still no source copied — which is what
+  §"never fork or re-implement" actually asks for.
+
+- **Declaring that pin (§R10)** — the checker doesn't care that there's no `Package.swift`; it
+  reads whatever file states the version. Point `pin.file` at the build script and anchor
+  `pin.pattern` on the variable that holds the tag, e.g. `DRAGONKIT_TAG="([0-9.]+)"`. Anchor it
+  on something dragon-kit-specific: the pattern is one search over the whole file, so a bare
+  version regex matches whichever dependency appears first — in ice-2's `.pbxproj` that was
+  Sparkle's version, and R10 reported a false PASS against a stale pin.
+
+- **Permissions (§R5)** — don't add a Permissions pane an app doesn't need. An IME receives
+  keystrokes through the IMK server, so it needs no Accessibility or Input-Monitoring grant.
+  Omitting the pane is a *declared* omission, not a silent one: add `"no-permissions"` to
+  `traits` in `.dragon-conformance.json` and R5 stops requiring it. (yahoo-keykey-2 currently
+  records this as a sanctioned §R11 exception instead; either is fine, the trait is tidier.)
+
+- **Distribution** — a third-party input method can't ship on the Mac App Store, so it stays
+  direct-download + Homebrew: link **both** `DragonKit` and `DragonKitUpdates`, and keep
+  Sparkle. The `mac-app-store` trait does not apply; `sparkle` does.
