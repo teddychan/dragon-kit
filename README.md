@@ -1,9 +1,9 @@
 # DragonKit
 
 Shared SwiftUI foundations for [Dragon App](https://www.dragonapp.com) macOS
-menu-bar apps (ice-2, clipmenu-2, KeyKey) — built and updated once.
+menu-bar apps (ice-2, clipmenu-2, spectacle-2, KeyKey) — built and updated once.
 
-## Status: v1.2.0 — uninstall learns about user data
+## Status: v2.1.0 — the canon is machine-checked, and background updates are hookable
 
 Two products in one package:
 
@@ -33,7 +33,11 @@ Modules:
   (`UninstallConfig`) — incl. an optional, default-off "also delete user data" toggle
   (`optionalDataToggle`) and always-removed `extraCleanupPaths` (caches, support files).
 - **Updates** (`DragonKitUpdates`) — `DragonUpdater` (Sparkle wrapper) +
-  `UpdatesSettingsPane`.
+  `UpdatesSettingsPane`. `DragonUpdaterConfig` opts an app into Sparkle's gentle scheduled
+  reminders and an `onUpdateFoundInBackground` callback (fires only for *scheduled* checks —
+  someone who just clicked "Check for Updates…" is already looking at the answer);
+  `DragonUpdater.start()` schedules background checks explicitly instead of relying on a
+  property read to initialize the updater.
 - **Localization** — `L(_:)` (module bundle → app bundle → key) with a runtime
   `LocalizationManager` + `LanguagePicker` and `.dragonLocalized()`. Ships **7 languages**
   (en, es, fr, ja, ko, zh-Hans, zh-Hant); switches **live, no restart**. Apps add their own
@@ -48,8 +52,13 @@ macOS 26+, Swift 6.1.
 ## Use it
 
 ```swift
-.package(url: "https://github.com/teddychan/dragon-kit", from: "1.0.0")
+.package(url: "https://github.com/teddychan/dragon-kit", from: "2.1.0")
 ```
+
+Pin the **newest** `vX.Y.Z` tag, not the oldest one that resolves — [CONFORMANCE.md](CONFORMANCE.md)
+§R10 fails an app whose pin is behind, because a stale pin is how an app silently misses a
+shared fix. `2.0.0` was breaking (`DragonAppMenu.Config` lost `onUninstall`), so a `from: "1.x"`
+pin never picks any of this up.
 
 ```swift
 import DragonKit
@@ -136,8 +145,8 @@ Dragon menu-bar app live. **Depend on it; never copy its code into your app.**
 1. Read [`docs/STARTING-A-NEW-APP.md`](docs/STARTING-A-NEW-APP.md) (self-contained) and the
    `sample-app/` app — `sample-app/` is the reference wiring for every module.
 2. Create an SPM executable app that depends on `dragon-kit` at a version tag
-   (`from: "1.0.0"`). Link `DragonKit`; add `DragonKitUpdates` **only** for
-   direct-download (non-Mac-App-Store) apps.
+   (`from: "2.1.0"` — the newest tag; §R10 fails a stale pin). Link `DragonKit`; add
+   `DragonKitUpdates` **only** for direct-download (non-Mac-App-Store) apps.
 3. Build settings screens as `SettingsPane` conformers using `DragonForm` /
    `DragonSection` / `.dragonAnnotation`.
 4. Supply your app's **content/config** — `AboutContent`, `WhatsNewContent`, a settings
@@ -152,7 +161,11 @@ Two layers, deliberately separated:
 - **Shared behavior lives here, once.** Pane layouts, the settings shell, backup logic,
   the updater, and the uninstall flow are owned by this repo. Fix or improve them **in
   `dragon-kit`**, tag a new version, and every app picks the change up by bumping its
-  dependency (`swift package update`). Apps must not fork or re-implement these.
+  dependency (`swift package update`). Apps must not fork or re-implement these — and since
+  v2.1.0 that is **machine-checked**, not review-enforced: [CONFORMANCE.md](CONFORMANCE.md)
+  states the rules, `Scripts/dragon-conformance.py` implements them, and each app calls
+  [`.github/workflows/conformance.yml`](.github/workflows/conformance.yml) from its own CI so
+  a violation fails the PR. Every rule is a drift that actually happened.
 - **App-specific content is injected by each app.** Your About text, What's New entries,
   settings shape, permission list, and configs are yours — DragonKit renders them but does
   not own them.
@@ -165,9 +178,12 @@ it from the app's `Info.plist` (`CFBundleShortVersionString`) — never hardcode
 — so About, backups, and update checks all report the same value.
 
 ## Roadmap
-Done: App Settings, Permissions, Backup & Restore, Check for Update, Uninstall (all
-demonstrated in `sample-app/`). Next: migrate ice-2 / clipmenu-2 onto the kit →
-settings-shell hardening → KeyKey onboarding.
+Done: App Settings, Permissions, Backup & Restore, Check for Update, Uninstall, What's New,
+7-language live localization, the canonical `DragonAppMenu` dropdown, and the machine-checked
+conformance spec (all demonstrated in `sample-app/`). The migration phase is over: all four
+apps — ice-2, clipmenu-2, spectacle-2, KeyKey — depend on the kit and run
+[`conformance.yml`](.github/workflows/conformance.yml) in their own CI, so re-implementing a
+kit module now fails a PR instead of passing review.
 
 Deferred, deliberately: a generalized **folder-based versioned backup** pane
 (user-picked folder with a security-scoped bookmark, versioned snapshot files,
