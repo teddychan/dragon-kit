@@ -15,7 +15,13 @@ grouped-form design primitives (the canonical look), a reliable settings-window 
 accessory apps, and a localization helper.
 
 - **DragonKit repo:** https://github.com/teddychan/dragon-kit (public, MIT)
-- **Version to depend on:** `1.0.0` (tag), i.e. `.package(url: "https://github.com/teddychan/dragon-kit", from: "1.0.0")`
+- **Version to depend on:** `2.1.0` (tag), i.e. `.package(url: "https://github.com/teddychan/dragon-kit", from: "2.1.0")`
+  — always the **newest** `vX.Y.Z` tag, not the oldest that resolves. `CONFORMANCE.md` §R10
+  fails an app whose pin is behind, because a stale pin is how an app silently misses shared
+  fixes; check `git tag --sort=-v:refname` in the kit before you write the number.
+- **The kit's rules are machine-checked.** `CONFORMANCE.md` is normative and a checker enforces
+  it in your app's CI — read it alongside this guide. The §3 scaffold wires your new app into
+  it and is written to pass.
 - The kit's own design spec + plan live in that repo under `docs/superpowers/` if you want the rationale.
 
 Your job = **scaffold a runnable shell first** (this doc gives you the complete starter files),
@@ -58,7 +64,10 @@ someRow.dragonAnnotation { AnyCaptionView() }                   // view-builder 
 // Conform your panes to this (note: paneBody, NOT body):
 public protocol SettingsPane: Identifiable where ID == String {
     var id: String { get }
-    var title: LocalizedStringKey { get }
+    // A localization KEY, resolved through L() at render time — a String, not a
+    // LocalizedStringKey. L() falls back to the key itself, so a plain "General" renders
+    // as "General" until you add Localizable.strings.
+    var title: String { get }
     var systemImage: String { get }
     associatedtype PaneBody: View
     @MainActor @ViewBuilder var paneBody: PaneBody { get }
@@ -71,6 +80,25 @@ SettingsShell(appName: "My App", panes: [AnySettingsPane], selection: Binding<St
 // Or self-managed (simplest; used by the scaffold below):
 ManagedSettingsShell(appName: "My App", panes: [AnySettingsPane], initialSelection: String? = nil)
 ```
+
+### Menu-bar dropdown — `DragonAppMenu` (**required**, §R1)
+```swift
+statusItem.menu = DragonAppMenu.menu(DragonAppMenu.Config(
+    appName: "My App",
+    onAbout:  { … },
+    onSettings: { … },
+    onCheckForUpdates: { … },   // nil OMITS the item — pass nil for a Mac App Store build
+    includeQuit: true           // false OMITS Quit — an IME is quit by the system
+))
+// Own menu content above the shared items? Build your menu, add your own separator, then:
+myMenu.addItem(.separator()); for item in DragonAppMenu.items(config) { myMenu.addItem(item) }
+```
+Order, titles, casing, ellipses and SF Symbols are **canon, not per-app config** — the kit owns
+them so the menus can't drift the way hand-rolled `NSMenu`s did. Constructing your own
+`NSMenuItem` for About / Check for Updates / Settings / Quit is an §R1 violation and fails CI.
+**Uninstall is deliberately not in this menu** (§R2) and there is no parameter to add it; it
+lives in Settings as `UninstallSettingsPane`, last in the sidebar. Rebuild the menu on
+`.dragonLanguageChanged` so its titles switch language live.
 
 ### Reliable settings window (for LSUIElement apps)
 ```swift
@@ -199,6 +227,8 @@ Structure:
   Resources/Info.plist
   scripts/run.sh
   .gitignore
+  .dragon-conformance.json               # required by CONFORMANCE §R0 — see below
+  .github/workflows/conformance.yml      # calls the kit's reusable workflow — see below
 ```
 
 ### `Package.swift`
@@ -210,7 +240,7 @@ let package = Package(
     name: "<TARGET>",
     platforms: [.macOS("26")],
     dependencies: [
-        .package(url: "https://github.com/teddychan/dragon-kit", from: "1.0.0"),
+        .package(url: "https://github.com/teddychan/dragon-kit", from: "2.1.0"),
     ],
     targets: [
         .executableTarget(
@@ -252,37 +282,105 @@ import DragonKit
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem?
 
+    // Host-owned selection, so a menu item can open Settings directly on a specific pane
+    // (About). `ManagedSettingsShell` keeps selection private and can't be re-targeted after
+    // the window exists, which is why the menu path uses `SettingsShell` instead.
+    private let selection = SettingsSelection()
+
     private lazy var settingsController = DragonSettingsWindowController(
         title: "<APP_DISPLAY> Settings",
-        rootView: ManagedSettingsShell(
+        rootView: SettingsRoot(
             appName: "<APP_DISPLAY>",
+            // Canonical sidebar order. Permissions and Uninstall are NOT optional extras:
+            // §R5 requires both (Permissions only if you don't declare the `no-permissions`
+            // trait), so a scaffold without them fails conformance on its first PR.
             panes: [
                 AnySettingsPane(GeneralPane()),
-                AnySettingsPane(AboutSettingsPane(content: AboutConfig.content)),
+                AnySettingsPane(PermissionsSettingsPane(permissions: [.accessibility()])),
                 AnySettingsPane(WhatsNewSettingsPane(content: WhatsNewConfig.content)),
-            ]
+                AnySettingsPane(AboutSettingsPane(content: AboutConfig.content)),
+                AnySettingsPane(UninstallSettingsPane(config: UninstallConfig(
+                    appName: "<APP_DISPLAY>",
+                    suiteNames: ["<BUNDLE_ID>.settings"],
+                    checklistItems: ["The app and its login item", "All settings"]
+                ))),
+            ],
+            selection: selection
         )
     )
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         item.button?.image = NSImage(systemSymbolName: "sparkles", accessibilityDescription: "<APP_DISPLAY>")
+        // Without an autosave name the item persists anonymously as "Item-0" in whatever
+        // defaults domain launched it, so debug and release builds fight over visibility.
+        item.autosaveName = "<TARGET>StatusItem-<BUNDLE_ID>"
 
-        let menu = NSMenu()
-        let settings = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
-        settings.target = self
-        menu.addItem(settings)
-        menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
-        item.menu = menu
+        item.menu = buildMenu()
         self.statusItem = item
+
+        // Rebuild the menu on a language change so its titles switch live, no restart.
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(languageChanged),
+            name: .dragonLanguageChanged, object: nil
+        )
     }
 
-    @objc private func openSettings() {
+    /// The canonical dropdown — never hand-rolled. §R1 requires these items come from
+    /// `DragonAppMenu`, which owns their order, titles, casing and SF Symbols so every
+    /// Dragon app's menu matches. Uninstall is deliberately absent (§R2).
+    private func buildMenu() -> NSMenu {
+        DragonAppMenu.menu(DragonAppMenu.Config(
+            appName: "<APP_DISPLAY>",
+            onAbout: { [weak self] in self?.openAbout() },
+            onSettings: { [weak self] in self?.openSettings() }
+            // Add `onCheckForUpdates:` once you wire DragonKitUpdates; leaving it nil omits
+            // the item, which is exactly what a Mac App Store build wants.
+        ))
+    }
+
+    @objc private func languageChanged() { statusItem?.menu = buildMenu() }
+
+    @objc private func openSettings() { settingsController.show() }
+
+    // Set the pane BEFORE showing, so it lands on About even on the window's first, lazy open.
+    @objc private func openAbout() {
+        selection.paneID = "about"
         settingsController.show()
     }
 }
+
+/// Host-owned settings selection — the delegate sets `paneID`, the shell renders it.
+@MainActor
+@Observable
+final class SettingsSelection {
+    var paneID: String?
+}
+
+/// Settings root. Observing `LocalizationManager` and applying `.dragonLocalized()` makes the
+/// whole window switch language live; `sample-app/` additionally rebuilds its panes on that
+/// change so injected content (About / What's New) re-localizes too.
+private struct SettingsRoot: View {
+    @ObservedObject private var localization = LocalizationManager.shared
+    let appName: String
+    let panes: [AnySettingsPane]
+    @Bindable var selection: SettingsSelection
+
+    var body: some View {
+        SettingsShell(appName: appName, panes: panes, selection: $selection.paneID)
+            .dragonLocalized()
+    }
+}
 ```
+
+> Pane order matters: `General → (your panes) → Permissions → Sync & Backup → What's New →
+> Updates → About → Uninstall` is canon and §R9 checks it. The scaffold ships five of those
+> slots in that relative order; slot Sync & Backup and Updates in as you add them.
+>
+> Swap `.accessibility()` for the permission your app actually needs. If it genuinely needs
+> none — an IME receives keystrokes via the IMK server, for instance — drop the pane and add
+> `"no-permissions"` to `traits` in `.dragon-conformance.json`, so the omission is a stated
+> fact the checker can see rather than a silent gap.
 
 ### `Sources/<TARGET>/GeneralPane.swift` (your first app pane — replace the placeholder body with real settings)
 ```swift
@@ -291,7 +389,7 @@ import DragonKit
 
 struct GeneralPane: SettingsPane {
     let id = "general"
-    let title: LocalizedStringKey = "General"
+    let title = "General"          // a localization key; L() falls back to the literal
     let systemImage = "gearshape"
 
     var paneBody: some View {
@@ -406,11 +504,47 @@ echo "Launched $APP"
 Package.resolved
 ```
 
+### `.dragon-conformance.json` (repo root — required by §R0)
+Without this file the app is in violation by definition: the checker can't find your sources,
+and a missing config had to count as a failure or deleting it would be the easiest way to pass.
+```jsonc
+{
+  "app": "<APP_DISPLAY>",
+  "sources": ["Sources"],
+  "strings": ["Sources/**/*.lproj/Localizable.strings"],
+  "pin": {
+    "file": "Package.swift",
+    // MUST anchor on dragon-kit: the pattern is one search over the whole file, so an
+    // unanchored version regex matches whichever dependency appears first. That is a live
+    // trap — in ice-2's .pbxproj it matched Sparkle's version and reported a false PASS.
+    "pattern": "dragon-kit\", from: \"([0-9.]+)\""
+  },
+  "paneOrder": { "file": "Sources/<TARGET>/AppDelegate.swift" },
+  "traits": [],          // add "sparkle" when you link DragonKitUpdates; "mac-app-store" for a MAS target
+  "exceptions": []       // §R11 — each needs a `reason` and a `sanctionedBy`
+}
+```
+
+### `.github/workflows/conformance.yml`
+```yaml
+name: DragonKit conformance
+on: pull_request
+jobs:
+  conformance:
+    uses: teddychan/dragon-kit/.github/workflows/conformance.yml@main
+```
+`@main` is deliberate and is what every Dragon app uses — the workflow reads the kit at its
+default branch for the rules anyway, so a tag pin would freeze the interface while the rules
+moved. Rules live in dragon-kit and only there, so you get every future rule for free.
+
 ### Verify the scaffold
 ```bash
 cd ~/git/<APP_DIR>
 swift build            # expect: Build complete!
-./scripts/run.sh       # ✦ menu-bar icon appears → Settings… shows General / About / What's New; Quit works
+./scripts/run.sh       # ✦ menu-bar icon appears → About / Settings… / Quit; Settings shows
+                       #   General / Permissions / What's New / About / Uninstall
+python3 ~/git/dragon-kit/Scripts/dragon-conformance.py --app . --kit ~/git/dragon-kit
+                       # expect: PASS — no violations
 ```
 
 ---
@@ -428,15 +562,24 @@ Once the shell runs:
    in DragonKit (see the cheat-sheet above; the `sample-app/` app wires up all of them). For
    anything DragonKit still doesn't provide, flag it: it should be added to DragonKit and
    consumed, not reimplemented per app.
+6. Keep the pin current. §R10 fails a pin behind the newest kit tag, and that is the whole
+   point — every app once sat on 1.3.0 while the kit was at 1.4.0, so none of them had the
+   shared menu at all.
 
 ## 5. Gotchas
 - Use `paneBody` (not `body`) in `SettingsPane` conformers.
+- `SettingsPane.title` is a `String` localization key resolved via `L()`, **not** a
+  `LocalizedStringKey`. It changed in v1.1.0 (live localization) and this guide was not
+  updated, so for a month the starter pane it shipped did not conform to `SettingsPane` and
+  failed to compile. The scaffold above is now compile-verified against the kit.
+- Never build an `NSMenuItem` for About / Check for Updates / Settings / Quit — §R1. Use
+  `DragonAppMenu`, and note there is no way to add Uninstall to the menu (§R2), by design.
 - `List` selection: DragonKit already handles optional-selection tags; you only supply panes.
 - `@main` + `@MainActor static func main()` — do **not** add a `main.swift` (they conflict).
 - SwiftPM identity: the product is `.product(name: "DragonKit", package: "dragon-kit")`
   (identity = repo name `dragon-kit`).
-- If `from: "1.0.0"` can't resolve, confirm the tag exists on the repo and your network/gh access.
+- If `from: "2.1.0"` can't resolve, confirm the tag exists on the repo and your network/gh access.
 
 ---
 
-*DragonKit v1.0.0 · this guide lives at `docs/STARTING-A-NEW-APP.md` in the dragon-kit repo.*
+*DragonKit v2.1.0 · this guide lives at `docs/STARTING-A-NEW-APP.md` in the dragon-kit repo.*
