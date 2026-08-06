@@ -63,7 +63,7 @@ modules, supplying only this app's own content/config. Use:
 Settings pane (sidebar) order — list panes in settingsPanes in this order, so every
 Dragon app's Settings sidebar matches (the order is host-owned; the shell just renders
 what you give it):
-  General → (this app's own panes) → Permissions → Sync & Backup → What's New → Updates → About → Uninstall
+  General → (this app's own panes) → Permissions → Backup & Restore → What's New → Updates → About → Uninstall
 
 Menu-bar wiring to copy from sample-app/AppDelegate.swift:
   • NSStatusItem whose menu is built by DragonAppMenu.menu(...) — NOT a hand-rolled NSMenu.

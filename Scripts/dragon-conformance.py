@@ -35,7 +35,15 @@ KIT_OWNED_LITERAL_KEYS = [
 CANONICAL_PANE_SLOTS = [
     ("General", ("GeneralPane", "general")),
     ("Permissions", ("PermissionsSettingsPane", "PermissionsPane", "permissions")),
-    ("Backup", ("BackupSettingsPane", "backup")),
+    # `SyncBackupPane`/`syncBackup` is clipmenu-2's own backup pane, sanctioned under §R11
+    # (iCloud sync + versioned folder backup, because DragonBackup is UserDefaults-suite only).
+    # Without those spellings the slot was never *seen* for the one app that diverges — and R9
+    # compares only the slots it saw, so clipmenu-2's backup pane could sit anywhere in the
+    # order and the rule still printed PASS. Verified: `\bbackup\b` does not match
+    # `SyncBackupPane` (no word boundary, wrong case), and clipmenu-2 passed R9 with this slot
+    # entirely unchecked. A checker that silently skips the app it exists to check is exactly
+    # the failure this spec was written to prevent.
+    ("Backup", ("BackupSettingsPane", "backup", "SyncBackupPane", "syncBackup")),
     ("What's New", ("WhatsNewSettingsPane", "WhatsNewPane", "whatsNew")),
     ("Updates", ("UpdatesSettingsPane", "updates")),
     ("About", ("AboutSettingsPane", "AboutPane", "about")),

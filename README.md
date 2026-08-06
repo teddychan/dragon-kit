@@ -100,7 +100,7 @@ the order the app puts them in its `settingsPanes` list, so each app is responsi
 for following this convention:
 
 ```
-General → (the app's own panes) → Permissions → Sync & Backup → What's New → Updates → About → Uninstall
+General → (the app's own panes) → Permissions → Backup & Restore → What's New → Updates → About → Uninstall
 ```
 
 The Dragon Sample App (`sample-app/`) wires its panes up in this order — mirror it in new apps.
