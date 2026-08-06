@@ -35,6 +35,10 @@ public struct AboutPane: View {
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(width: 128, height: 128)
+                    // Purely decorative: the app name is the next element down as real text, so
+                    // letting VoiceOver announce the icon as well only adds a stop that repeats
+                    // what the following line already says.
+                    .accessibilityHidden(true)
             }
             Text(content.appName)
                 .font(.largeTitle)

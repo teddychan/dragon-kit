@@ -22,11 +22,13 @@
 "DragonKit.permissions.openSettings" = "打开系统设置";
 "DragonKit.permissions.refresh" = "刷新";
 "DragonKit.permissions.refreshHint" = "重新检查上方的权限状态。";
+"DragonKit.permission.accessibility.title" = "辅助功能";
+"DragonKit.permission.accessibility.detail" = "观察并控制其他应用的界面元素。";
+"DragonKit.permission.screenRecording.title" = "屏幕录制";
+"DragonKit.permission.screenRecording.detail" = "捕捉屏幕上的内容。";
 
 "DragonKit.backup.folderSection" = "备份文件夹";
 "DragonKit.backup.choose" = "选择…";
-"DragonKit.backup.autoOnQuit" = "退出时自动备份";
-"DragonKit.backup.autoOnQuitHint" = "每次退出应用时写入一份新备份。";
 "DragonKit.backup.backupsSection" = "备份";
 "DragonKit.backup.now" = "立即备份";
 "DragonKit.backup.reveal" = "在访达中显示";
@@ -34,6 +36,9 @@
 "DragonKit.backup.restore" = "恢复";
 "DragonKit.backup.restoreConfirmTitle" = "恢复此备份？";
 "DragonKit.backup.restoreConfirmMessage" = "你当前的设置将被替换，应用将重新启动。";
+"DragonKit.backup.deleteAccessibility" = "删除备份 %@";
+"DragonKit.backup.unchangedTitle" = "无需备份";
+"DragonKit.backup.unchangedMessage" = "自上次备份以来你的设置没有变化，因此未创建新备份。";
 "DragonKit.backup.errorTitle" = "备份错误";
 
 "DragonKit.uninstall.section" = "卸载";
@@ -41,6 +46,8 @@
 "DragonKit.uninstall.body" = "%@ 将退出并彻底移除自身。这将删除：";
 "DragonKit.uninstall.permissionsNote" = "你授予的权限需由你在系统设置 ▸ 隐私与安全性中移除——macOS 不允许应用撤销这些权限。此操作无法撤销。";
 "DragonKit.uninstall.confirm" = "卸载";
+"DragonKit.uninstall.failedTitle" = "卸载未完成";
+"DragonKit.uninstall.failedMessage" = "无法将 %@ 移到废纸篓。它的设置和登录项已被移除，但应用本身仍未删除——请你自行将它移到废纸篓。";
 
 "DragonKit.updates.autoCheck" = "自动检查更新";
 "DragonKit.updates.autoDownload" = "自动下载更新";
@@ -60,3 +67,14 @@
 "DragonKit.menu.checkForUpdates" = "检查更新…";
 "DragonKit.menu.settings" = "设置…";
 "DragonKit.menu.quit" = "退出 %@";
+
+"DragonKit.mainMenu.edit" = "编辑";
+"DragonKit.mainMenu.undo" = "撤销";
+"DragonKit.mainMenu.redo" = "重做";
+"DragonKit.mainMenu.cut" = "剪切";
+"DragonKit.mainMenu.copy" = "拷贝";
+"DragonKit.mainMenu.paste" = "粘贴";
+"DragonKit.mainMenu.selectAll" = "全选";
+"DragonKit.mainMenu.window" = "窗口";
+"DragonKit.mainMenu.close" = "关闭";
+"DragonKit.mainMenu.minimize" = "最小化";

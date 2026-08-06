@@ -22,11 +22,13 @@
 "DragonKit.permissions.openSettings" = "시스템 설정 열기";
 "DragonKit.permissions.refresh" = "새로 고침";
 "DragonKit.permissions.refreshHint" = "위의 권한 상태를 다시 확인합니다.";
+"DragonKit.permission.accessibility.title" = "손쉬운 사용";
+"DragonKit.permission.accessibility.detail" = "다른 앱의 인터페이스 요소를 관찰하고 제어합니다.";
+"DragonKit.permission.screenRecording.title" = "화면 기록";
+"DragonKit.permission.screenRecording.detail" = "화면의 내용을 캡처합니다.";
 
 "DragonKit.backup.folderSection" = "백업 폴더";
 "DragonKit.backup.choose" = "선택…";
-"DragonKit.backup.autoOnQuit" = "종료 시 자동으로 백업";
-"DragonKit.backup.autoOnQuitHint" = "앱을 종료할 때마다 새 백업을 저장합니다.";
 "DragonKit.backup.backupsSection" = "백업";
 "DragonKit.backup.now" = "지금 백업";
 "DragonKit.backup.reveal" = "Finder에서 보기";
@@ -34,6 +36,9 @@
 "DragonKit.backup.restore" = "복원";
 "DragonKit.backup.restoreConfirmTitle" = "이 백업을 복원하시겠습니까?";
 "DragonKit.backup.restoreConfirmMessage" = "현재 설정이 대체되고 앱이 다시 시작됩니다.";
+"DragonKit.backup.deleteAccessibility" = "백업 %@ 삭제";
+"DragonKit.backup.unchangedTitle" = "백업할 항목 없음";
+"DragonKit.backup.unchangedMessage" = "마지막 백업 이후 설정이 변경되지 않아 새 백업을 생성하지 않았습니다.";
 "DragonKit.backup.errorTitle" = "백업 오류";
 
 "DragonKit.uninstall.section" = "제거";
@@ -41,6 +46,8 @@
 "DragonKit.uninstall.body" = "%@이(가) 종료되고 완전히 삭제됩니다. 다음 항목이 삭제됩니다:";
 "DragonKit.uninstall.permissionsNote" = "부여한 권한은 시스템 설정 ▸ 개인정보 보호 및 보안에서 직접 제거해야 합니다. macOS는 앱이 권한을 취소하도록 허용하지 않습니다. 이 작업은 취소할 수 없습니다.";
 "DragonKit.uninstall.confirm" = "제거";
+"DragonKit.uninstall.failedTitle" = "제거가 완료되지 않음";
+"DragonKit.uninstall.failedMessage" = "%@을(를) 휴지통으로 옮기지 못했습니다. 설정과 로그인 항목은 삭제되었지만 앱은 아직 설치되어 있습니다. 직접 휴지통으로 옮기세요.";
 
 "DragonKit.updates.autoCheck" = "자동으로 업데이트 확인";
 "DragonKit.updates.autoDownload" = "자동으로 업데이트 다운로드";
@@ -60,3 +67,14 @@
 "DragonKit.menu.checkForUpdates" = "업데이트 확인…";
 "DragonKit.menu.settings" = "설정…";
 "DragonKit.menu.quit" = "%@ 종료";
+
+"DragonKit.mainMenu.edit" = "편집";
+"DragonKit.mainMenu.undo" = "실행 취소";
+"DragonKit.mainMenu.redo" = "다시 실행";
+"DragonKit.mainMenu.cut" = "오려두기";
+"DragonKit.mainMenu.copy" = "복사하기";
+"DragonKit.mainMenu.paste" = "붙여넣기";
+"DragonKit.mainMenu.selectAll" = "전체 선택";
+"DragonKit.mainMenu.window" = "윈도우";
+"DragonKit.mainMenu.close" = "닫기";
+"DragonKit.mainMenu.minimize" = "최소화";

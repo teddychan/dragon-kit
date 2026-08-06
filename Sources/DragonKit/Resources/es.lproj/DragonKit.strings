@@ -22,11 +22,13 @@
 "DragonKit.permissions.openSettings" = "Abrir Ajustes del Sistema";
 "DragonKit.permissions.refresh" = "Actualizar";
 "DragonKit.permissions.refreshHint" = "Vuelve a comprobar los estados de permisos anteriores.";
+"DragonKit.permission.accessibility.title" = "Accesibilidad";
+"DragonKit.permission.accessibility.detail" = "Observar y controlar los elementos de la interfaz de otras apps.";
+"DragonKit.permission.screenRecording.title" = "Grabación de pantalla";
+"DragonKit.permission.screenRecording.detail" = "Capturar el contenido de la pantalla.";
 
 "DragonKit.backup.folderSection" = "Carpeta de copias";
 "DragonKit.backup.choose" = "Elegir…";
-"DragonKit.backup.autoOnQuit" = "Hacer copia automáticamente al salir";
-"DragonKit.backup.autoOnQuitHint" = "Guarda una copia nueva cada vez que se cierra la app.";
 "DragonKit.backup.backupsSection" = "Copias de seguridad";
 "DragonKit.backup.now" = "Hacer copia ahora";
 "DragonKit.backup.reveal" = "Mostrar en el Finder";
@@ -34,6 +36,9 @@
 "DragonKit.backup.restore" = "Restaurar";
 "DragonKit.backup.restoreConfirmTitle" = "¿Restaurar esta copia?";
 "DragonKit.backup.restoreConfirmMessage" = "Se reemplazarán tus ajustes actuales y la app se reiniciará.";
+"DragonKit.backup.deleteAccessibility" = "Eliminar copia %@";
+"DragonKit.backup.unchangedTitle" = "No hay nada que copiar";
+"DragonKit.backup.unchangedMessage" = "Tus ajustes no han cambiado desde la última copia, así que no se ha creado ninguna copia nueva.";
 "DragonKit.backup.errorTitle" = "Error de copia";
 
 "DragonKit.uninstall.section" = "Desinstalar";
@@ -41,6 +46,8 @@
 "DragonKit.uninstall.body" = "%@ se cerrará y se eliminará por completo. Esto eliminará:";
 "DragonKit.uninstall.permissionsNote" = "Los permisos que hayas concedido debes eliminarlos tú en Ajustes del Sistema ▸ Privacidad y seguridad; macOS no permite que la app los revoque. Esto no se puede deshacer.";
 "DragonKit.uninstall.confirm" = "Desinstalar";
+"DragonKit.uninstall.failedTitle" = "Desinstalación incompleta";
+"DragonKit.uninstall.failedMessage" = "No se ha podido mover %@ a la Papelera. Se han eliminado sus ajustes y su ítem de inicio de sesión, pero la app sigue instalada; muévela tú a la Papelera.";
 
 "DragonKit.updates.autoCheck" = "Buscar actualizaciones automáticamente";
 "DragonKit.updates.autoDownload" = "Descargar actualizaciones automáticamente";
@@ -60,3 +67,14 @@
 "DragonKit.menu.checkForUpdates" = "Buscar actualizaciones…";
 "DragonKit.menu.settings" = "Ajustes…";
 "DragonKit.menu.quit" = "Salir de %@";
+
+"DragonKit.mainMenu.edit" = "Edición";
+"DragonKit.mainMenu.undo" = "Deshacer";
+"DragonKit.mainMenu.redo" = "Rehacer";
+"DragonKit.mainMenu.cut" = "Cortar";
+"DragonKit.mainMenu.copy" = "Copiar";
+"DragonKit.mainMenu.paste" = "Pegar";
+"DragonKit.mainMenu.selectAll" = "Seleccionar todo";
+"DragonKit.mainMenu.window" = "Ventana";
+"DragonKit.mainMenu.close" = "Cerrar";
+"DragonKit.mainMenu.minimize" = "Minimizar";
