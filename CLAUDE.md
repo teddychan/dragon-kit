@@ -50,7 +50,7 @@ order, titles, casing, ellipses and SF Symbols. Uninstall is deliberately absent
 there is no flag to put it back. The settings sidebar order is:
 
 ```
-General → (the app's own panes) → Permissions → Sync & Backup → What's New → Updates → About → Uninstall
+General → (the app's own panes) → Permissions → Backup & Restore → What's New → Updates → About → Uninstall
 ```
 
 Changing any of this changes the UI of every Dragon app simultaneously, so it moves together

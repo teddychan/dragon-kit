@@ -274,6 +274,38 @@ enum SettingsNavigationIdentifier: String {
     case uninstall = "Uninstall"
 }
 """}, config_over={"paneOrder": {"file": "Sources/Nav.swift"}}), "R9")
+        # An app may ship its OWN backup pane under §R11 — clipmenu-2's `SyncBackupPane` adds
+        # iCloud sync and versioned folder backup, which DragonBackup deliberately doesn't do.
+        # It is still bound by R9's *position*. This was a live hole, not a hypothetical: the
+        # slot's spellings were only `BackupSettingsPane`/`backup`, and `\bbackup\b` matches
+        # neither `SyncBackupPane` (no word boundary, wrong case) — so R9 never saw the slot,
+        # and since it compares only the slots it saw, clipmenu-2 passed with its backup pane
+        # free to sit anywhere in the sidebar. The rule reported PASS on the one app it most
+        # needed to check, which is the silent-checker failure this whole spec exists to stop.
+        def panes_with_backup_named(decl: str, ahead_of_permissions: bool = False) -> str:
+            backup = f"AnySettingsPane({decl}),"
+            order = [
+                "AnySettingsPane(GeneralPane()),",
+                "AnySettingsPane(PermissionsSettingsPane(permissions: [.accessibility()])),",
+                backup,
+                "AnySettingsPane(WhatsNewSettingsPane(content: .init(version: \"v1\", date: \"d\","
+                " summary: \"s\", sections: []))),",
+                "AnySettingsPane(UpdatesSettingsPane(updater: updater)),",
+                "AnySettingsPane(AboutSettingsPane(content: AboutConfig.content)),",
+                "AnySettingsPane(UninstallSettingsPane(config: UninstallConfig(appName: \"T\"))),",
+            ]
+            if ahead_of_permissions:  # the drift R9 must catch
+                order.remove(backup)
+                order.insert(1, backup)
+            body = "\n".join("            " + line for line in order)
+            return ("import SwiftUI\nimport DragonKit\n\n@MainActor\nenum Panes {\n"
+                    "    static func all(updater: DragonUpdater) -> [AnySettingsPane] {\n"
+                    "        [\n" + body + "\n        ]\n    }\n}\n")
+
+        expect_pass("app's own SyncBackupPane, in the canonical slot", make_app(
+            tmp, panes=panes_with_backup_named("SyncBackupPane()")))
+        expect_violation("app's own SyncBackupPane, ahead of Permissions", make_app(
+            tmp, panes=panes_with_backup_named("SyncBackupPane()", ahead_of_permissions=True)), "R9")
 
         print("R10 — pin must be current")
         expect_violation("stale pin", make_app(tmp, package=(

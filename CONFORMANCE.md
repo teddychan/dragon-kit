@@ -170,12 +170,25 @@ key is dead weight that merely *looks* authoritative.
 ## R9 — Settings pane order matches the canon
 
 ```
-General → (the app's own panes) → Permissions → Sync & Backup → What's New → Updates → About → Uninstall
+General → (the app's own panes) → Permissions → Backup & Restore → What's New → Updates → About → Uninstall
 ```
 
 The checker extracts kit pane identifiers in declaration order from the file named by
 `paneOrder` and requires their **relative** order to match. App-specific panes anywhere
 between General and Permissions are fine.
+
+Each slot is matched on the **pane identifier**, never on its display title — so a slot is
+satisfied by `BackupSettingsPane` (which the kit titles "Backup & Restore") *or* by an app's
+sanctioned equivalent in the same position: clipmenu-2 ships `SyncBackupPane` ("Sync & Backup")
+there under §R11. The canon line names what the kit itself ships; a sanctioned divergence sits
+in the same slot and is listed in §R11, not renamed in the canon.
+
+**Rationale:** the canon line used to read "Sync & Backup" — clipmenu-2's name for it — while
+the kit's own pane is titled "Backup & Restore" and the checker's slot spellings recognized
+only `BackupSettingsPane`/`backup`. So the one app whose pane is named differently had this
+slot **silently unchecked**: `\bbackup\b` doesn't match `SyncBackupPane`, R9 compares only the
+slots it actually saw, and clipmenu-2 passed with its backup pane free to sit anywhere in the
+order. Three names for one slot, and the gap was in the app the rule most needed to cover.
 
 ## R10 — The DragonKit pin is current
 
