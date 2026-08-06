@@ -19,19 +19,37 @@ Modules:
   deliberately excluded — it lives in Settings.
 - **Settings** — `SettingsShell` (host-owned selection) + `ManagedSettingsShell`;
   `DragonSettingsWindowController` opens it reliably for accessory apps; modules
-  conform to `SettingsPane`.
+  conform to `SettingsPane`. It also installs a minimal menu bar while the window is open —
+  an accessory app going `.regular` with no `NSApp.mainMenu` shows an *empty* one, costing
+  ⌘W, ⌘Q and every pasteboard shortcut in a settings text field. Pass
+  `installsMainMenu: false` to opt out; an app that already owns a main menu keeps it.
 - **App Settings** — `DragonSettingsStore<Value>` (Codable persistence in a UserDefaults
-  suite) + `LoginItem` (launch at login via `SMAppService`).
+  suite) + `LoginItem` (launch at login via `SMAppService`). `load()` **migrates** a blob
+  written before the app's settings type gained a field, rather than resetting to defaults:
+  Swift's synthesized `Decodable` throws on a missing key, so a strict decode meant adding one
+  setting silently wiped every preference on upgrade. A blob that still can't be read is
+  preserved under `<key>.unreadable` instead of being dropped.
 - **About** — `AboutContent` + `AboutPane` / `AboutSettingsPane`.
 - **What's New** — release-notes pane: `WhatsNewContent` / `ChangeSection` (Added /
   Changed / Fixed …) + `WhatsNewPane` / `WhatsNewSettingsPane`.
 - **Permissions** — `DragonPermission` (+ `.accessibility()` / `.screenRecording()`) +
-  `PermissionsSettingsPane` (live status, Open System Settings).
+  `PermissionsSettingsPane` (Open System Settings; status refreshes on a ~1s cadence **while
+  the app is active**, and immediately on becoming active — the grant happens over in System
+  Settings, so polling in the background was pure TCC traffic nobody was looking at). The two
+  kit factories supply localization keys, so their titles and details render in all 7
+  languages; an app-supplied literal still works, because `L()` falls back to the key.
 - **Backup & Restore** — `DragonBackup` (snapshot/restore a UserDefaults suite) +
-  `BackupSettingsPane` (`BackupConfig`).
+  `BackupSettingsPane` (`BackupConfig`). `writeBackupIfChanged` returns `.unchanged` rather
+  than writing a duplicate when nothing has changed since the newest backup — the pane says so
+  instead of silently no-opping, and ten redundant files can't push the last genuinely
+  different snapshot out of the retention window. `restore` refuses a file that isn't a backup,
+  or one taken from another suite; both used to *erase* the suite instead. The pane keeps the
+  chosen folder as a security-scoped bookmark so it survives relaunch under App Sandbox.
 - **Uninstall** — `DragonUninstaller` + `UninstallView` / `UninstallSettingsPane`
   (`UninstallConfig`) — incl. an optional, default-off "also delete user data" toggle
-  (`optionalDataToggle`) and always-removed `extraCleanupPaths` (caches, support files).
+  (`optionalDataToggle`) and always-removed `extraCleanupPaths` (caches, support files). A
+  failed Trash move is reported to the user instead of quitting as though it had worked — the
+  settings teardown before it is irreversible.
 - **Updates** (`DragonKitUpdates`) — `DragonUpdater` (Sparkle wrapper) +
   `UpdatesSettingsPane`. `DragonUpdaterConfig` opts an app into Sparkle's gentle scheduled
   reminders and an `onUpdateFoundInBackground` callback (fires only for *scheduled* checks —
@@ -186,10 +204,14 @@ apps — ice-2, clipmenu-2, spectacle-2, KeyKey — depend on the kit and run
 kit module now fails a PR instead of passing review.
 
 Deferred, deliberately: a generalized **folder-based versioned backup** pane
-(user-picked folder with a security-scoped bookmark, versioned snapshot files,
-retention, restore list — the shape clipmenu-2 ships app-side). Generalize it here
-only when a second app (KeyKey / ice-2) needs that same shape; until then
-`DragonBackup` stays UserDefaults-suite-only.
+(versioned snapshot files of arbitrary app data, retention, restore list — the shape
+clipmenu-2 ships app-side). Generalize it here only when a second app (KeyKey / ice-2)
+needs that same shape; until then `DragonBackup` stays UserDefaults-suite-only.
+
+The settings pane's *own* user-picked folder now carries a security-scoped bookmark, so the
+folder it already had survives relaunch under App Sandbox. That is not this deferral being
+reversed: `DragonBackup` still snapshots one UserDefaults suite and still knows nothing about
+folders-as-a-shape.
 
 ## License
 MIT.

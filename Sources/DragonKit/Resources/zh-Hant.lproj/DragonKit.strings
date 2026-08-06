@@ -22,11 +22,13 @@
 "DragonKit.permissions.openSettings" = "打開系統設定";
 "DragonKit.permissions.refresh" = "重新整理";
 "DragonKit.permissions.refreshHint" = "重新檢查上方的權限狀態。";
+"DragonKit.permission.accessibility.title" = "輔助使用";
+"DragonKit.permission.accessibility.detail" = "觀察並控制其他 App 的介面元件。";
+"DragonKit.permission.screenRecording.title" = "螢幕錄製";
+"DragonKit.permission.screenRecording.detail" = "擷取螢幕上的內容。";
 
 "DragonKit.backup.folderSection" = "備份檔案夾";
 "DragonKit.backup.choose" = "選擇…";
-"DragonKit.backup.autoOnQuit" = "結束時自動備份";
-"DragonKit.backup.autoOnQuitHint" = "每次結束 App 時寫入一份新備份。";
 "DragonKit.backup.backupsSection" = "備份";
 "DragonKit.backup.now" = "立即備份";
 "DragonKit.backup.reveal" = "在 Finder 中顯示";
@@ -34,6 +36,9 @@
 "DragonKit.backup.restore" = "還原";
 "DragonKit.backup.restoreConfirmTitle" = "還原此備份？";
 "DragonKit.backup.restoreConfirmMessage" = "你目前的設定將被取代，App 將重新啟動。";
+"DragonKit.backup.deleteAccessibility" = "刪除備份 %@";
+"DragonKit.backup.unchangedTitle" = "無需備份";
+"DragonKit.backup.unchangedMessage" = "自上次備份以來你的設定沒有變更，因此未建立新的備份。";
 "DragonKit.backup.errorTitle" = "備份錯誤";
 
 "DragonKit.uninstall.section" = "解除安裝";
@@ -41,6 +46,8 @@
 "DragonKit.uninstall.body" = "%@ 將結束並徹底移除自身。這將刪除：";
 "DragonKit.uninstall.permissionsNote" = "你授予的權限需由你在系統設定 ▸ 隱私權與安全性中移除——macOS 不允許 App 撤銷這些權限。此操作無法復原。";
 "DragonKit.uninstall.confirm" = "解除安裝";
+"DragonKit.uninstall.failedTitle" = "解除安裝未完成";
+"DragonKit.uninstall.failedMessage" = "無法將 %@ 移到垃圾桶。它的設定和登入項目已被移除，但 App 本身仍未刪除——請你自行將它移到垃圾桶。";
 
 "DragonKit.updates.autoCheck" = "自動檢查更新";
 "DragonKit.updates.autoDownload" = "自動下載更新";
@@ -60,3 +67,14 @@
 "DragonKit.menu.checkForUpdates" = "檢查更新…";
 "DragonKit.menu.settings" = "設定…";
 "DragonKit.menu.quit" = "結束 %@";
+
+"DragonKit.mainMenu.edit" = "編輯";
+"DragonKit.mainMenu.undo" = "還原";
+"DragonKit.mainMenu.redo" = "重做";
+"DragonKit.mainMenu.cut" = "剪下";
+"DragonKit.mainMenu.copy" = "拷貝";
+"DragonKit.mainMenu.paste" = "貼上";
+"DragonKit.mainMenu.selectAll" = "全選";
+"DragonKit.mainMenu.window" = "視窗";
+"DragonKit.mainMenu.close" = "關閉";
+"DragonKit.mainMenu.minimize" = "縮到最小";

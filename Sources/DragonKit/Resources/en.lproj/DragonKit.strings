@@ -22,11 +22,13 @@
 "DragonKit.permissions.openSettings" = "Open System Settings";
 "DragonKit.permissions.refresh" = "Refresh";
 "DragonKit.permissions.refreshHint" = "Re-checks the permission statuses above.";
+"DragonKit.permission.accessibility.title" = "Accessibility";
+"DragonKit.permission.accessibility.detail" = "Observe and control other apps' interface elements.";
+"DragonKit.permission.screenRecording.title" = "Screen Recording";
+"DragonKit.permission.screenRecording.detail" = "Capture the contents of the screen.";
 
 "DragonKit.backup.folderSection" = "Backup Folder";
 "DragonKit.backup.choose" = "Choose…";
-"DragonKit.backup.autoOnQuit" = "Back up automatically on quit";
-"DragonKit.backup.autoOnQuitHint" = "Write a fresh backup each time the app quits.";
 "DragonKit.backup.backupsSection" = "Backups";
 "DragonKit.backup.now" = "Back Up Now";
 "DragonKit.backup.reveal" = "Reveal in Finder";
@@ -34,6 +36,9 @@
 "DragonKit.backup.restore" = "Restore";
 "DragonKit.backup.restoreConfirmTitle" = "Restore this backup?";
 "DragonKit.backup.restoreConfirmMessage" = "Your current settings will be replaced and the app will relaunch.";
+"DragonKit.backup.deleteAccessibility" = "Delete backup %@";
+"DragonKit.backup.unchangedTitle" = "Nothing to Back Up";
+"DragonKit.backup.unchangedMessage" = "Your settings haven't changed since the last backup, so no new backup was created.";
 "DragonKit.backup.errorTitle" = "Backup Error";
 
 "DragonKit.uninstall.section" = "Uninstall";
@@ -41,6 +46,8 @@
 "DragonKit.uninstall.body" = "%@ will quit and remove itself completely. This will delete:";
 "DragonKit.uninstall.permissionsNote" = "Any permissions you granted must be removed by you in System Settings ▸ Privacy & Security — macOS does not let the app revoke them. This cannot be undone.";
 "DragonKit.uninstall.confirm" = "Uninstall";
+"DragonKit.uninstall.failedTitle" = "Uninstall Incomplete";
+"DragonKit.uninstall.failedMessage" = "%@ could not be moved to the Trash. Its settings and login item have been removed, but the app is still installed — move it to the Trash yourself.";
 
 "DragonKit.updates.autoCheck" = "Automatically check for updates";
 "DragonKit.updates.autoDownload" = "Automatically download updates";
@@ -60,3 +67,14 @@
 "DragonKit.menu.checkForUpdates" = "Check for Updates…";
 "DragonKit.menu.settings" = "Settings…";
 "DragonKit.menu.quit" = "Quit %@";
+
+"DragonKit.mainMenu.edit" = "Edit";
+"DragonKit.mainMenu.undo" = "Undo";
+"DragonKit.mainMenu.redo" = "Redo";
+"DragonKit.mainMenu.cut" = "Cut";
+"DragonKit.mainMenu.copy" = "Copy";
+"DragonKit.mainMenu.paste" = "Paste";
+"DragonKit.mainMenu.selectAll" = "Select All";
+"DragonKit.mainMenu.window" = "Window";
+"DragonKit.mainMenu.close" = "Close";
+"DragonKit.mainMenu.minimize" = "Minimize";

@@ -22,11 +22,13 @@
 "DragonKit.permissions.openSettings" = "Ouvrir Réglages Système";
 "DragonKit.permissions.refresh" = "Actualiser";
 "DragonKit.permissions.refreshHint" = "Revérifie les états d’autorisation ci-dessus.";
+"DragonKit.permission.accessibility.title" = "Accessibilité";
+"DragonKit.permission.accessibility.detail" = "Observer et contrôler les éléments d’interface des autres apps.";
+"DragonKit.permission.screenRecording.title" = "Enregistrement de l’écran";
+"DragonKit.permission.screenRecording.detail" = "Capturer le contenu de l’écran.";
 
 "DragonKit.backup.folderSection" = "Dossier de sauvegarde";
 "DragonKit.backup.choose" = "Choisir…";
-"DragonKit.backup.autoOnQuit" = "Sauvegarder automatiquement à la fermeture";
-"DragonKit.backup.autoOnQuitHint" = "Écrit une nouvelle sauvegarde à chaque fermeture de l’app.";
 "DragonKit.backup.backupsSection" = "Sauvegardes";
 "DragonKit.backup.now" = "Sauvegarder maintenant";
 "DragonKit.backup.reveal" = "Afficher dans le Finder";
@@ -34,6 +36,9 @@
 "DragonKit.backup.restore" = "Restaurer";
 "DragonKit.backup.restoreConfirmTitle" = "Restaurer cette sauvegarde ?";
 "DragonKit.backup.restoreConfirmMessage" = "Vos réglages actuels seront remplacés et l’app redémarrera.";
+"DragonKit.backup.deleteAccessibility" = "Supprimer la sauvegarde %@";
+"DragonKit.backup.unchangedTitle" = "Rien à sauvegarder";
+"DragonKit.backup.unchangedMessage" = "Vos réglages n’ont pas changé depuis la dernière sauvegarde : aucune nouvelle sauvegarde n’a été créée.";
 "DragonKit.backup.errorTitle" = "Erreur de sauvegarde";
 
 "DragonKit.uninstall.section" = "Désinstaller";
@@ -41,6 +46,8 @@
 "DragonKit.uninstall.body" = "%@ va se fermer et se supprimer complètement. Cela supprimera :";
 "DragonKit.uninstall.permissionsNote" = "Les autorisations que vous avez accordées doivent être retirées par vous dans Réglages Système ▸ Confidentialité et sécurité — macOS ne permet pas à l’app de les révoquer. Cette action est irréversible.";
 "DragonKit.uninstall.confirm" = "Désinstaller";
+"DragonKit.uninstall.failedTitle" = "Désinstallation incomplète";
+"DragonKit.uninstall.failedMessage" = "Impossible de placer %@ dans la Corbeille. Ses réglages et son élément d’ouverture ont été supprimés, mais l’app est toujours installée : placez-la vous-même dans la Corbeille.";
 
 "DragonKit.updates.autoCheck" = "Rechercher les mises à jour automatiquement";
 "DragonKit.updates.autoDownload" = "Télécharger les mises à jour automatiquement";
@@ -60,3 +67,14 @@
 "DragonKit.menu.checkForUpdates" = "Rechercher les mises à jour…";
 "DragonKit.menu.settings" = "Réglages…";
 "DragonKit.menu.quit" = "Quitter %@";
+
+"DragonKit.mainMenu.edit" = "Édition";
+"DragonKit.mainMenu.undo" = "Annuler";
+"DragonKit.mainMenu.redo" = "Rétablir";
+"DragonKit.mainMenu.cut" = "Couper";
+"DragonKit.mainMenu.copy" = "Copier";
+"DragonKit.mainMenu.paste" = "Coller";
+"DragonKit.mainMenu.selectAll" = "Tout sélectionner";
+"DragonKit.mainMenu.window" = "Fenêtre";
+"DragonKit.mainMenu.close" = "Fermer";
+"DragonKit.mainMenu.minimize" = "Réduire";

@@ -8,7 +8,19 @@ import CoreGraphics
 @MainActor
 public final class DragonPermission: Identifiable {
     public let id: String
+    /// Section heading for this permission: a localization **key** resolved through ``L(_:)``
+    /// when ``PermissionsPane`` renders it, or a plain string, which falls back to itself — so
+    /// an app-supplied literal keeps working. Mirrors ``SettingsPane/title``.
     public let title: String
+    /// Supporting lines shown under the status; each is a localization **key** resolved through
+    /// ``L(_:)``, or a plain string, which falls back to itself.
+    ///
+    /// The kit's own factories below pass keys because they used to pass English literals and
+    /// neither could ever localize: ``PermissionsPane`` rendered `details` with `Text(String)`,
+    /// which is verbatim and does no lookup at all, so they shipped in English in all seven
+    /// languages; and re-wrapping `title` as a `LocalizedStringKey` at the pane resolves against
+    /// the *host app's* bundle, while ``L(_:)`` resolves the module's. Kit-owned copy has to be
+    /// a kit key, or every app would have to duplicate the string in its own `.lproj` files.
     public let details: [String]
     public let isRequired: Bool
     public let mayRequireRelaunch: Bool
@@ -56,11 +68,12 @@ public final class DragonPermission: Identifiable {
 
 public extension DragonPermission {
     /// Accessibility (AX) — required to observe and control other apps' interface elements.
+    /// Title and detail are kit-owned localization keys (see ``DragonPermission/details``).
     static func accessibility(isRequired: Bool = true) -> DragonPermission {
         DragonPermission(
             id: "accessibility",
-            title: "Accessibility",
-            details: ["Observe and control other apps' interface elements."],
+            title: "DragonKit.permission.accessibility.title",
+            details: ["DragonKit.permission.accessibility.detail"],
             isRequired: isRequired,
             settingsURLs: [
                 URL(string: "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_Accessibility"),
@@ -76,11 +89,12 @@ public extension DragonPermission {
     }
 
     /// Screen Recording — required to capture the contents of the screen.
+    /// Title and detail are kit-owned localization keys (see ``DragonPermission/details``).
     static func screenRecording(isRequired: Bool = false) -> DragonPermission {
         DragonPermission(
             id: "screenRecording",
-            title: "Screen Recording",
-            details: ["Capture the contents of the screen."],
+            title: "DragonKit.permission.screenRecording.title",
+            details: ["DragonKit.permission.screenRecording.detail"],
             isRequired: isRequired,
             mayRequireRelaunch: true,
             settingsURLs: [

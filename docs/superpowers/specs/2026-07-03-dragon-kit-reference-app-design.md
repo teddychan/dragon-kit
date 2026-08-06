@@ -55,7 +55,13 @@ MAS apps link only `DragonKit`; direct-download apps link both. `Example/` links
     createdDate, suiteName, defaults`), with list/prune (keep newest 10). Generalized from
     `SettingsBackup` (suite-domain snapshot instead of a fixed key enum).
   - `BackupConfig` + `BackupSettingsPane` — folder chooser, Back Up Now, Reveal, list with
-    Restore/Delete, auto-backup-on-quit toggle. App supplies `appName`, `suiteName`,
+    Restore/Delete, auto-backup-on-quit toggle.
+    **Superseded 2026-08-06: the auto-backup-on-quit toggle was removed.** Nothing in the kit
+    or in any of the five apps ever read the preference it wrote, so it shipped on-by-default
+    and did nothing. Do not restore it from this spec — this is the "spec mandated a drifted
+    item" trap CLAUDE.md warns about. "Back Up Now" now reports `.unchanged` instead of
+    writing a duplicate.
+    App supplies `appName`, `suiteName`,
     `appVersion`, and a `relaunch` handler. Pane's own prefs live in `standard` defaults
     (not the backed-up suite), so backups never include backup settings.
 - **`Uninstall/`**

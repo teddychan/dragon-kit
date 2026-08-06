@@ -22,11 +22,13 @@
 "DragonKit.permissions.openSettings" = "システム設定を開く";
 "DragonKit.permissions.refresh" = "更新";
 "DragonKit.permissions.refreshHint" = "上のアクセス権の状態を再確認します。";
+"DragonKit.permission.accessibility.title" = "アクセシビリティ";
+"DragonKit.permission.accessibility.detail" = "ほかのアプリのインターフェイス要素を観察し、操作します。";
+"DragonKit.permission.screenRecording.title" = "画面収録";
+"DragonKit.permission.screenRecording.detail" = "画面の内容をキャプチャします。";
 
 "DragonKit.backup.folderSection" = "バックアップフォルダ";
 "DragonKit.backup.choose" = "選択…";
-"DragonKit.backup.autoOnQuit" = "終了時に自動でバックアップ";
-"DragonKit.backup.autoOnQuitHint" = "アプリを終了するたびに新しいバックアップを作成します。";
 "DragonKit.backup.backupsSection" = "バックアップ";
 "DragonKit.backup.now" = "今すぐバックアップ";
 "DragonKit.backup.reveal" = "Finderに表示";
@@ -34,6 +36,9 @@
 "DragonKit.backup.restore" = "復元";
 "DragonKit.backup.restoreConfirmTitle" = "このバックアップを復元しますか？";
 "DragonKit.backup.restoreConfirmMessage" = "現在の設定は置き換えられ、アプリが再起動します。";
+"DragonKit.backup.deleteAccessibility" = "バックアップ%@を削除";
+"DragonKit.backup.unchangedTitle" = "バックアップの必要はありません";
+"DragonKit.backup.unchangedMessage" = "前回のバックアップから設定が変更されていないため、新しいバックアップは作成されませんでした。";
 "DragonKit.backup.errorTitle" = "バックアップエラー";
 
 "DragonKit.uninstall.section" = "アンインストール";
@@ -41,6 +46,8 @@
 "DragonKit.uninstall.body" = "%@は終了し、完全に自身を削除します。次の項目が削除されます:";
 "DragonKit.uninstall.permissionsNote" = "許可した権限は、システム設定 ▸ プライバシーとセキュリティでご自身で削除してください。macOSではアプリが権限を取り消すことはできません。この操作は取り消せません。";
 "DragonKit.uninstall.confirm" = "アンインストール";
+"DragonKit.uninstall.failedTitle" = "アンインストールが完了しませんでした";
+"DragonKit.uninstall.failedMessage" = "%@をゴミ箱に移動できませんでした。設定とログイン項目は削除されましたが、アプリはまだインストールされています。ご自身でゴミ箱に移動してください。";
 
 "DragonKit.updates.autoCheck" = "自動的にアップデートを確認";
 "DragonKit.updates.autoDownload" = "自動的にアップデートをダウンロード";
@@ -60,3 +67,14 @@
 "DragonKit.menu.checkForUpdates" = "アップデートを確認…";
 "DragonKit.menu.settings" = "設定…";
 "DragonKit.menu.quit" = "%@ を終了";
+
+"DragonKit.mainMenu.edit" = "編集";
+"DragonKit.mainMenu.undo" = "取り消す";
+"DragonKit.mainMenu.redo" = "やり直す";
+"DragonKit.mainMenu.cut" = "カット";
+"DragonKit.mainMenu.copy" = "コピー";
+"DragonKit.mainMenu.paste" = "ペースト";
+"DragonKit.mainMenu.selectAll" = "すべてを選択";
+"DragonKit.mainMenu.window" = "ウインドウ";
+"DragonKit.mainMenu.close" = "閉じる";
+"DragonKit.mainMenu.minimize" = "しまう";

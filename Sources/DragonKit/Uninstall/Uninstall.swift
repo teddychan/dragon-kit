@@ -1,4 +1,5 @@
 import AppKit
+import OSLog
 import SwiftUI
 
 /// App-supplied configuration for the Uninstall flow.
@@ -40,6 +41,8 @@ public struct UninstallConfig {
 /// quit. Ported from ice-2's uninstall flow, generalized to any bundle id / suites.
 @MainActor
 public enum DragonUninstaller {
+    private static let logger = Logger(subsystem: "com.dragonapp.DragonKit", category: "Uninstall")
+
     public static func run(
         config: UninstallConfig,
         deleteOptionalData: Bool = false,
@@ -72,9 +75,45 @@ public enum DragonUninstaller {
         // App Store app can't spawn processes and is removed by the App Store instead.)
         schedulePostExitCleanup(of: leftovers)
 
-        NSWorkspace.shared.recycle([Bundle.main.bundleURL]) { _, _ in
-            Task { @MainActor in onComplete() }
+        // The teardown above is irreversible and has already happened, so the Trash move is the
+        // one step whose failure the user has to hear about: on a read-only volume, an
+        // MDM-managed or SIP-protected path, or a plain permission denial, the app is still
+        // installed but every setting and the login item are gone. Discarding this error meant
+        // `onComplete()` — which terminates by default — reported a successful uninstall that
+        // hadn't happened, and the user was told nothing.
+        //
+        // Only the description crosses the hop: `any Error` isn't Sendable, and the string is
+        // all the log line needs.
+        let appName = config.appName
+        NSWorkspace.shared.recycle([Bundle.main.bundleURL]) { _, error in
+            let failureReason = error?.localizedDescription
+            Task { @MainActor in
+                guard let failureReason else {
+                    onComplete()
+                    return
+                }
+                reportBundleRemovalFailure(appName: appName, reason: failureReason)
+            }
         }
+    }
+
+    /// Tells the user the app is still installed, and does *not* run `onComplete` — quitting
+    /// here would hide the failure behind a window that just disappeared.
+    ///
+    /// The raw `localizedDescription` goes to OSLog only. It's an internal error description
+    /// (`NSCocoaErrorDomain` file-system copy, typically), not copy anyone can act on, and the
+    /// standard this kit is held to forbids surfacing those as user-facing text; the alert says
+    /// what to do instead.
+    private static func reportBundleRemovalFailure(appName: String, reason: String) {
+        logger.error("Moving the app bundle to the Trash failed: \(reason, privacy: .public)")
+
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = L("DragonKit.uninstall.failedTitle")
+        alert.informativeText = String(format: L("DragonKit.uninstall.failedMessage"), appName)
+        alert.addButton(withTitle: L("DragonKit.ok"))
+        if let icon = NSApp.applicationIconImage { alert.icon = icon }
+        alert.runModal()
     }
 
     /// Preference plists (one per wiped domain — the bundle id and each settings suite) plus
@@ -101,14 +140,40 @@ public enum DragonUninstaller {
         return paths
     }
 
+    /// The `/bin/sh` script the post-exit cleanup runs. A fixed constant, and it must stay one:
+    /// no path is ever interpolated into it. `"$@"` re-expands the arguments as separate words
+    /// with no further parsing, so a path containing `"`, `$`, a backtick, a backslash or a
+    /// space is passed through literally.
+    ///
+    /// `sleep 2` is load-bearing, not a fudge: cfprefsd flushes and rewrites an emptied
+    /// preference plist when the app exits, recreating the file `run` just deleted. The delete
+    /// has to land after we're gone.
+    static let postExitCleanupScript = #"sleep 2; /bin/rm -rf "$@""#
+
+    /// argv for the detached cleanup shell — paths as *arguments*, never as script text.
+    ///
+    /// This used to be `"/bin/rm -rf \"\(url.path)\""` joined with `; `. Double quotes stop
+    /// word-splitting but not `$`, backticks, backslashes or a closing `"`, so a path with any
+    /// of those in it became shell syntax in a recursive delete. Today's inputs are
+    /// app-controlled (bundle id, suite names, the home directory) and no live exploit existed,
+    /// but the rule is that paths and URLs are untrusted input — and the safe form is one line.
+    ///
+    /// The literal `sh` is `$0` for `sh -c`; the paths land in `$1`…`$n`, which is what `"$@"`
+    /// expands. Empty in, empty out: no arguments means there is nothing to run, and
+    /// ``schedulePostExitCleanup(of:)`` spawns no process at all.
+    static func postExitCleanupArguments(for urls: [URL]) -> [String] {
+        guard !urls.isEmpty else { return [] }
+        return ["-c", postExitCleanupScript, "sh"] + urls.map(\.path)
+    }
+
     /// Deletes `urls` from a detached shell that outlives this process, defeating cfprefsd's
     /// on-exit flush that would otherwise resurrect emptied preference plists.
     private static func schedulePostExitCleanup(of urls: [URL]) {
-        guard !urls.isEmpty else { return }
-        let script = "sleep 2; " + urls.map { "/bin/rm -rf \"\($0.path)\"" }.joined(separator: "; ")
+        let arguments = postExitCleanupArguments(for: urls)
+        guard !arguments.isEmpty else { return }
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/sh")
-        process.arguments = ["-c", script]
+        process.arguments = arguments
         try? process.run()
     }
 }
