@@ -4,15 +4,21 @@ name: DragonKit conformance
 #
 #   jobs:
 #     conformance:
-#       uses: teddychan/dragon-kit/.github/workflows/conformance.yml@v2
+#       uses: teddychan/dragon-kit/.github/workflows/conformance.yml@main
 #
 # Rules live in dragon-kit (CONFORMANCE.md + Scripts/dragon-conformance.py) and only there, so
 # every app picks up new rules with no per-repo copies to drift — the same duplication problem
 # the spec exists to prevent.
 #
-# Deliberately takes no inputs. The kit is always checked out at its default branch, so a rule
-# added today applies to every app's next PR; the `@v2` pin covers this workflow's interface,
-# not the rule set. That also means no untrusted value ever reaches `ref:`.
+# `@main` is deliberate, and it is what all five apps use. dragon-kit has no floating `v2` tag —
+# only v2.0.0/v2.0.1/v2.1.0 — so `@v2` does not resolve at all. #27 fixed exactly that ref in
+# CONFORMANCE.md and missed this copy, which is the one an app is most likely to paste from —
+# the fix has to move with the doc. Even given such a tag, pinning would freeze this workflow's
+# *interface* while the *rules* kept moving, because the kit is read at its default branch
+# regardless. See CONFORMANCE.md §"How to comply".
+#
+# Deliberately takes no inputs: the kit is always checked out at its default branch, so a rule
+# added today applies to every app's next PR, and no untrusted value ever reaches `ref:`.
 on:
   workflow_call:
 
