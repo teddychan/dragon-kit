@@ -122,6 +122,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if !model.showInMenuBar {
             settingsController.show()
         }
+
+        // Wake Sparkle now. `DragonUpdater` builds it lazily on first property access, so an app
+        // that never reads one never starts the scheduled-check timer — apps used to poke
+        // `canCheckForUpdates` to force it, which is what `start()` exists to replace. Info.plist
+        // ships `SUEnableAutomaticChecks = false`, so this schedules nothing until the user turns
+        // the Updates pane's toggle on; without it that toggle would do nothing this launch.
+        updater.start()
     }
 
     /// Build the canonical Dragon menu-bar menu via `DragonAppMenu` — the single source of

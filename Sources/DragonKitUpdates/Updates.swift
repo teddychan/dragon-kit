@@ -11,16 +11,7 @@ import SwiftUI
 /// everything else to `SPUStandardUserDriver`.
 private final class DragonUpdaterUserDriver: SPUStandardUserDriver {
     override func showUpdateNotFoundWithError(_ error: any Error) async {
-        // Sparkle reports "no update" both when we're genuinely on the latest version and when
-        // an update exists but can't be installed here (OS too old/new, non-ARM64 Mac). Only
-        // reword the former; defer to Sparkle's accurate message for the latter.
-        let blockedReasons: Set<Int32> = [
-            SPUNoUpdateFoundReason.systemIsTooOld.rawValue,
-            SPUNoUpdateFoundReason.systemIsTooNew.rawValue,
-            SPUNoUpdateFoundReason.hardwareDoesNotSupportARM64.rawValue,
-        ]
-        let reason = ((error as NSError).userInfo[SPUNoUpdateFoundReasonKey] as? NSNumber)?.int32Value
-        if let reason, blockedReasons.contains(reason) {
+        if NoUpdateFoundAlert.shouldDeferToSparkle(error: error) {
             await super.showUpdateNotFoundWithError(error)
             return
         }
@@ -37,6 +28,28 @@ private final class DragonUpdaterUserDriver: SPUStandardUserDriver {
         alert.addButton(withTitle: "OK")
         if let icon = NSApp.applicationIconImage { alert.icon = icon }
         alert.runModal()
+    }
+}
+
+/// The one decision inside ``DragonUpdaterUserDriver/showUpdateNotFoundWithError(_:)`` that is
+/// pure logic, split out so it can be tested — the override itself needs a live Sparkle session,
+/// and this module (the one that broke ice-2 twice) otherwise had no test at all.
+enum NoUpdateFoundAlert {
+    /// Whether Sparkle's own "no update" message must be shown unchanged.
+    ///
+    /// Sparkle reports "no update" both when we're genuinely on the latest version and when an
+    /// update exists but can't be installed here (OS too old/new, non-ARM64 Mac). Only the
+    /// former may be reworded to "<App> is up to date"; saying that for the latter would be a
+    /// lie, so those defer to Sparkle's accurate message.
+    static func shouldDeferToSparkle(error: any Error) -> Bool {
+        let blockedReasons: Set<Int32> = [
+            SPUNoUpdateFoundReason.systemIsTooOld.rawValue,
+            SPUNoUpdateFoundReason.systemIsTooNew.rawValue,
+            SPUNoUpdateFoundReason.hardwareDoesNotSupportARM64.rawValue,
+        ]
+        let reason = ((error as NSError).userInfo[SPUNoUpdateFoundReasonKey] as? NSNumber)?.int32Value
+        guard let reason else { return false }
+        return blockedReasons.contains(reason)
     }
 }
 
@@ -109,6 +122,9 @@ public final class DragonUpdater: ObservableObject {
     private let config: DragonUpdaterConfig
     /// Retained for the updater's lifetime — Sparkle holds the delegate weakly.
     private var driverDelegate: DragonUserDriverDelegate?
+    /// Retained so the KVO registration lives as long as the updater does; releasing it
+    /// invalidates the observation.
+    private var lastCheckObservation: NSKeyValueObservation?
 
     public init(config: DragonUpdaterConfig = DragonUpdaterConfig()) {
         self.config = config
@@ -138,11 +154,27 @@ public final class DragonUpdater: ObservableObject {
                 userDriver = driver
                 driverDelegate = delegate
                 updaterInstance = instance
+                observeLastUpdateCheckDate(of: instance)
             } catch {
                 return nil
             }
         }
         return updaterInstance
+    }
+
+    /// Republish when Sparkle stamps `lastUpdateCheckDate`, which it does *after* a check
+    /// finishes — the pane's "Last checked: …" used to keep showing the previous value, because
+    /// the only `objectWillChange` fired synchronously when the check *started*.
+    /// `SPUUpdater` posts manual KVO notifications for this property (`willChangeValueForKey` in
+    /// its `updateLastUpdateCheckDate`), so `.prior` gives us a real "will change" edge.
+    private func observeLastUpdateCheckDate(of instance: SPUUpdater) {
+        lastCheckObservation = instance
+            .observe(\.lastUpdateCheckDate, options: [.prior]) { [weak self] _, change in
+                guard change.isPrior else { return }
+                // Sparkle stamps this on the main thread (SPUUpdater is main-thread-only by
+                // contract), so assert the isolation rather than hopping and publishing late.
+                MainActor.assumeIsolated { self?.objectWillChange.send() }
+            }
     }
 
     /// Whether an update check can currently run.
@@ -154,24 +186,28 @@ public final class DragonUpdater: ObservableObject {
     public var automaticallyChecksForUpdates: Bool {
         get { updater?.automaticallyChecksForUpdates ?? false }
         set {
-            updater?.automaticallyChecksForUpdates = newValue
+            // Before the mutation, not after: the contract is "will change", so a subscriber
+            // that reads the value on notification must still see the old one.
             objectWillChange.send()
+            updater?.automaticallyChecksForUpdates = newValue
         }
     }
 
     public var automaticallyDownloadsUpdates: Bool {
         get { updater?.automaticallyDownloadsUpdates ?? false }
         set {
-            updater?.automaticallyDownloadsUpdates = newValue
             objectWillChange.send()
+            updater?.automaticallyDownloadsUpdates = newValue
         }
     }
 
     /// Check for updates now, presenting Sparkle's standard UI. Safe to call even if Sparkle
     /// can't initialize (missing bundle id) — it simply no-ops.
     public func checkForUpdates() {
-        updater?.checkForUpdates()
+        // Before the call: it flips `canCheckForUpdates` synchronously, which disables the
+        // pane's button. The refresh once the check *finishes* comes from the KVO observation.
         objectWillChange.send()
+        updater?.checkForUpdates()
     }
 }
 

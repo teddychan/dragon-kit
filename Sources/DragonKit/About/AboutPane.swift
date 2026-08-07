@@ -56,7 +56,19 @@ public struct AboutPane: View {
 
     @ViewBuilder
     private var linkRows: some View {
-        ForEach(content.links) { link in
+        // Keyed on position, not on `AboutLink.id`: that id is a fresh `UUID()` per instance, and
+        // apps hand us content rebuilt from scratch each time — sample-app's
+        // `AboutConfig.content` is a computed `static var`, and the settings root rebuilds its
+        // panes on every language change. Keying on `id` therefore handed SwiftUI all-new
+        // identities on each rebuild, so it tore down and recreated every link row instead of
+        // updating it.
+        //
+        // Position rather than `url`, which was the first fix here: `url` is stable across a
+        // rebuild but not guaranteed *unique*, so two links to the same destination would
+        // collapse into one row — the identical bug being fixed for `creditRows` one section
+        // down. Position is both stable and unique, and it gives the whole pane one identity
+        // rule. These rows are stateless, so nothing depends on identity following a reorder.
+        ForEach(Array(content.links.enumerated()), id: \.offset) { _, link in
             LabeledContent {
                 Link(link.detail, destination: link.url)
             } label: {
@@ -74,7 +86,11 @@ public struct AboutPane: View {
 
     @ViewBuilder
     private var creditRows: some View {
-        ForEach(content.credits, id: \.label) { credit in
+        // Keyed on position, not on `label`: labels legitimately repeat — "License: MIT" beside
+        // "License: Apache-2.0", or two "Built with" lines — and `ForEach` requires unique ids,
+        // so a label key silently collapsed such a pair into one row and dropped the rest.
+        // `credits` is a fixed, ordered, app-supplied list, so its index is a sound identity.
+        ForEach(Array(content.credits.enumerated()), id: \.offset) { _, credit in
             LabeledContent(credit.label) { Text(credit.value) }
         }
     }

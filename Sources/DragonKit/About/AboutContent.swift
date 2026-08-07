@@ -2,6 +2,9 @@ import AppKit
 
 /// A single labeled link shown in the About pane.
 public struct AboutLink: Identifiable, Sendable {
+    /// A fresh id per instance, so it is *not* stable across rebuilds of equal content — apps
+    /// build their `AboutContent` from a computed property. `AboutPane` deliberately keys its
+    /// `ForEach` on `url` instead; don't "simplify" it back to the `Identifiable` conformance.
     public let id = UUID()
     public let title: String
     public let detail: String

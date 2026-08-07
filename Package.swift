@@ -32,5 +32,12 @@ let package = Package(
             name: "DragonKitTests",
             dependencies: ["DragonKit"]
         ),
+        // Separate from DragonKitTests, not folded into it: keeping Sparkle out of the core
+        // module's test target preserves the two-product split that makes clipmenu-2's Mac App
+        // Store build possible, and makes it loud if that ever changes.
+        .testTarget(
+            name: "DragonKitUpdatesTests",
+            dependencies: ["DragonKitUpdates"]
+        ),
     ]
 )

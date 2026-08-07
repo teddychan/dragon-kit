@@ -109,6 +109,15 @@ enum DragonKit {}
 "DragonKit.ping" = "pong";
 ```
 
+> **Superseded 2026-08-06.** The `DragonKit.ping` fixture and the `SmokeTests.swift` below were
+> both removed. `ping` was a test-only key, but the key-parity test forces every key into every
+> locale, so it shipped to users in all seven languages; `resolvesKeyFromModuleBundle()` now
+> asserts against a real shipping key (`DragonKit.ok`) and proves the same thing. `SmokeTests`
+> asserted `#expect(Bool(true))` — if the package didn't build, the test target wouldn't compile
+> and every other test would fail first. Do not reintroduce either from this plan: like the
+> auto-backup toggle in the reference-app design spec, this is a document mandating something
+> since deliberately deleted.
+
 `Tests/DragonKitTests/SmokeTests.swift`:
 
 ```swift
