@@ -15,7 +15,7 @@ grouped-form design primitives (the canonical look), a reliable settings-window 
 accessory apps, and a localization helper.
 
 - **DragonKit repo:** https://github.com/teddychan/dragon-kit (public, MIT)
-- **Version to depend on:** `2.2.0` (tag), i.e. `.package(url: "https://github.com/teddychan/dragon-kit", from: "2.2.0")`
+- **Version to depend on:** `2.3.0` (tag), i.e. `.package(url: "https://github.com/teddychan/dragon-kit", from: "2.3.0")`
   — always the **newest** `vX.Y.Z` tag, not the oldest that resolves. `CONFORMANCE.md` §R10
   fails an app whose pin is behind, because a stale pin is how an app silently misses shared
   fixes; check `git tag --sort=-v:refname` in the kit before you write the number.
@@ -240,7 +240,7 @@ let package = Package(
     name: "<TARGET>",
     platforms: [.macOS("26")],
     dependencies: [
-        .package(url: "https://github.com/teddychan/dragon-kit", from: "2.2.0"),
+        .package(url: "https://github.com/teddychan/dragon-kit", from: "2.3.0"),
     ],
     targets: [
         .executableTarget(
@@ -578,8 +578,8 @@ Once the shell runs:
 - `@main` + `@MainActor static func main()` — do **not** add a `main.swift` (they conflict).
 - SwiftPM identity: the product is `.product(name: "DragonKit", package: "dragon-kit")`
   (identity = repo name `dragon-kit`).
-- If `from: "2.2.0"` can't resolve, confirm the tag exists on the repo and your network/gh access.
+- If `from: "2.3.0"` can't resolve, confirm the tag exists on the repo and your network/gh access.
 
 ---
 
-*DragonKit v2.2.0 · this guide lives at `docs/STARTING-A-NEW-APP.md` in the dragon-kit repo.*
+*DragonKit v2.3.0 · this guide lives at `docs/STARTING-A-NEW-APP.md` in the dragon-kit repo.*

@@ -3,7 +3,7 @@
 Shared SwiftUI foundations for [Dragon App](https://www.dragonapp.com) macOS
 menu-bar apps (ice-2, clipmenu-2, spectacle-2, KeyKey) — built and updated once.
 
-## Status: v2.2.0 — settings survive an upgrade, and a restore can no longer erase them
+## Status: v2.3.0 — settings survive an upgrade, and the kit no longer ships parameters that do nothing
 
 Two products in one package:
 
@@ -70,7 +70,7 @@ macOS 26+, Swift 6.1.
 ## Use it
 
 ```swift
-.package(url: "https://github.com/teddychan/dragon-kit", from: "2.2.0")
+.package(url: "https://github.com/teddychan/dragon-kit", from: "2.3.0")
 ```
 
 Pin the **newest** `vX.Y.Z` tag, not the oldest one that resolves — [CONFORMANCE.md](CONFORMANCE.md)
@@ -163,7 +163,7 @@ Dragon menu-bar app live. **Depend on it; never copy its code into your app.**
 1. Read [`docs/STARTING-A-NEW-APP.md`](docs/STARTING-A-NEW-APP.md) (self-contained) and the
    `sample-app/` app — `sample-app/` is the reference wiring for every module.
 2. Create an SPM executable app that depends on `dragon-kit` at a version tag
-   (`from: "2.2.0"` — the newest tag; §R10 fails a stale pin). Link `DragonKit`; add
+   (`from: "2.3.0"` — the newest tag; §R10 fails a stale pin). Link `DragonKit`; add
    `DragonKitUpdates` **only** for direct-download (non-Mac-App-Store) apps.
 3. Build settings screens as `SettingsPane` conformers using `DragonForm` /
    `DragonSection` / `.dragonAnnotation`.
