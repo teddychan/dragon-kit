@@ -4,8 +4,14 @@ import Foundation
 
 @MainActor
 @Suite struct LocalizationTests {
+    /// Proves `L()` reads the module bundle instead of falling through to returning the key.
+    /// Deliberately asserted against a *real shipping* key: this used to use a `DragonKit.ping`
+    /// = `pong` fixture, which — because key parity forces every key into every locale — shipped
+    /// to users of all five Dragon apps in seven languages. Don't reintroduce a fixture key.
+    /// `DragonKit.ok` works because its value differs from the key in all seven `.lproj` files,
+    /// so a broken resolver returning the key can't pass.
     @Test func resolvesKeyFromModuleBundle() {
-        #expect(L("DragonKit.ping") == "pong")
+        #expect(L("DragonKit.ok") == "OK")
     }
 
     @Test func fallsBackToKeyWhenMissing() {

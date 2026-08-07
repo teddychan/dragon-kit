@@ -18,7 +18,8 @@ depending on, and keep it from breaking five apps at once.
 | `Sources/DragonKit/` | The core library. **No external dependencies.** |
 | `Sources/DragonKitUpdates/` | The only target that may touch Sparkle. |
 | `Sources/DragonKit/Resources/*.lproj/DragonKit.strings` | Kit-owned strings, 7 languages. |
-| `Tests/DragonKitTests/` | swift-testing suites. |
+| `Tests/DragonKitTests/` | swift-testing suites for the core library. |
+| `Tests/DragonKitUpdatesTests/` | swift-testing suites for the Sparkle-backed target. Separate on purpose: keeping Sparkle out of the core test target is what keeps the two-product split honest. |
 | `CONFORMANCE.md` + `Scripts/dragon-conformance.py` + `Scripts/test_conformance.py` | The rules apps are held to, their implementation, and the tests for that implementation. |
 | `.github/workflows/conformance.yml` | Reusable workflow the four apps call from their own CI. |
 | `sample-app/` | Dragon Sample App — a real, releasable reference app that wires up every module. |
