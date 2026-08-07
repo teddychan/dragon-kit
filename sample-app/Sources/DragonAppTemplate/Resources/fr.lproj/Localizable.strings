@@ -19,6 +19,7 @@
 "app.whatsNew.fixed3" = "Si la désinstallation ne parvient pas à placer l’app dans la Corbeille, elle vous le dit au lieu de quitter comme si tout s’était bien passé.";
 "app.whatsNew.added1" = "Les Réglages ont de nouveau une barre des menus : ⌘W ferme la fenêtre, et Couper, Copier et Coller fonctionnent dans les champs de texte.";
 "app.whatsNew.changed1" = "« Sauvegarder maintenant » vous prévient quand rien n’a changé, au lieu d’écrire discrètement une sauvegarde en double.";
+"app.whatsNew.changed2" = "Reconstruite sur DragonKit 2.4.0.";
 "app.whatsNew.removed1" = "L’interrupteur « sauvegarder automatiquement en quittant », qui n’a jamais rien fait.";
 "app.whatsNew.improved1" = "VoiceOver nomme désormais le bouton Supprimer de chaque sauvegarde, et les vérifications d’autorisations se mettent en pause lorsque l’app est en arrière-plan.";
 "app.uninstall.item.app" = "L’app et son élément d’ouverture";

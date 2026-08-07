@@ -19,6 +19,7 @@
 "app.whatsNew.fixed3" = "If uninstalling can't move the app to the Trash, it now tells you instead of quitting as though it worked.";
 "app.whatsNew.added1" = "Settings has a menu bar again: ⌘W closes the window, and Cut, Copy and Paste work in text fields.";
 "app.whatsNew.changed1" = "Back Up Now tells you when nothing has changed, instead of quietly writing a duplicate backup.";
+"app.whatsNew.changed2" = "Rebuilt on DragonKit 2.4.0.";
 "app.whatsNew.removed1" = "The “back up automatically on quit” switch, which never actually did anything.";
 "app.whatsNew.improved1" = "VoiceOver now names each backup's Delete button, and permission checks pause while the app is in the background.";
 "app.uninstall.item.app" = "The app and its login item";

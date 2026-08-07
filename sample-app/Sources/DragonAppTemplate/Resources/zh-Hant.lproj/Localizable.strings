@@ -19,6 +19,7 @@
 "app.whatsNew.fixed3" = "如果解除安裝時無法將 App 移到垃圾桶，現在會告訴你，而不是像成功了一樣直接結束。";
 "app.whatsNew.added1" = "設定視窗重新有了選單列：⌘W 可以關閉視窗，剪下、拷貝和貼上在文字欄位中也能正常使用。";
 "app.whatsNew.changed1" = "「立即備份」在沒有任何變更時會告訴你，而不是悄悄寫入一份重複的備份。";
+"app.whatsNew.changed2" = "App 已基於 DragonKit 2.4.0 重新建置。";
 "app.whatsNew.removed1" = "「結束時自動備份」開關——它其實從未發揮任何作用。";
 "app.whatsNew.improved1" = "VoiceOver 現在會讀出每個備份的刪除按鈕名稱，App 在背景時也會暫停權限檢查。";
 "app.uninstall.item.app" = "App 及其登入項目";

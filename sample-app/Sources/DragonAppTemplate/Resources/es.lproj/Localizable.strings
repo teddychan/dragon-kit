@@ -19,6 +19,7 @@
 "app.whatsNew.fixed3" = "Si al desinstalar no se puede mover la app a la Papelera, ahora se te avisa en lugar de salir como si todo hubiera ido bien.";
 "app.whatsNew.added1" = "Ajustes vuelve a tener barra de menús: ⌘W cierra la ventana y Cortar, Copiar y Pegar funcionan en los campos de texto.";
 "app.whatsNew.changed1" = "«Hacer copia ahora» te avisa cuando no ha cambiado nada, en lugar de crear en silencio una copia duplicada.";
+"app.whatsNew.changed2" = "Reconstruida sobre DragonKit 2.4.0.";
 "app.whatsNew.removed1" = "El interruptor «hacer copia automáticamente al salir», que en realidad nunca hacía nada.";
 "app.whatsNew.improved1" = "VoiceOver ahora nombra el botón Eliminar de cada copia de seguridad, y las comprobaciones de permisos se pausan mientras la app está en segundo plano.";
 "app.uninstall.item.app" = "La app y su ítem de inicio de sesión";
