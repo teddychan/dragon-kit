@@ -67,6 +67,9 @@
 "DragonKit.menu.settings" = "설정…";
 "DragonKit.menu.quit" = "%@ 종료";
 
+"DragonKit.mainMenu.hide" = "%@ 가리기";
+"DragonKit.mainMenu.hideOthers" = "다른 항목 가리기";
+"DragonKit.mainMenu.showAll" = "모두 보기";
 "DragonKit.mainMenu.edit" = "편집";
 "DragonKit.mainMenu.undo" = "실행 취소";
 "DragonKit.mainMenu.redo" = "다시 실행";

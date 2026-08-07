@@ -3,7 +3,7 @@
 Shared SwiftUI foundations for [Dragon App](https://www.dragonapp.com) macOS
 menu-bar apps (ice-2, clipmenu-2, spectacle-2, KeyKey) — built and updated once.
 
-## Status: v2.3.0 — settings survive an upgrade, and the kit no longer ships parameters that do nothing
+## Status: v2.4.0 — settings survive an upgrade, and an input method can keep Quit out of its menu bar
 
 Two products in one package:
 
@@ -22,7 +22,10 @@ Modules:
   conform to `SettingsPane`. It also installs a minimal menu bar while the window is open —
   an accessory app going `.regular` with no `NSApp.mainMenu` shows an *empty* one, costing
   ⌘W, ⌘Q and every pasteboard shortcut in a settings text field. Pass
-  `installsMainMenu: false` to opt out; an app that already owns a main menu keeps it.
+  `installsMainMenu: false` to opt out; an app that already owns a main menu keeps it. A
+  system-managed input method passes `includeQuit: false` instead — same spelling and same
+  reason as `DragonAppMenu.Config.includeQuit` — which drops Quit ⌘Q while keeping the Edit and
+  Window menus, because an IME's settings still need Cut/Copy/Paste and ⌘W.
 - **App Settings** — `DragonSettingsStore<Value>` (Codable persistence in a UserDefaults
   suite) + `LoginItem` (launch at login via `SMAppService`). `load()` **migrates** a blob
   written before the app's settings type gained a field, rather than resetting to defaults:
@@ -70,7 +73,7 @@ macOS 26+, Swift 6.1.
 ## Use it
 
 ```swift
-.package(url: "https://github.com/teddychan/dragon-kit", from: "2.3.0")
+.package(url: "https://github.com/teddychan/dragon-kit", from: "2.4.0")
 ```
 
 Pin the **newest** `vX.Y.Z` tag, not the oldest one that resolves — [CONFORMANCE.md](CONFORMANCE.md)
@@ -163,7 +166,7 @@ Dragon menu-bar app live. **Depend on it; never copy its code into your app.**
 1. Read [`docs/STARTING-A-NEW-APP.md`](docs/STARTING-A-NEW-APP.md) (self-contained) and the
    `sample-app/` app — `sample-app/` is the reference wiring for every module.
 2. Create an SPM executable app that depends on `dragon-kit` at a version tag
-   (`from: "2.3.0"` — the newest tag; §R10 fails a stale pin). Link `DragonKit`; add
+   (`from: "2.4.0"` — the newest tag; §R10 fails a stale pin). Link `DragonKit`; add
    `DragonKitUpdates` **only** for direct-download (non-Mac-App-Store) apps.
 3. Build settings screens as `SettingsPane` conformers using `DragonForm` /
    `DragonSection` / `.dragonAnnotation`.

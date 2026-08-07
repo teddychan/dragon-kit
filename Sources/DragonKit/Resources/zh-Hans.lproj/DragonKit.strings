@@ -67,6 +67,9 @@
 "DragonKit.menu.settings" = "设置…";
 "DragonKit.menu.quit" = "退出 %@";
 
+"DragonKit.mainMenu.hide" = "隐藏%@";
+"DragonKit.mainMenu.hideOthers" = "隐藏其他";
+"DragonKit.mainMenu.showAll" = "全部显示";
 "DragonKit.mainMenu.edit" = "编辑";
 "DragonKit.mainMenu.undo" = "撤销";
 "DragonKit.mainMenu.redo" = "重做";
