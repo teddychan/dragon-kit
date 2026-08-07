@@ -13,9 +13,14 @@
 "app.about.source" = "Código";
 "app.about.builtWith" = "Creado con";
 "app.about.license" = "Licencia";
-"app.whatsNew.summary" = "Desinstalar se ha movido del menú de la barra de menús a los Ajustes.";
-"app.whatsNew.removed1" = "Desinstalar ya no aparece en el menú de la barra de menús, junto a Salir.";
-"app.whatsNew.changed1" = "Ahora está en el último panel de Ajustes, donde pide confirmación antes de eliminar nada.";
+"app.whatsNew.summary" = "Tus ajustes ahora sobreviven a una actualización de la app, y la ventana de Ajustes ya tiene barra de menús.";
+"app.whatsNew.fixed1" = "Los ajustes ya no vuelven a sus valores por omisión cuando la app añade una opción nueva.";
+"app.whatsNew.fixed2" = "Ahora se rechaza un archivo de copia de seguridad dañado al restaurarlo, en lugar de borrar tus ajustes.";
+"app.whatsNew.fixed3" = "Si al desinstalar no se puede mover la app a la Papelera, ahora se te avisa en lugar de salir como si todo hubiera ido bien.";
+"app.whatsNew.added1" = "Ajustes vuelve a tener barra de menús: ⌘W cierra la ventana y Cortar, Copiar y Pegar funcionan en los campos de texto.";
+"app.whatsNew.changed1" = "«Hacer copia ahora» te avisa cuando no ha cambiado nada, en lugar de crear en silencio una copia duplicada.";
+"app.whatsNew.removed1" = "El interruptor «hacer copia automáticamente al salir», que en realidad nunca hacía nada.";
+"app.whatsNew.improved1" = "VoiceOver ahora nombra el botón Eliminar de cada copia de seguridad, y las comprobaciones de permisos se pausan mientras la app está en segundo plano.";
 "app.uninstall.item.app" = "La app y su ítem de inicio de sesión";
 "app.uninstall.item.settings" = "Todos los ajustes";
 "app.uninstall.item.state" = "Estado guardado de la aplicación";

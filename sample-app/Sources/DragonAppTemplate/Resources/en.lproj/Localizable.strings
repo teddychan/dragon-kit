@@ -13,9 +13,14 @@
 "app.about.source" = "Source";
 "app.about.builtWith" = "Built with";
 "app.about.license" = "License";
-"app.whatsNew.summary" = "Uninstall has moved out of the menu-bar menu into Settings.";
-"app.whatsNew.removed1" = "Uninstall is no longer in the menu-bar dropdown, next to Quit.";
-"app.whatsNew.changed1" = "Find it as the last pane in Settings, where it confirms before removing anything.";
+"app.whatsNew.summary" = "Your settings now survive an app update, and the Settings window has a working menu bar.";
+"app.whatsNew.fixed1" = "Settings no longer reset to their defaults when the app gains a new preference.";
+"app.whatsNew.fixed2" = "Restoring a damaged backup file now refuses it, instead of erasing your settings.";
+"app.whatsNew.fixed3" = "If uninstalling can't move the app to the Trash, it now tells you instead of quitting as though it worked.";
+"app.whatsNew.added1" = "Settings has a menu bar again: ⌘W closes the window, and Cut, Copy and Paste work in text fields.";
+"app.whatsNew.changed1" = "Back Up Now tells you when nothing has changed, instead of quietly writing a duplicate backup.";
+"app.whatsNew.removed1" = "The “back up automatically on quit” switch, which never actually did anything.";
+"app.whatsNew.improved1" = "VoiceOver now names each backup's Delete button, and permission checks pause while the app is in the background.";
 "app.uninstall.item.app" = "The app and its login item";
 "app.uninstall.item.settings" = "All settings";
 "app.uninstall.item.state" = "Saved application state";
