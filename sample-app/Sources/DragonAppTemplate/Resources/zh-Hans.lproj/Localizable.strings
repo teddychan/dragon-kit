@@ -19,6 +19,7 @@
 "app.whatsNew.fixed3" = "如果卸载时无法把应用移到废纸篓，现在会告诉你，而不是像成功了一样直接退出。";
 "app.whatsNew.added1" = "设置窗口重新有了菜单栏：⌘W 可以关闭窗口，剪切、拷贝和粘贴在文本框中也能正常使用。";
 "app.whatsNew.changed1" = "“立即备份”在没有任何改动时会告诉你，而不是悄悄写入一份重复的备份。";
+"app.whatsNew.changed2" = "应用已基于 DragonKit 2.4.0 重新构建。";
 "app.whatsNew.removed1" = "“退出时自动备份”开关——它其实从未起过任何作用。";
 "app.whatsNew.improved1" = "VoiceOver 现在会读出每个备份的删除按钮名称，应用在后台时也会暂停权限检查。";
 "app.uninstall.item.app" = "应用及其登录项";
