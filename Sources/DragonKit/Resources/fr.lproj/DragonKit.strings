@@ -67,6 +67,9 @@
 "DragonKit.menu.settings" = "Réglages…";
 "DragonKit.menu.quit" = "Quitter %@";
 
+"DragonKit.mainMenu.hide" = "Masquer %@";
+"DragonKit.mainMenu.hideOthers" = "Masquer les autres";
+"DragonKit.mainMenu.showAll" = "Tout afficher";
 "DragonKit.mainMenu.edit" = "Édition";
 "DragonKit.mainMenu.undo" = "Annuler";
 "DragonKit.mainMenu.redo" = "Rétablir";

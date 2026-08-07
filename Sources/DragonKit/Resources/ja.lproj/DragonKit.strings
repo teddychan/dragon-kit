@@ -67,6 +67,9 @@
 "DragonKit.menu.settings" = "設定…";
 "DragonKit.menu.quit" = "%@ を終了";
 
+"DragonKit.mainMenu.hide" = "%@を隠す";
+"DragonKit.mainMenu.hideOthers" = "ほかを隠す";
+"DragonKit.mainMenu.showAll" = "すべてを表示";
 "DragonKit.mainMenu.edit" = "編集";
 "DragonKit.mainMenu.undo" = "取り消す";
 "DragonKit.mainMenu.redo" = "やり直す";

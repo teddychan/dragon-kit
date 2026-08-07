@@ -11,12 +11,13 @@ import SwiftUI
 /// settings opened under a completely **empty** menu bar: no ⌘W, no ⌘Q, and no
 /// Undo/Cut/Copy/Paste/Select All in any settings text field, because those verbs reach the
 /// focused view from menu items travelling the responder chain, not from the text system.
-/// ``makeSettingsMainMenu(appName:)`` supplies the minimum standard menu and ``show()``
+/// ``makeSettingsMainMenu(appName:includeQuit:)`` supplies the minimum standard menu and ``show()``
 /// installs it for as long as the window is open. Found by the macOS engineering-standard
 /// audit of the kit; fixing it here fixes it for every Dragon app at once.
 @MainActor
 public final class DragonSettingsWindowController: NSWindowController, NSWindowDelegate {
     private let installsMainMenu: Bool
+    private let includeQuit: Bool
 
     /// Whether *this* controller is what put the current `NSApp.mainMenu` there. Tracked as a
     /// stored flag rather than re-derived at close time, because a non-nil menu then says
@@ -30,14 +31,23 @@ public final class DragonSettingsWindowController: NSWindowController, NSWindowD
     ///   fills a `nil` one. Defaulted and placed ahead of `rootView` so the existing
     ///   `init(title:rootView:)` and `init(title:minSize:defaultSize:rootView:)` call sites in
     ///   the five apps keep compiling untouched.
+    /// - Parameter includeQuit: Include Quit ⌘Q in that menu bar (default `true`). Pass `false`
+    ///   from a system-managed input method, which is quit by the system and not by the user —
+    ///   the same reason, and the same spelling, as ``DragonAppMenu/Config/includeQuit``.
+    ///   yahoo-keykey-2 already passes it there and had no way to say it here, so v2.3.0 would
+    ///   have given its Settings window a Quit its own dropdown deliberately omits. The Edit and
+    ///   Window menus are unaffected, which is the point: an IME's settings still need
+    ///   Cut/Copy/Paste and ⌘W, and those only ever arrive via menu items.
     public init(
         title: String,
         minSize: NSSize = NSSize(width: 720, height: 480),
         defaultSize: NSSize = NSSize(width: 800, height: 560),
         installsMainMenu: Bool = true,
+        includeQuit: Bool = true,
         rootView: some View
     ) {
         self.installsMainMenu = installsMainMenu
+        self.includeQuit = includeQuit
         let hosting = NSHostingController(rootView: rootView)
         let window = NSWindow(contentViewController: hosting)
         window.title = title
@@ -61,7 +71,10 @@ public final class DragonSettingsWindowController: NSWindowController, NSWindowD
         // `MainMenu.xib`, or installed at launch) must keep it — overwriting it would
         // silently delete every app-specific command while settings happened to be open.
         if installsMainMenu, NSApp.mainMenu == nil {
-            NSApp.mainMenu = Self.makeSettingsMainMenu(appName: Self.hostAppName())
+            NSApp.mainMenu = Self.makeSettingsMainMenu(
+                appName: Self.hostAppName(),
+                includeQuit: includeQuit
+            )
             installedMainMenu = true
         }
         if window?.isVisible == false { window?.center() }
@@ -94,17 +107,45 @@ public final class DragonSettingsWindowController: NSWindowController, NSWindowD
     ///
     /// Deliberately pure — it takes the app name and touches no `NSApp` state — because a real
     /// menu bar can't be asserted in a unit test but this structure can (`SettingsMainMenuTests`).
-    static func makeSettingsMainMenu(appName: String) -> NSMenu {
+    static func makeSettingsMainMenu(appName: String, includeQuit: Bool = true) -> NSMenu {
         let mainMenu = NSMenu()
 
-        // Reuses the existing `DragonKit.menu.quit` ("Quit %@") that the dropdown's Quit item
-        // formats, so the two can't drift into different wording.
+        // macOS renders whichever menu comes first as the application menu, so one always has to
+        // exist — which is why Quit being optional doesn't mean the app menu is. Hide / Hide
+        // Others / Show All are the conventional contents, need no app-specific knowledge, and
+        // keep the menu from rendering as an empty dropdown under the app's name when an IME
+        // omits Quit.
         let appMenu = NSMenu(title: appName)
         appMenu.addItem(menuItem(
-            title: String(format: L("DragonKit.menu.quit"), appName),
-            action: #selector(NSApplication.terminate(_:)),
-            keyEquivalent: "q"
+            title: String(format: L("DragonKit.mainMenu.hide"), appName),
+            action: #selector(NSApplication.hide(_:)),
+            keyEquivalent: "h"
         ))
+        appMenu.addItem(menuItem(
+            title: L("DragonKit.mainMenu.hideOthers"),
+            action: #selector(NSApplication.hideOtherApplications(_:)),
+            keyEquivalent: "h",
+            modifiers: [.command, .option]
+        ))
+        appMenu.addItem(menuItem(
+            title: L("DragonKit.mainMenu.showAll"),
+            action: #selector(NSApplication.unhideAllApplications(_:)),
+            keyEquivalent: ""
+        ))
+        // `includeQuit: false` is for a system-managed input method, which is quit by the system
+        // and not by the user — the same reason, and the same spelling, as
+        // ``DragonAppMenu/Config/includeQuit``. yahoo-keykey-2 already passes it there and had no
+        // way to say it here, so adopting v2.3.0 would have handed its Settings window a Quit ⌘Q
+        // that its dropdown deliberately omits. Reuses `DragonKit.menu.quit` ("Quit %@") so the
+        // dropdown and the menu bar can't drift into different wording.
+        if includeQuit {
+            appMenu.addItem(.separator())
+            appMenu.addItem(menuItem(
+                title: String(format: L("DragonKit.menu.quit"), appName),
+                action: #selector(NSApplication.terminate(_:)),
+                keyEquivalent: "q"
+            ))
+        }
         mainMenu.addItem(submenuItem(title: appName, submenu: appMenu))
 
         let editMenu = NSMenu(title: L("DragonKit.mainMenu.edit"))

@@ -101,7 +101,21 @@ import AppKit
         let actionable = menu.items
             .flatMap { [$0] + ($0.submenu?.items ?? []) }
             .filter { !$0.isSeparatorItem && $0.submenu == nil }
-        #expect(actionable.count == 9) // Quit + 6 Edit + 2 Window — nothing silently skipped
+        // Hide + Hide Others + Show All + Quit, 6 Edit, 2 Window — nothing silently skipped.
+        // The count is deliberately hardcoded: it is what makes this test notice a *new* item
+        // that someone forgot to leave target-less, rather than quietly checking a shorter list.
+        #expect(actionable.count == 12)
+        for item in actionable {
+            #expect(item.target == nil, "\(item.title) has a target and will not reach the responder chain")
+        }
+    }
+
+    /// The same guarantee for the IME menu, which has its own item count.
+    @Test func everyActionableItemIsTargetLessWithoutQuitToo() {
+        let actionable = imeMenu.items
+            .flatMap { [$0] + ($0.submenu?.items ?? []) }
+            .filter { !$0.isSeparatorItem && $0.submenu == nil }
+        #expect(actionable.count == 11) // as above, minus Quit
         for item in actionable {
             #expect(item.target == nil, "\(item.title) has a target and will not reach the responder chain")
         }
@@ -109,6 +123,63 @@ import AppKit
 
     /// The app name comes from the host's `Info.plist` at call time — never hardcoded — and is
     /// formatted through the existing `DragonKit.menu.quit` ("Quit %@") that the dropdown uses.
+    // MARK: - includeQuit: false (a system-managed input method)
+
+    /// yahoo-keykey-2 passes `includeQuit: false` to ``DragonAppMenu`` because an IME is quit by
+    /// the system, not the user. v2.3.0 gave it no way to say the same thing about the settings
+    /// menu bar, so adopting it would have handed that app a Quit ⌘Q its own dropdown
+    /// deliberately omits. These guard the escape hatch and, just as importantly, guard that it
+    /// costs the IME nothing else.
+    private var imeMenu: NSMenu {
+        DragonSettingsWindowController.makeSettingsMainMenu(appName: appName, includeQuit: false)
+    }
+
+    @Test func includeQuitFalseOmitsQuitAndItsSeparator() {
+        let appMenu = imeMenu.items.first?.submenu
+        #expect(item(appMenu, action: #selector(NSApplication.terminate(_:))) == nil)
+        // The separator existed only to set Quit apart, so it goes with it — the same rule
+        // `DragonAppMenu` follows for the dropdown's trailing divider.
+        #expect(appMenu?.items.contains { $0.isSeparatorItem } == false)
+        #expect(appMenu?.items.last?.isSeparatorItem == false)
+    }
+
+    /// macOS renders whichever menu comes first as the application menu, so dropping Quit must
+    /// not leave it empty — an app-named dropdown with nothing in it reads as broken.
+    @Test func theAppMenuIsStillPopulatedWithoutQuit() {
+        let appMenu = imeMenu.items.first?.submenu
+        #expect(appMenu?.items.isEmpty == false)
+        #expect(item(appMenu, action: #selector(NSApplication.hide(_:))) != nil)
+        #expect(item(appMenu, action: #selector(NSApplication.hideOtherApplications(_:))) != nil)
+        #expect(item(appMenu, action: #selector(NSApplication.unhideAllApplications(_:))) != nil)
+    }
+
+    /// The whole reason an IME wants the menu bar at all: Cut/Copy/Paste and ⌘W reach a text
+    /// field only through menu items. Omitting Quit must not cost it those.
+    @Test func omittingQuitLeavesEditAndWindowIntact() {
+        let ime = imeMenu
+        #expect(ime.items.count == 3)
+        let edit = ime.items[safe: 1]?.submenu
+        let window = ime.items[safe: 2]?.submenu
+        #expect(item(edit, action: #selector(NSText.cut(_:)))?.keyEquivalent == "x")
+        #expect(item(edit, action: #selector(NSText.copy(_:)))?.keyEquivalent == "c")
+        #expect(item(edit, action: #selector(NSText.paste(_:)))?.keyEquivalent == "v")
+        #expect(item(edit, action: #selector(NSText.selectAll(_:)))?.keyEquivalent == "a")
+        #expect(item(window, action: #selector(NSWindow.performClose(_:)))?.keyEquivalent == "w")
+    }
+
+    @Test func hideOthersCarriesOptionInTheModifierMask() {
+        let hideOthers = item(appMenu, action: #selector(NSApplication.hideOtherApplications(_:)))
+        #expect(hideOthers?.keyEquivalent == "h")
+        #expect(hideOthers?.keyEquivalentModifierMask == [.command, .option])
+        // Plain ⌘H must stay Hide, or the two collide on the same shortcut.
+        #expect(item(appMenu, action: #selector(NSApplication.hide(_:)))?.keyEquivalentModifierMask == [.command])
+    }
+
+    /// The default is unchanged, so every existing app keeps the v2.3.0 behaviour untouched.
+    @Test func quitIsStillPresentByDefault() {
+        #expect(item(appMenu, action: #selector(NSApplication.terminate(_:)))?.keyEquivalent == "q")
+    }
+
     @Test func theQuitItemTitleIncludesTheAppName() {
         let quit = item(appMenu, action: #selector(NSApplication.terminate(_:)))
         #expect(quit?.title.contains(appName) == true)
