@@ -13,9 +13,14 @@
 "app.about.source" = "原始碼";
 "app.about.builtWith" = "建置於";
 "app.about.license" = "授權";
-"app.whatsNew.summary" = "解除安裝已從選單列選單移至設定。";
-"app.whatsNew.removed1" = "選單列選單中「結束」旁邊的解除安裝項目已移除。";
-"app.whatsNew.changed1" = "現在位於設定的最後一個面板，刪除前會先確認。";
+"app.whatsNew.summary" = "現在 App 更新後你的設定不會遺失，設定視窗也有了可用的選單列。";
+"app.whatsNew.fixed1" = "App 新增設定項目時，你的設定不再被重設為預設值。";
+"app.whatsNew.fixed2" = "還原損壞的備份檔案時，現在會拒絕該檔案，而不是清除你的設定。";
+"app.whatsNew.fixed3" = "如果解除安裝時無法將 App 移到垃圾桶，現在會告訴你，而不是像成功了一樣直接結束。";
+"app.whatsNew.added1" = "設定視窗重新有了選單列：⌘W 可以關閉視窗，剪下、拷貝和貼上在文字欄位中也能正常使用。";
+"app.whatsNew.changed1" = "「立即備份」在沒有任何變更時會告訴你，而不是悄悄寫入一份重複的備份。";
+"app.whatsNew.removed1" = "「結束時自動備份」開關——它其實從未發揮任何作用。";
+"app.whatsNew.improved1" = "VoiceOver 現在會讀出每個備份的刪除按鈕名稱，App 在背景時也會暫停權限檢查。";
 "app.uninstall.item.app" = "App 及其登入項目";
 "app.uninstall.item.settings" = "所有設定";
 "app.uninstall.item.state" = "已儲存的 App 狀態";
