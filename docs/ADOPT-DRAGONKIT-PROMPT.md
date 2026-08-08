@@ -17,7 +17,9 @@ menu-bar app, so each app builds them once and updates them centrally.
 - Depend on it at a version tag — DO NOT copy its source into this app. Use the NEWEST
   vX.Y.Z tag (check `git tag --sort=-v:refname` in ~/git/dragon-kit); a pin behind the
   newest tag fails conformance §R10:
-      .package(url: "https://github.com/teddychan/dragon-kit", from: "2.4.0")
+      // X.Y.Z = the newest tag:
+      //   gh release view --repo teddychan/dragon-kit --json tagName -q '.tagName | ltrimstr("v")'
+      .package(url: "https://github.com/teddychan/dragon-kit", from: "X.Y.Z")
 - Two products:
     • DragonKit         — core, no external deps
     • DragonKitUpdates  — adds Sparkle; link ONLY in a direct-download build,
@@ -116,7 +118,8 @@ output in that plan — it is the machine-readable version of this app's adoptio
   MAS target links `DragonKit` only. For a direct-download-only app, link both everywhere.
 - **Permission type** — name the permission the app actually needs (e.g. `.accessibility()`
   for KeyKey/Ice) instead of the generic placeholder.
-- **Version pin** — bump `from: "2.4.0"` to whatever the latest DragonKit tag is
+- **Version pin** — set `from:` to the newest DragonKit tag
+  (`gh release view --repo teddychan/dragon-kit --json tagName -q '.tagName | ltrimstr("v")'`)
   (`git tag --sort=-v:refname` in `~/git/dragon-kit`); §R10 fails anything older.
 - **Menu omissions** — pass `onCheckForUpdates: nil` for a Mac App Store target and
   `includeQuit: false` for an IME. These are first-class `DragonAppMenu.Config` parameters —
