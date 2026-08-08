@@ -52,7 +52,11 @@ Modules:
   (`UninstallConfig`) — incl. an optional, default-off "also delete user data" toggle
   (`optionalDataToggle`) and always-removed `extraCleanupPaths` (caches, support files). A
   failed Trash move is reported to the user instead of quitting as though it had worked — the
-  settings teardown before it is irreversible.
+  settings teardown before it is irreversible. An app shipped as a Homebrew cask passes
+  `homebrewCask:` so the post-exit cleanup clears brew's receipt too: Homebrew never watches the
+  filesystem, so an app that deletes itself leaves a receipt still claiming it is installed and a
+  dangling `Caskroom` symlink, and `brew install` then refuses outright for an app that isn't
+  there. Direct-download only — a sandboxed build can't spawn processes.
 - **Updates** (`DragonKitUpdates`) — `DragonUpdater` (Sparkle wrapper) +
   `UpdatesSettingsPane`. `DragonUpdaterConfig` opts an app into Sparkle's gentle scheduled
   reminders and an `onUpdateFoundInBackground` callback (fires only for *scheduled* checks —
