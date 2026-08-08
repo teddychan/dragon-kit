@@ -9,8 +9,6 @@
 "app.general.playSound" = "Reproducir sonido al actuar";
 "app.general.playSoundHint" = "Un ajuste de ejemplo específico de la app, incluido para que Copia de seguridad tenga datos reales que guardar.";
 "app.general.languageSection" = "Idioma";
-"app.about.updateFramework" = "Framework de actualización";
-
 "app.whatsNew.summary" = "Tus ajustes ahora sobreviven a una actualización de la app, y la ventana de Ajustes ya tiene barra de menús.";
 "app.whatsNew.fixed1" = "Los ajustes ya no vuelven a sus valores por omisión cuando la app añade una opción nueva.";
 "app.whatsNew.fixed2" = "Ahora se rechaza un archivo de copia de seguridad dañado al restaurarlo, en lugar de borrar tus ajustes.";

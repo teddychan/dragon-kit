@@ -71,6 +71,12 @@ Credits: Created by · Based on* · Built with → DragonKit vX.Y.Z · License �
 `*` optional slots. Link detail text is *derived* from the URL, never typed beside it, and the
 website must address the canonical `dragonapp.com/{app-name}-{major}` page — the same string as
 the support row's repo, which is how `websiteMatchesSupportRepo` checks one against the other.
+
+**Attributions are `name → licence`** — `Sparkle → MIT`, `OpenCC → Apache-2.0`. Never a role
+label: clipmenu-2 wrote `Sparkle → MIT` while the sample app wrote `Update framework → Sparkle
+(MIT)` within a day of 3.0.0, in the one slot still app-supplied. The field names carry the rule,
+which is why `Attribution(component:source:)` is deprecated in favour of `init(name:license:)`.
+
 `AboutCanonTests` pins all of it.
 
 **Never hardcode a version, and always show it with a `v`.** The app's version is read from

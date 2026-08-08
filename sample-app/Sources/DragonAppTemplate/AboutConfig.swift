@@ -27,8 +27,10 @@ enum AboutConfig {
             supportURL: URL(string: "https://github.com/teddychan/dragon-kit/issues")!,
             license: "MIT",
             attributions: [
-                // The app bundles Sparkle.framework by way of DragonKitUpdates.
-                Attribution(component: L("app.about.updateFramework"), source: "Sparkle (MIT)"),
+                // The app bundles Sparkle.framework by way of DragonKitUpdates. Name → licence,
+                // never a role label: this row read "Update framework → Sparkle (MIT)" while
+                // clipmenu-2's read "Sparkle → MIT", which is how the canon got settled.
+                Attribution(name: "Sparkle", license: "MIT"),
             ]
         )
     }
