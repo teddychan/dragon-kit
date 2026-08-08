@@ -90,21 +90,43 @@ import Foundation
     /// yahoo-keykey-2 credits a language model, a Cangjie table and a Han-conversion library.
     @Test func attributionsRenderLastInOrder() {
         let rows = Self.content(attributions: [
-            Attribution(component: "Language model", source: "openvanilla/McBopomofo"),
-            Attribution(component: "Cangjie table", source: "ibus-table-chinese"),
-            Attribution(component: "Han conversion", source: "OpenCC (Apache-2.0)"),
+            Attribution(name: "McBopomofo", license: "MIT"),
+            Attribution(name: "ibus-table-chinese", license: "GPL-3.0"),
+            Attribution(name: "OpenCC", license: "Apache-2.0"),
         ]).creditRows
 
         #expect(rows.count == 6)
-        #expect(rows.suffix(3).map(\.label) == ["Language model", "Cangjie table", "Han conversion"])
-        #expect(rows.suffix(3).map(\.value) == [
-            "openvanilla/McBopomofo", "ibus-table-chinese", "OpenCC (Apache-2.0)",
-        ])
+        #expect(rows.suffix(3).map(\.label) == ["McBopomofo", "ibus-table-chinese", "OpenCC"])
+        #expect(rows.suffix(3).map(\.value) == ["MIT", "GPL-3.0", "Apache-2.0"])
         // The canon rows are still the canon rows, in order, ahead of them. No `originalWork`
         // here, so the Based on slot collapses and Built with sits at index 1.
         #expect(rows[0].label == L("DragonKit.about.createdBy"))
         #expect(rows[1].label == L("DragonKit.about.builtWith"))
         #expect(rows[2].label == L("DragonKit.about.license"))
+    }
+
+    /// Attributions are name → licence. clipmenu-2 wrote `Sparkle → MIT` while the sample app
+    /// wrote `Update framework → Sparkle (MIT)` — same type, two shapes, within a day of 3.0.0.
+    /// The label is the thing's own name and the value its licence, in that order.
+    @Test func attributionsAreNameThenLicense() {
+        let rows = Self.content(attributions: [
+            Attribution(name: "Sparkle", license: "MIT"),
+            Attribution(name: "OpenCC", license: "Apache-2.0"),
+        ]).creditRows
+        #expect(rows.suffix(2).map(\.label) == ["Sparkle", "OpenCC"])
+        #expect(rows.suffix(2).map(\.value) == ["MIT", "Apache-2.0"])
+    }
+
+    /// The deprecated `component:source:` spelling stays only because removing a public member
+    /// would force a major tag and a hand bump in four apps. It must keep producing the identical
+    /// row — a deprecation that quietly changed the output would be worse than the rename.
+    @available(*, deprecated)
+    @Test func deprecatedInitProducesTheSameRow() {
+        let old = Attribution(component: "Sparkle", source: "MIT")
+        let new = Attribution(name: "Sparkle", license: "MIT")
+        #expect(old == new)
+        #expect(old.component == new.name)
+        #expect(old.source == new.license)
     }
 
     /// Two attributions may legitimately share a component name, and `ForEach` ids must be
@@ -113,8 +135,8 @@ import Foundation
     /// every row it was given, in order.
     @Test func duplicateAttributionLabelsAreBothKeptInOrder() {
         let rows = Self.content(attributions: [
-            Attribution(component: "Licence", source: "MIT"),
-            Attribution(component: "Licence", source: "Apache-2.0"),
+            Attribution(name: "OpenCC", license: "MIT"),
+            Attribution(name: "OpenCC", license: "Apache-2.0"),
         ]).creditRows
         #expect(rows.suffix(2).map(\.value) == ["MIT", "Apache-2.0"])
     }

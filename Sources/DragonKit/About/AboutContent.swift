@@ -31,20 +31,44 @@ public struct OriginalWork: Sendable, Equatable {
     }
 }
 
-/// A third-party component an app bundles or derives data from, listed at the end of Credits.
+/// A third-party thing an app bundles, and its licence — listed at the end of Credits.
 ///
-/// The only genuinely app-specific rows in the pane: yahoo-keykey-2 credits a language model, a
-/// Cangjie table and a Han-conversion library that no other app has. Typed as a pair rather than
-/// left as free-form `(String, String)` credits, so it can only ever append to the canon rows —
-/// never retitle, reorder or replace one.
+/// The only genuinely app-specific rows in the pane, and therefore the one place left where two
+/// apps could still look different. They did, within a day of 3.0.0 shipping: clipmenu-2 wrote
+/// `Sparkle → MIT` while the sample app wrote `Update framework → Sparkle (MIT)`. Same type, two
+/// shapes, exactly the drift the fixed slots removed everywhere else.
+///
+/// **The canon is name → licence**: the thing's own name as its authors spell it, then its SPDX
+/// licence. `Sparkle → MIT`, `OpenCC → Apache-2.0`. It reads as a standard acknowledgements list
+/// and scales to ice-2's six bundled libraries, where inventing a role label for each ("Slider
+/// control", "Accessibility bridge") would be one more thing to get inconsistent.
+///
+/// The field *names* carry that rule, which is why they changed: nobody writes a role into
+/// something called `name` or an origin into something called `license` by accident. The old
+/// `component`/`source` spelling stays as deprecated aliases rather than being removed — deleting
+/// public members would force a major tag and a hand bump in all four apps, the same trade
+/// ``DragonSection`` records for its deprecated overloads.
 public struct Attribution: Sendable, Equatable {
-    public let component: String
-    public let source: String
+    /// The library or data set's own name — `Sparkle`, `OpenCC`, `ibus-table-chinese`.
+    public let name: String
+    /// Its licence, SPDX-style — `MIT`, `Apache-2.0`, `GPL-3.0`.
+    public let license: String
 
-    public init(component: String, source: String) {
-        self.component = component
-        self.source = source
+    public init(name: String, license: String) {
+        self.name = name
+        self.license = license
     }
+
+    @available(*, deprecated, message: "Attributions are name → licence: Attribution(name: \"Sparkle\", license: \"MIT\"). A role label such as \"Update framework\" is not a name.")
+    public init(component: String, source: String) {
+        self.init(name: component, license: source)
+    }
+
+    @available(*, deprecated, renamed: "name")
+    public var component: String { name }
+
+    @available(*, deprecated, renamed: "license")
+    public var source: String { license }
 }
 
 /// App-supplied content for the shared About pane.
@@ -195,7 +219,7 @@ public struct AboutContent {
         ))
         rows.append(AboutCreditRow(label: L("DragonKit.about.license"), value: license))
         rows.append(contentsOf: attributions.map {
-            AboutCreditRow(label: $0.component, value: $0.source)
+            AboutCreditRow(label: $0.name, value: $0.license)
         })
         return rows
     }

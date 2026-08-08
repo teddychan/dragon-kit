@@ -7,7 +7,7 @@ import Foundation
 /// constant is the only mechanism that exists. Bumped with the `vX.Y.Z` tag; the tag-push
 /// workflow fails when the two disagree, which is what keeps the row honest.
 public enum DragonKitVersion {
-    public static let current = "3.0.1"
+    public static let current = "3.1.0"
 }
 
 /// The one place a version becomes user-visible text.

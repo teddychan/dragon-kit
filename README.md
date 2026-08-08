@@ -36,7 +36,8 @@ Modules:
   URLs and proper nouns, and the kit assembles every row title, SF Symbol and ordering —
   `Website` / `Support on GitHub` / `Original project`\* / `Open-source licenses`\*, then a
   **Credits** section of `Created by` / `Based on`\* / `Built with · DragonKit vX.Y.Z` /
-  `License` / app attributions\* (`*` = optional). Link detail text is derived from the URL
+  `License` / app attributions\* (`*` = optional). Attributions are `name → licence`
+  (`Sparkle → MIT`), never a role label. Link detail text is derived from the URL
   rather than typed beside it, and `websiteMatchesSupportRepo` checks the website addresses the
   canonical `dragonapp.com/{app-name}-{major}` page. `AboutContent` took free-form
   `links`/`credits` arrays until five apps used them to ship five different panes.
