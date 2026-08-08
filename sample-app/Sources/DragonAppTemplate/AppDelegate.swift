@@ -75,7 +75,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             extraCleanupPaths: [
                 library.appending(path: "Caches/\(bundleID)"),
                 library.appending(path: "HTTPStorages/\(bundleID)"),
-            ]
+            ],
+            // Distributed as a Homebrew cask. An app that deletes itself leaves brew's receipt
+            // claiming it is still installed, so `brew install` then refuses for an app that
+            // isn't there; the token lets the post-exit cleanup clear that record.
+            homebrewCask: "dragon-sample-app"
         )
     }
 

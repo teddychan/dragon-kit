@@ -18,6 +18,18 @@ public struct UninstallConfig {
     /// `~/Library/Application Support/<app>`, `Caches/<bundle-id>`,
     /// `HTTPStorages/<bundle-id>`) — things the shared teardown can't know about.
     public let extraCleanupPaths: [URL]
+    /// Homebrew cask token (e.g. `"clipmenu-2"`), when the app is distributed as a cask.
+    ///
+    /// An app that deletes itself leaves Homebrew's records untouched, because Homebrew never
+    /// watches the filesystem: its receipt still says the cask is installed, and
+    /// `Caskroom/<token>/<version>/<App>.app` is a symlink that is now dangling. The user then
+    /// gets `brew install` refusing outright — "already installed" — for an app that isn't there,
+    /// with nothing pointing at `brew reinstall` as the way out. Supplying the token lets the
+    /// post-exit cleanup clear that record so the two views of the world agree again.
+    ///
+    /// Best-effort and direct-download only: a sandboxed Mac App Store build can't spawn
+    /// processes, and is removed by the App Store anyway.
+    public let homebrewCask: String?
 
     public init(
         appName: String,
@@ -25,7 +37,8 @@ public struct UninstallConfig {
         suiteNames: [String] = [],
         checklistItems: [String],
         optionalDataToggle: (label: String, paths: [URL])? = nil,
-        extraCleanupPaths: [URL] = []
+        extraCleanupPaths: [URL] = [],
+        homebrewCask: String? = nil
     ) {
         self.appName = appName
         self.bundleID = bundleID
@@ -33,6 +46,7 @@ public struct UninstallConfig {
         self.checklistItems = checklistItems
         self.optionalDataToggle = optionalDataToggle
         self.extraCleanupPaths = extraCleanupPaths
+        self.homebrewCask = homebrewCask
     }
 }
 
@@ -73,7 +87,7 @@ public enum DragonUninstaller {
         // file we just deleted. Delete the leftovers again from a detached process that runs
         // after we've quit, so nothing lingers. (Direct-download apps only — a sandboxed Mac
         // App Store app can't spawn processes and is removed by the App Store instead.)
-        schedulePostExitCleanup(of: leftovers)
+        schedulePostExitCleanup(of: leftovers, cask: config.homebrewCask)
 
         // The teardown above is irreversible and has already happened, so the Trash move is the
         // one step whose failure the user has to hear about: on a read-only volume, an
@@ -148,7 +162,53 @@ public enum DragonUninstaller {
     /// `sleep 2` is load-bearing, not a fudge: cfprefsd flushes and rewrites an emptied
     /// preference plist when the app exits, recreating the file `run` just deleted. The delete
     /// has to land after we're gone.
-    static let postExitCleanupScript = #"sleep 2; /bin/rm -rf "$@""#
+    /// Environment variable carrying the Homebrew cask token to the detached shell.
+    ///
+    /// It travels here rather than in the script text for the same reason the paths travel in
+    /// argv: nothing app-supplied is ever parsed as shell syntax.
+    static let cleanupCaskEnvironmentKey = "DRAGON_UNINSTALL_CASK"
+
+    /// Environment for the detached shell. Inherits the process environment (brew needs `HOME`),
+    /// then sets or *removes* the cask key — removing matters, because an inherited value would
+    /// otherwise make an app with no cask configured uninstall someone else's.
+    static func postExitCleanupEnvironment(cask: String?) -> [String: String] {
+        var environment = ProcessInfo.processInfo.environment
+        if let cask, !cask.isEmpty {
+            environment[cleanupCaskEnvironmentKey] = cask
+        } else {
+            environment.removeValue(forKey: cleanupCaskEnvironmentKey)
+        }
+        return environment
+    }
+
+    /// The `/bin/sh` script the post-exit cleanup runs. A fixed constant, and it must stay one:
+    /// neither a path nor a cask token is ever interpolated into it.
+    ///
+    /// The `brew` half exists because an app that deletes itself leaves Homebrew's records
+    /// untouched — Homebrew never watches the filesystem, so its receipt still claims the cask
+    /// is installed and `brew install` then refuses outright for an app that isn't there.
+    ///
+    /// It runs *after* the bundle is already in the Trash, and that ordering is the whole design:
+    /// `brew uninstall --cask` deletes the app itself, so doing this first would make
+    /// `NSWorkspace.recycle` fail on a bundle that was already gone and fire the "Uninstall
+    /// Incomplete" alert on an uninstall that had actually succeeded. By this point brew's only
+    /// remaining job is clearing its own receipt.
+    ///
+    /// A GUI app inherits no shell `PATH`, so the two standard prefixes are probed explicitly
+    /// (Apple silicon, then Intel). Errors are swallowed on purpose: the app is gone either way
+    /// and there is no UI left to report into.
+    static let postExitCleanupScript = #"""
+    sleep 2
+    /bin/rm -rf "$@"
+    if [ -n "${DRAGON_UNINSTALL_CASK:-}" ]; then
+      for brew in /opt/homebrew/bin/brew /usr/local/bin/brew; do
+        if [ -x "$brew" ]; then
+          "$brew" uninstall --cask --force "$DRAGON_UNINSTALL_CASK" >/dev/null 2>&1 && break
+        fi
+      done
+    fi
+    exit 0
+    """#
 
     /// argv for the detached cleanup shell — paths as *arguments*, never as script text.
     ///
@@ -159,21 +219,25 @@ public enum DragonUninstaller {
     /// but the rule is that paths and URLs are untrusted input — and the safe form is one line.
     ///
     /// The literal `sh` is `$0` for `sh -c`; the paths land in `$1`…`$n`, which is what `"$@"`
-    /// expands. Empty in, empty out: no arguments means there is nothing to run, and
-    /// ``schedulePostExitCleanup(of:)`` spawns no process at all.
-    static func postExitCleanupArguments(for urls: [URL]) -> [String] {
-        guard !urls.isEmpty else { return [] }
+    /// expands. Empty in, empty out: nothing to delete *and* no cask means there is nothing to
+    /// run, and ``schedulePostExitCleanup(of:cask:)`` spawns no process at all. A cask with no
+    /// leftover paths still runs — `rm -rf` with no operands is a silent no-op under `-f`, and
+    /// clearing Homebrew's receipt is reason enough on its own.
+    static func postExitCleanupArguments(for urls: [URL], cask: String? = nil) -> [String] {
+        let hasCask = !(cask ?? "").isEmpty
+        guard !urls.isEmpty || hasCask else { return [] }
         return ["-c", postExitCleanupScript, "sh"] + urls.map(\.path)
     }
 
     /// Deletes `urls` from a detached shell that outlives this process, defeating cfprefsd's
     /// on-exit flush that would otherwise resurrect emptied preference plists.
-    private static func schedulePostExitCleanup(of urls: [URL]) {
-        let arguments = postExitCleanupArguments(for: urls)
+    private static func schedulePostExitCleanup(of urls: [URL], cask: String?) {
+        let arguments = postExitCleanupArguments(for: urls, cask: cask)
         guard !arguments.isEmpty else { return }
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/sh")
         process.arguments = arguments
+        process.environment = postExitCleanupEnvironment(cask: cask)
         try? process.run()
     }
 }
