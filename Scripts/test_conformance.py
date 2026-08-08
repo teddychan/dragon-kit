@@ -66,8 +66,11 @@ struct GeneralPane: SettingsPane {
 }
 """
 COMPLIANT_STRINGS = '"app.pane.general" = "General";\n'
+# Same rule as STALE_PBXPROJ below: a fixture pin that must read as *current* has to stay above
+# dragon-kit's newest real tag, or every compliant-app test starts failing the day the kit
+# catches up.
 COMPLIANT_PACKAGE = ('// swift-tools-version: 6.1\n'
-                     '.package(url: "https://github.com/teddychan/dragon-kit", from: "9.9.9"),\n')
+                     '.package(url: "https://github.com/teddychan/dragon-kit", from: "999.9.9"),\n')
 COMPLIANT_BUILD = (
     'BUILD="$(git rev-list --count HEAD)"\n'
     'PlistBuddy -c "Set :CFBundleVersion $BUILD" Info.plist\n'
@@ -325,10 +328,15 @@ enum SettingsNavigationIdentifier: String {
         # numerically ABOVE DragonKit's newest tag — so the rule reported a false PASS while the
         # real DragonKit pin was stale. A false pass is worse than a false failure: it looks
         # like the rule is protecting you.
+        # The decoy version must stay ABOVE dragon-kit's newest tag, or this fixture starts
+        # depending on the kit's own version instead of testing the regex. It was Sparkle's real
+        # 2.5.2, which held only while the kit was below that — tagging v3.0.0 turned the
+        # documented false PASS into a genuine stale-pin violation and broke main. Hence a
+        # synthetic number no real tag will reach.
         STALE_PBXPROJ = """
 			repositoryURL = "https://github.com/sparkle-project/Sparkle";
 			requirement = {
-				minimumVersion = 2.5.2;
+				minimumVersion = 999.0.0;
 			};
 			repositoryURL = "https://github.com/teddychan/dragon-kit";
 			requirement = {
