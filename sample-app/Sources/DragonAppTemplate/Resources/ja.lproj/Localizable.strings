@@ -9,10 +9,8 @@
 "app.general.playSound" = "操作時にサウンドを再生";
 "app.general.playSoundHint" = "アプリ独自のサンプル設定です。バックアップと復元に保存する実データを用意するために含まれています。";
 "app.general.languageSection" = "言語";
-"app.about.website" = "ウェブサイト";
-"app.about.source" = "ソース";
-"app.about.builtWith" = "使用技術";
-"app.about.license" = "ライセンス";
+"app.about.updateFramework" = "アップデートフレームワーク";
+
 "app.whatsNew.summary" = "アプリをアップデートしても設定が失われなくなり、設定ウインドウでメニューバーが使えるようになりました。";
 "app.whatsNew.fixed1" = "アプリに新しい設定項目が追加されても、設定が初期値に戻らなくなりました。";
 "app.whatsNew.fixed2" = "壊れたバックアップファイルを復元しようとすると、設定を消さずに拒否するようになりました。";

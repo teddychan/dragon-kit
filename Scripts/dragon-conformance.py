@@ -67,6 +67,14 @@ LAYOUT_PRIMITIVE = re.compile(
 # Directories that are never app source (agent worktrees, vendored kit, build output).
 SKIP_DIRS = {".git", ".build", "vendor", "build", "DerivedData", ".claude", "node_modules"}
 
+# Where R12 looks for the `DragonCommitDate` stamp when an app declares no `buildFiles`.
+# Broad on purpose: the four apps package themselves four different ways (SwiftPM script,
+# Xcode project, a bare swiftc script, and the shared release workflow).
+DEFAULT_BUILD_FILES = [
+    "*.sh", "scripts/*.sh", "scripts/**/*.sh", "**/scripts/*.sh",
+    ".github/workflows/*.yml", "**/Info.plist", "**/*.pbxproj",
+]
+
 
 @dataclass
 class Violation:
@@ -91,6 +99,7 @@ class Config:
     pin: dict = field(default_factory=dict)
     pane_order: dict = field(default_factory=dict)
     traits: list[str] = field(default_factory=list)
+    build_files: list[str] = field(default_factory=list)
     exceptions: list[dict] = field(default_factory=list)
 
     def excuses(self, rule: str, path: str) -> bool:
@@ -102,6 +111,18 @@ class Config:
             if not p or p in path.replace(os.sep, "/"):
                 return True
         return False
+
+
+def skipped(path: str, root: str) -> bool:
+    """Whether `path` lies in a build/vendor directory *inside the app*.
+
+    Relative to `root`, never on the absolute path. Splitting the absolute path matches
+    directories above the app too — and this repo's own worktrees live under `.claude/`, which is
+    in ``SKIP_DIRS``, so an absolute-path test silently skipped every file in the checkout and
+    reported a clean pass. A rule that cannot fail is worse than no rule.
+    """
+    rel = os.path.relpath(path, root)
+    return any(part in SKIP_DIRS for part in rel.split(os.sep))
 
 
 def swift_files(root: str, sources: list[str]) -> list[str]:
@@ -259,7 +280,7 @@ def rule_r8_kit_strings(root: str, cfg: Config) -> list[Violation]:
     out: list[Violation] = []
     for pattern in cfg.strings:
         for path in glob.glob(os.path.join(root, pattern), recursive=True):
-            if any(part in SKIP_DIRS for part in path.split(os.sep)):
+            if skipped(path, root):
                 continue
             for number, raw in enumerate(read(path), 1):
                 match = re.match(r'\s*"([^"]+)"\s*=', raw)
@@ -326,6 +347,35 @@ def rule_r10_pin(root: str, cfg: Config, kit: str) -> list[Violation]:
     return []
 
 
+def rule_r12_commit_date(root: str, cfg: Config) -> list[Violation]:
+    """The build must stamp `DragonCommitDate` into Info.plist.
+
+    About renders `v2.4.1 (756) · 2026-Aug-07 16:54:20 UTC`. The build number is
+    `git rev-list --count HEAD`, and the timestamp used to be the *executable's* modification
+    date — when CI linked and signed the binary. The two halves therefore described different
+    things and drifted apart: rebuild the same commit tomorrow and the count holds while the date
+    moves. `DragonAbout` now reads `DragonCommitDate` (`git log -1 --format=%cI`) so the whole
+    line fingerprints one commit, and deliberately shows no date at all when the key is missing —
+    a silent fallback to the old meaning is the drift this replaced. An app that never stamps the
+    key silently loses the timestamp, which is what this rule catches.
+
+    Checked by grepping the app's build surface rather than by running it: whichever of a shell
+    script, a workflow, an Info.plist or an Xcode project stamps the key, the key has to appear
+    in the repo somewhere.
+    """
+    if cfg.excuses("R12", ""):
+        return []
+    for pattern in (cfg.build_files or DEFAULT_BUILD_FILES):
+        for path in glob.glob(os.path.join(root, pattern), recursive=True):
+            if skipped(path, root) or not os.path.isfile(path):
+                continue
+            if "DragonCommitDate" in "".join(read(path)):
+                return []
+    return [Violation("R12", "no build step stamps 'DragonCommitDate' into Info.plist — About's "
+                      "version line will show no build timestamp (searched "
+                      f"{cfg.build_files or DEFAULT_BUILD_FILES})")]
+
+
 # --------------------------------------------------------------------------- driver
 
 def load_config(root: str, override: str | None = None) -> Config:
@@ -344,7 +394,8 @@ def load_config(root: str, override: str | None = None) -> Config:
                          f"{', '.join(missing)}")
     return Config(app=raw["app"], sources=raw["sources"], strings=raw.get("strings", []),
                   pin=raw.get("pin", {}), pane_order=raw.get("paneOrder", {}),
-                  traits=raw.get("traits", []), exceptions=raw.get("exceptions", []))
+                  traits=raw.get("traits", []), build_files=raw.get("buildFiles", []),
+                  exceptions=raw.get("exceptions", []))
 
 
 def main() -> int:
@@ -375,6 +426,7 @@ def main() -> int:
     violations += rule_r8_kit_strings(root, cfg)
     violations += rule_r9_pane_order(root, cfg)
     violations += rule_r10_pin(root, cfg, kit)
+    violations += rule_r12_commit_date(root, cfg)
 
     print(f"DragonKit conformance — {cfg.app} ({len(files)} Swift files, "
           f"{len(kit_types)} kit types)")

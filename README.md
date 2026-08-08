@@ -32,9 +32,17 @@ Modules:
   Swift's synthesized `Decodable` throws on a missing key, so a strict decode meant adding one
   setting silently wiped every preference on upgrade. A blob that still can't be read is
   preserved under `<key>.unreadable` instead of being dropped.
-- **About** — `AboutContent` + `AboutPane` / `AboutSettingsPane`.
+- **About** — `AboutContent` + `AboutPane` / `AboutSettingsPane`. **Fixed slots**: an app supplies
+  URLs and proper nouns, and the kit assembles every row title, SF Symbol and ordering —
+  `Website` / `Support on GitHub` / `Original project`\* / `Open-source licenses`\*, then a
+  **Credits** section of `Created by` / `Based on`\* / `Built with · DragonKit vX.Y.Z` /
+  `License` / app attributions\* (`*` = optional). Link detail text is derived from the URL
+  rather than typed beside it, and `websiteMatchesSupportRepo` checks the website addresses the
+  canonical `dragonapp.com/{app-name}-{major}` page. `AboutContent` took free-form
+  `links`/`credits` arrays until five apps used them to ship five different panes.
 - **What's New** — release-notes pane: `WhatsNewContent` / `ChangeSection` (Added /
-  Changed / Fixed …) + `WhatsNewPane` / `WhatsNewSettingsPane`.
+  Changed / Fixed …) + `WhatsNewPane` / `WhatsNewSettingsPane`. `version` is not public; the
+  pane renders `displayVersion`, so every version in the UI carries exactly one `v`.
 - **Permissions** — `DragonPermission` (+ `.accessibility()` / `.screenRecording()`) +
   `PermissionsSettingsPane` (Open System Settings; status refreshes on a ~1s cadence **while
   the app is active**, and immediately on becoming active — the grant happens over in System

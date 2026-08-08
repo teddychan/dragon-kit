@@ -1,5 +1,4 @@
 "DragonKit.selectSetting" = "Selecciona un ajuste";
-"DragonKit.acknowledgements" = "Agradecimientos";
 "DragonKit.whatsNew.title" = "Novedades de esta versión";
 
 "DragonKit.ok" = "OK";
@@ -7,6 +6,16 @@
 
 "DragonKit.language.label" = "Idioma";
 "DragonKit.language.system" = "Automático";
+
+"DragonKit.about.website" = "Sitio web";
+"DragonKit.about.support" = "Soporte en GitHub";
+"DragonKit.about.original" = "Proyecto original";
+"DragonKit.about.licenses" = "Licencias de código abierto";
+"DragonKit.about.credits" = "Créditos";
+"DragonKit.about.createdBy" = "Creado por";
+"DragonKit.about.basedOn" = "Basado en";
+"DragonKit.about.builtWith" = "Desarrollado con";
+"DragonKit.about.license" = "Licencia";
 
 "DragonKit.pane.about" = "Acerca de";
 "DragonKit.pane.whatsNew" = "Novedades";
@@ -48,6 +57,8 @@
 "DragonKit.uninstall.failedTitle" = "Desinstalación incompleta";
 "DragonKit.uninstall.failedMessage" = "No se ha podido mover %@ a la Papelera. Se han eliminado sus ajustes y su ítem de inicio de sesión, pero la app sigue instalada; muévela tú a la Papelera.";
 
+"DragonKit.updates.upToDate.title" = "%@ está actualizado";
+"DragonKit.updates.upToDate.message" = "%@ es actualmente la versión más reciente disponible.";
 "DragonKit.updates.autoCheck" = "Buscar actualizaciones automáticamente";
 "DragonKit.updates.autoDownload" = "Descargar actualizaciones automáticamente";
 "DragonKit.updates.checkNow" = "Buscar actualizaciones…";

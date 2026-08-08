@@ -16,7 +16,7 @@ public struct WhatsNewPane: View {
                     Text(L("DragonKit.whatsNew.title"))
                         .font(.title)
                         .fontWeight(.semibold)
-                    Text("\(content.version) · \(content.date)")
+                    Text("\(content.displayVersion) · \(content.date)")
                         .font(.callout)
                         .foregroundStyle(.secondary)
                     if !content.summary.isEmpty {

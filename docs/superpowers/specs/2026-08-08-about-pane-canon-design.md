@@ -379,6 +379,27 @@ Breaking by design — removing `AboutLink`, the free-form arrays, and public `W
 
 Shipping the tag is not finished until the apps bump.
 
+## Implementation notes — where the build differed from this design
+
+- **The sample app still passes an explicit What's New version.** `WhatsNewContent.version` now
+  defaults to the bundle, but `sample-app/WhatsNewConfig.swift` carried a documented reason for
+  pinning it: the pane shows the changelog for one specific release and must stay pinned after
+  `CFBundleShortVersionString` moves on. That reasoning survives the change, so the app keeps
+  passing `"1.3.1"` — bare, since the kit now adds the `v`. The default exists for apps like
+  yahoo-keykey-2 that hardcoded a literal with no such rationale.
+- **R12 checks the build surface, not the built app.** A static checker cannot run an app's
+  packaging, so it greps scripts, workflows, `Info.plist` and `.pbxproj` for the key.
+- **A latent trap in the checker was fixed alongside.** `SKIP_DIRS` was tested against the
+  *absolute* path, so any checkout under a directory named in it — including this repo's own
+  `.claude/worktrees/` — silently skipped every file and reported a clean pass. R8 was affected
+  too. Both now test the path relative to the app root.
+- **Outstanding: the shared release pipeline does not stamp `DragonCommitDate`.** The sample app's
+  local `run.sh` does, but releases are packaged by `teddychan/dragon-release-ci@v5`, which stamps
+  only `CFBundleVersion`. Until that repo stamps the commit date, a *released* build shows
+  `v1.3.1 (756)` with no timestamp. R12 passes on the repo while the release does not comply,
+  which is precisely the false-confidence failure this spec warns about — so no app should adopt
+  `v3.0.0` before that lands.
+
 ## Rejected alternatives
 
 - **Keep the free-form API, enforce with a conformance checker.** A regex over five repos cannot

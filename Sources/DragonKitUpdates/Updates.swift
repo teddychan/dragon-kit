@@ -23,9 +23,12 @@ private final class DragonUpdaterUserDriver: SPUStandardUserDriver {
         let short = bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
 
         let alert = NSAlert()
-        alert.messageText = "\(appName) is up to date"
-        alert.informativeText = "v\(short) is currently the newest version available."
-        alert.addButton(withTitle: "OK")
+        alert.messageText = String(format: L("DragonKit.updates.upToDate.title"), appName)
+        alert.informativeText = String(
+            format: L("DragonKit.updates.upToDate.message"),
+            DragonVersion.display(short)
+        )
+        alert.addButton(withTitle: L("DragonKit.ok"))
         if let icon = NSApp.applicationIconImage { alert.icon = icon }
         alert.runModal()
     }

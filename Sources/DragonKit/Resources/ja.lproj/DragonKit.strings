@@ -1,5 +1,4 @@
 "DragonKit.selectSetting" = "設定を選択してください";
-"DragonKit.acknowledgements" = "謝辞";
 "DragonKit.whatsNew.title" = "このバージョンの新機能";
 
 "DragonKit.ok" = "OK";
@@ -7,6 +6,16 @@
 
 "DragonKit.language.label" = "言語";
 "DragonKit.language.system" = "自動";
+
+"DragonKit.about.website" = "ウェブサイト";
+"DragonKit.about.support" = "GitHub でサポート";
+"DragonKit.about.original" = "オリジナルプロジェクト";
+"DragonKit.about.licenses" = "オープンソースライセンス";
+"DragonKit.about.credits" = "クレジット";
+"DragonKit.about.createdBy" = "作成者";
+"DragonKit.about.basedOn" = "ベース";
+"DragonKit.about.builtWith" = "使用技術";
+"DragonKit.about.license" = "ライセンス";
 
 "DragonKit.pane.about" = "情報";
 "DragonKit.pane.whatsNew" = "新機能";
@@ -48,6 +57,8 @@
 "DragonKit.uninstall.failedTitle" = "アンインストールが完了しませんでした";
 "DragonKit.uninstall.failedMessage" = "%@をゴミ箱に移動できませんでした。設定とログイン項目は削除されましたが、アプリはまだインストールされています。ご自身でゴミ箱に移動してください。";
 
+"DragonKit.updates.upToDate.title" = "%@ は最新です";
+"DragonKit.updates.upToDate.message" = "%@ が現在利用可能な最新バージョンです。";
 "DragonKit.updates.autoCheck" = "自動的にアップデートを確認";
 "DragonKit.updates.autoDownload" = "自動的にアップデートをダウンロード";
 "DragonKit.updates.checkNow" = "アップデートを確認…";

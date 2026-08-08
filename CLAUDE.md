@@ -57,8 +57,31 @@ General → (the app's own panes) → Permissions → Backup & Restore → What'
 Changing any of this changes the UI of every Dragon app simultaneously, so it moves together
 with `README.md`, `CONFORMANCE.md` and the tests — or not at all.
 
-**Never hardcode a version.** It is read from the app's `Info.plist`
-(`CFBundleShortVersionString`); `DragonAbout.versionString()` is the shared helper.
+**The About pane's rows are canon too, and they are fixed slots.** `AboutContent` once took
+free-form `links`/`credits` arrays; five apps used them to ship five visibly different panes, so
+the arrays are gone. An app supplies URLs and proper nouns — the kit assembles every title, SF
+Symbol, order and detail string:
+
+```
+header:  icon → name → v<ver> (<count>) · <commit date> UTC → © …
+links:   Website globe · Support on GitHub lifepreserver · Original project heart* · Open-source licenses doc.text*
+Credits: Created by · Based on* · Built with → DragonKit vX.Y.Z · License · attributions*
+```
+
+`*` optional slots. Link detail text is *derived* from the URL, never typed beside it, and the
+website must address the canonical `dragonapp.com/{app-name}-{major}` page — the same string as
+the support row's repo, which is how `websiteMatchesSupportRepo` checks one against the other.
+`AboutCanonTests` pins all of it.
+
+**Never hardcode a version, and always show it with a `v`.** The app's version is read from
+`Info.plist` (`CFBundleShortVersionString`); `DragonAbout.versionString()` is the shared helper.
+Every version that reaches the UI goes through `DragonVersion.display(_:)`, which is why
+`WhatsNewContent.version` is *not* public — only the normalized `displayVersion` is, so no
+un-prefixed version string is reachable from outside the module.
+
+`DragonKitVersion.current` is the one sanctioned hardcoded version: a SwiftPM library has no
+`Info.plist` and SwiftPM injects no package version, so the constant is hand-bumped with the tag
+and `kit-version-check.yml` fails the tag when the two disagree.
 
 ## Conformance rules move as a triad
 
@@ -120,8 +143,11 @@ if you touch `sample-app/Package.swift`, preserve both:
 
 Two independent tag series live in this repo:
 
-- **`vX.Y.Z`** — the library. **Triggers no CI and no release**; it is purely a version marker
-  the four apps pin against. Shipping one isn't finished until the apps bump.
+- **`vX.Y.Z`** — the library. **Triggers a version-consistency check only — still no build and no
+  release**; it is purely a version marker the four apps pin against. `kit-version-check.yml`
+  asserts `DragonKitVersion.current` equals the tag, because every app's About reports that
+  constant as "Built with · DragonKit vX.Y.Z" and nothing else can catch a missed bump. Shipping
+  one isn't finished until the apps bump.
 - **`sample-vX.Y.Z`** — the Dragon Sample App. Triggers `sample-app-release.yml`, which builds,
   signs, notarizes, self-hosts the appcast and bumps the Homebrew cask. Its GitHub Release is
   demoted to pre-release so the kit's own tags keep the "Latest" badge.

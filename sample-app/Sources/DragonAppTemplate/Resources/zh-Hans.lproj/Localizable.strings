@@ -9,10 +9,8 @@
 "app.general.playSound" = "操作时播放声音";
 "app.general.playSoundHint" = "一个应用专属的示例设置——包含它是为了让备份与恢复有真实数据可保存。";
 "app.general.languageSection" = "语言";
-"app.about.website" = "网站";
-"app.about.source" = "源代码";
-"app.about.builtWith" = "构建于";
-"app.about.license" = "许可证";
+"app.about.updateFramework" = "更新框架";
+
 "app.whatsNew.summary" = "现在应用更新后你的设置不会丢失，设置窗口也有了可用的菜单栏。";
 "app.whatsNew.fixed1" = "应用新增设置项时，你的设置不再被重置为默认值。";
 "app.whatsNew.fixed2" = "恢复损坏的备份文件时，现在会拒绝该文件，而不是清空你的设置。";

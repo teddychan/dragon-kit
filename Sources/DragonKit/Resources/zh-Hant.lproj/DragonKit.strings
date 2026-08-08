@@ -1,5 +1,4 @@
 "DragonKit.selectSetting" = "選擇一個設定";
-"DragonKit.acknowledgements" = "致謝";
 "DragonKit.whatsNew.title" = "此版本的新功能";
 
 "DragonKit.ok" = "好";
@@ -7,6 +6,16 @@
 
 "DragonKit.language.label" = "語言";
 "DragonKit.language.system" = "自動";
+
+"DragonKit.about.website" = "網站";
+"DragonKit.about.support" = "在 GitHub 上取得支援";
+"DragonKit.about.original" = "原始專案";
+"DragonKit.about.licenses" = "開源授權";
+"DragonKit.about.credits" = "鳴謝";
+"DragonKit.about.createdBy" = "建立者";
+"DragonKit.about.basedOn" = "基於";
+"DragonKit.about.builtWith" = "建構於";
+"DragonKit.about.license" = "授權";
 
 "DragonKit.pane.about" = "關於";
 "DragonKit.pane.whatsNew" = "新功能";
@@ -48,6 +57,8 @@
 "DragonKit.uninstall.failedTitle" = "解除安裝未完成";
 "DragonKit.uninstall.failedMessage" = "無法將 %@ 移到垃圾桶。它的設定和登入項目已被移除，但 App 本身仍未刪除——請你自行將它移到垃圾桶。";
 
+"DragonKit.updates.upToDate.title" = "%@ 已是最新版本";
+"DragonKit.updates.upToDate.message" = "%@ 是目前可用的最新版本。";
 "DragonKit.updates.autoCheck" = "自動檢查更新";
 "DragonKit.updates.autoDownload" = "自動下載更新";
 "DragonKit.updates.checkNow" = "檢查更新…";

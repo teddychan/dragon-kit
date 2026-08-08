@@ -10,29 +10,25 @@ enum AboutConfig {
         DragonAbout.versionString()
     }
 
+    /// Only values live here. Every row title, SF Symbol and ordering in the About pane is
+    /// DragonKit's — see ``AboutContent``, which took free-form `links`/`credits` arrays until
+    /// five apps used them to ship five visibly different panes.
     @MainActor
     static var content: AboutContent {
         AboutContent(
             appName: "Dragon Sample App",
             versionString: versionString,
-            copyright: "© 2026 Teddy Chan",
-            links: [
-                AboutLink(
-                    title: L("app.about.website"),
-                    detail: "dragonapp.com",
-                    systemImage: "globe",
-                    url: URL(string: "https://www.dragonapp.com")!
-                ),
-                AboutLink(
-                    title: L("app.about.source"),
-                    detail: "teddychan/dragon-kit",
-                    systemImage: "chevron.left.forwardslash.chevron.right",
-                    url: URL(string: "https://github.com/teddychan/dragon-kit")!
-                ),
-            ],
-            credits: [
-                (label: L("app.about.builtWith"), value: "DragonKit"),
-                (label: L("app.about.license"), value: "MIT"),
+            copyright: DragonAbout.copyright(years: "2026", holder: "Teddy Chan"),
+            // Sanctioned exception to the `dragonapp.com/{app-name}-{major}` rule: the sample app
+            // is the kit's reference app and has no marketing page of its own, so it points at
+            // the studio hub. Every shipping app must address its own canonical page, which
+            // `AboutContent.websiteMatchesSupportRepo` checks against the support row's repo.
+            websiteURL: URL(string: "https://www.dragonapp.com")!,
+            supportURL: URL(string: "https://github.com/teddychan/dragon-kit/issues")!,
+            license: "MIT",
+            attributions: [
+                // The app bundles Sparkle.framework by way of DragonKitUpdates.
+                Attribution(component: L("app.about.updateFramework"), source: "Sparkle (MIT)"),
             ]
         )
     }

@@ -1,49 +1,243 @@
 import AppKit
 
-/// A single labeled link shown in the About pane.
-public struct AboutLink: Identifiable, Sendable {
-    /// A fresh id per instance, so it is *not* stable across rebuilds of equal content — apps
-    /// build their `AboutContent` from a computed property. `AboutPane` deliberately keys its
-    /// `ForEach` on `url` instead; don't "simplify" it back to the `Identifiable` conformance.
-    public let id = UUID()
+/// One assembled row in the About pane's links section. Built by ``AboutContent``, never by an
+/// app — the title and symbol are kit-owned so the row reads identically in every Dragon app.
+public struct AboutLinkRow: Identifiable, Sendable, Equatable {
+    public var id: String { systemImage + title }
     public let title: String
     public let detail: String
     public let systemImage: String
     public let url: URL
+}
 
-    public init(title: String, detail: String, systemImage: String, url: URL) {
-        self.title = title
-        self.detail = detail
-        self.systemImage = systemImage
-        self.url = url
+/// One assembled row in the About pane's Credits section.
+public struct AboutCreditRow: Sendable, Equatable {
+    public let label: String
+    public let value: String
+}
+
+/// The upstream project a Dragon app reimplements, rendered as `<name> by <author>`.
+///
+/// A struct rather than a tuple so it is `Equatable` for the canon tests. The "by" is kit-owned
+/// too: ice-2 wrote "Original Ice → Jordan Baird", spectacle-2 wrote "Based on → Spectacle by
+/// Eric Czarny", and clipmenu-2 a third way. One label, one joining word, one shape.
+public struct OriginalWork: Sendable, Equatable {
+    public let name: String
+    public let author: String
+
+    public init(name: String, author: String) {
+        self.name = name
+        self.author = author
+    }
+}
+
+/// A third-party component an app bundles or derives data from, listed at the end of Credits.
+///
+/// The only genuinely app-specific rows in the pane: yahoo-keykey-2 credits a language model, a
+/// Cangjie table and a Han-conversion library that no other app has. Typed as a pair rather than
+/// left as free-form `(String, String)` credits, so it can only ever append to the canon rows —
+/// never retitle, reorder or replace one.
+public struct Attribution: Sendable, Equatable {
+    public let component: String
+    public let source: String
+
+    public init(component: String, source: String) {
+        self.component = component
+        self.source = source
     }
 }
 
 /// App-supplied content for the shared About pane.
+///
+/// **Fixed slots, deliberately.** This type used to take `links: [AboutLink]` and
+/// `credits: [(label: String, value: String)]` — free-form arrays in which the app chose every
+/// title, SF Symbol, label and row count. Five apps then hand-wrote five `AboutConfig.swift`
+/// files and shipped five visibly different About panes: "Support on GitHub" beside "Report an
+/// issue on GitHub" beside "Source", three different symbols for that one row, a "License" row
+/// missing in one app, and a copyright field holding `倉頡／簡易 輸入法` instead of a copyright.
+///
+/// The kit owned the frame and nothing inside it, so the arrays are gone. An app now supplies
+/// URLs and proper nouns; ``linkRows`` and ``creditRows`` assemble every title, symbol and
+/// ordering here. Adding, renaming, re-iconing or reordering a row is a compile error rather
+/// than something spotted in a screenshot months later.
 public struct AboutContent {
+    // MARK: Header
+
     public let appName: String
+    /// Always ``DragonAbout/versionString(bundle:)``. spectacle-2 hand-rolled
+    /// `"\(short) (\(build))"` and lost both the `v` prefix and the build timestamp.
     public let versionString: String
+    /// Always ``DragonAbout/copyright(original:years:holder:)``.
     public let copyright: String
     public let appIcon: NSImage?
-    public let links: [AboutLink]
-    public let credits: [(label: String, value: String)]
-    public let acknowledgementsURL: URL?
+
+    // MARK: Links — fixed slots
+
+    /// The app's canonical marketing page, `https://www.dragonapp.com/{app-name}-{major}/`.
+    ///
+    /// The site's canonical URLs are all repo-named; `/clipmenu/` and `/keykey/` are `<meta
+    /// refresh>` stubs whose `rel=canonical` points at `/clipmenu-2/` and `/yahoo-keykey-2/`.
+    /// clipmenu-2 and yahoo-keykey-2 linked those stubs and spectacle-2 linked the bare hub —
+    /// three of five apps wrong — so ``websiteMatchesSupportRepo`` checks this against
+    /// ``supportURL``'s repo name.
+    public let websiteURL: URL
+    /// The GitHub issues page. ice-2, clipmenu-2 and yahoo-keykey-2 pointed here; spectacle-2
+    /// and the sample app pointed at the repo root and titled the row "Source" instead.
+    public let supportURL: URL
+    /// The upstream project's repository, when the app reimplements one.
+    public let originalProjectURL: URL?
+    /// Third-party licence notices, hosted at `dragonapp.com/{app}/licenses`.
+    ///
+    /// Replaces the bundled Acknowledgements document ice-2 shipped: a hand-maintained RTF/PDF
+    /// carrying full MIT text for six libraries. Hosting them on the site rather than in the
+    /// bundle is a weaker reading of MIT's "included in all copies" and was chosen knowingly —
+    /// see the design spec.
+    public let licensesURL: URL?
+
+    // MARK: Credits — fixed slots
+
+    public let createdBy: String
+    public let originalWork: OriginalWork?
+    /// The app's *own* licence (`MIT`, `GPL-3.0`) — not the third-party notices behind
+    /// ``licensesURL``. Two licence-shaped rows that mean different things; don't merge them.
+    public let license: String
+    public let attributions: [Attribution]
 
     public init(
         appName: String,
         versionString: String,
         copyright: String,
+        websiteURL: URL,
+        supportURL: URL,
+        license: String,
         appIcon: NSImage? = NSImage(named: NSImage.applicationIconName),
-        links: [AboutLink] = [],
-        credits: [(label: String, value: String)] = [],
-        acknowledgementsURL: URL? = nil
+        originalProjectURL: URL? = nil,
+        licensesURL: URL? = nil,
+        createdBy: String = "Teddy Chan",
+        originalWork: OriginalWork? = nil,
+        attributions: [Attribution] = []
     ) {
         self.appName = appName
         self.versionString = versionString
         self.copyright = copyright
+        self.websiteURL = websiteURL
+        self.supportURL = supportURL
+        self.license = license
         self.appIcon = appIcon
-        self.links = links
-        self.credits = credits
-        self.acknowledgementsURL = acknowledgementsURL
+        self.originalProjectURL = originalProjectURL
+        self.licensesURL = licensesURL
+        self.createdBy = createdBy
+        self.originalWork = originalWork
+        self.attributions = attributions
+    }
+
+    // MARK: Assembled rows
+
+    /// The links section, in canonical order. Optional slots collapse without reordering the
+    /// rest.
+    ///
+    /// Detail text is *derived* from the URL, never typed: yahoo-keykey-2 wrote
+    /// `www.dragonapp.com/keykey` where every other app omitted the `www.`, and a typed string
+    /// can disagree with the URL it sits beside. ``AboutLinkDetail`` is the single formatter.
+    @MainActor
+    public var linkRows: [AboutLinkRow] {
+        var rows = [
+            AboutLinkRow(
+                title: L("DragonKit.about.website"),
+                detail: AboutLinkDetail.detail(for: websiteURL),
+                systemImage: "globe",
+                url: websiteURL
+            ),
+            AboutLinkRow(
+                title: L("DragonKit.about.support"),
+                detail: AboutLinkDetail.detail(for: supportURL),
+                systemImage: "lifepreserver",
+                url: supportURL
+            ),
+        ]
+        if let originalProjectURL {
+            rows.append(AboutLinkRow(
+                title: L("DragonKit.about.original"),
+                detail: AboutLinkDetail.detail(for: originalProjectURL),
+                systemImage: "heart",
+                url: originalProjectURL
+            ))
+        }
+        if let licensesURL {
+            rows.append(AboutLinkRow(
+                title: L("DragonKit.about.licenses"),
+                detail: AboutLinkDetail.detail(for: licensesURL),
+                systemImage: "doc.text",
+                url: licensesURL
+            ))
+        }
+        return rows
+    }
+
+    /// The Credits section, in canonical order: Created by → Based on → Built with → License →
+    /// attributions.
+    ///
+    /// "Built with · DragonKit vX.Y.Z" has no corresponding stored property on purpose. It is
+    /// the one row that says which kit a binary actually compiled against, so an app can neither
+    /// omit it, move it, nor state a version of its own.
+    @MainActor
+    public var creditRows: [AboutCreditRow] {
+        var rows = [AboutCreditRow(label: L("DragonKit.about.createdBy"), value: createdBy)]
+        if let originalWork {
+            rows.append(AboutCreditRow(
+                label: L("DragonKit.about.basedOn"),
+                value: "\(originalWork.name) by \(originalWork.author)"
+            ))
+        }
+        rows.append(AboutCreditRow(
+            label: L("DragonKit.about.builtWith"),
+            value: "DragonKit \(DragonVersion.display(DragonKitVersion.current))"
+        ))
+        rows.append(AboutCreditRow(label: L("DragonKit.about.license"), value: license))
+        rows.append(contentsOf: attributions.map {
+            AboutCreditRow(label: $0.component, value: $0.source)
+        })
+        return rows
+    }
+
+    /// Whether ``websiteURL`` addresses the canonical page for ``supportURL``'s repository.
+    ///
+    /// The site convention is `{app-name}-{major}`, which is also the GitHub repo name for every
+    /// Dragon app — so the two rows check each other with no table to maintain. The Dragon
+    /// Sample App is the sanctioned exception: it has no marketing page and points at the hub.
+    public var websiteMatchesSupportRepo: Bool {
+        guard let repo = AboutLinkDetail.repository(of: supportURL) else { return false }
+        let path = websiteURL.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        return path == repo
+    }
+}
+
+/// Formats a link's trailing detail text from its URL, so no app can type one that disagrees
+/// with where the row actually goes.
+public enum AboutLinkDetail {
+    /// `https://github.com/teddychan/ice-2/issues` → `teddychan/ice-2`;
+    /// `https://www.dragonapp.com/ice-2/` → `dragonapp.com/ice-2`.
+    public static func detail(for url: URL) -> String {
+        if let repo = repository(of: url), let owner = owner(of: url) {
+            return "\(owner)/\(repo)"
+        }
+        let host = (url.host ?? "").replacingOccurrences(
+            of: "^www\\.", with: "", options: .regularExpression
+        )
+        let path = url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        return path.isEmpty ? host : "\(host)/\(path)"
+    }
+
+    /// The repository name in a `github.com/owner/repo/...` URL.
+    public static func repository(of url: URL) -> String? { gitHubComponents(of: url)?.repo }
+
+    /// The owner in a `github.com/owner/repo/...` URL.
+    public static func owner(of url: URL) -> String? { gitHubComponents(of: url)?.owner }
+
+    private static func gitHubComponents(of url: URL) -> (owner: String, repo: String)? {
+        guard url.host?.hasSuffix("github.com") == true else { return nil }
+        let parts = url.path.split(separator: "/").map(String.init)
+        guard parts.count >= 2 else { return nil }
+        return (parts[0], parts[1])
     }
 }

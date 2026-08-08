@@ -1,5 +1,4 @@
 "DragonKit.selectSetting" = "Select a setting";
-"DragonKit.acknowledgements" = "Acknowledgements";
 "DragonKit.whatsNew.title" = "What's new in this version";
 
 "DragonKit.ok" = "OK";
@@ -7,6 +6,16 @@
 
 "DragonKit.language.label" = "Language";
 "DragonKit.language.system" = "Automatic";
+
+"DragonKit.about.website" = "Website";
+"DragonKit.about.support" = "Support on GitHub";
+"DragonKit.about.original" = "Original project";
+"DragonKit.about.licenses" = "Open-source licenses";
+"DragonKit.about.credits" = "Credits";
+"DragonKit.about.createdBy" = "Created by";
+"DragonKit.about.basedOn" = "Based on";
+"DragonKit.about.builtWith" = "Built with";
+"DragonKit.about.license" = "License";
 
 "DragonKit.pane.about" = "About";
 "DragonKit.pane.whatsNew" = "What's New";
@@ -48,6 +57,8 @@
 "DragonKit.uninstall.failedTitle" = "Uninstall Incomplete";
 "DragonKit.uninstall.failedMessage" = "%@ could not be moved to the Trash. Its settings and login item have been removed, but the app is still installed — move it to the Trash yourself.";
 
+"DragonKit.updates.upToDate.title" = "%@ is up to date";
+"DragonKit.updates.upToDate.message" = "%@ is currently the newest version available.";
 "DragonKit.updates.autoCheck" = "Automatically check for updates";
 "DragonKit.updates.autoDownload" = "Automatically download updates";
 "DragonKit.updates.checkNow" = "Check for Updates…";
