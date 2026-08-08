@@ -11,7 +11,7 @@ enum WhatsNewConfig {
     ///
     /// Every entry is a localization key resolved through ``L(_:)``; the app ships its own
     /// `Localizable.strings` in seven languages, so the pane switches with the language picker.
-    /// Fixed leads because 1.3.0's headline is that settings stop being lost on upgrade.
+    /// Changed leads because 1.4.0's headline is that About now renders the kit's fixed rows.
     ///
     /// Write the version bare. DragonKit adds the `v` at render time via ``DragonVersion`` — it
     /// used to be whatever each app typed, which is how ice-2 and spectacle-2 came to show a
@@ -19,27 +19,16 @@ enum WhatsNewConfig {
     @MainActor
     static var content: WhatsNewContent {
         WhatsNewContent(
-            version: "1.3.1",
-            date: "2026-08-07",
+            version: "1.4.0",
+            date: "2026-08-08",
             summary: L("app.whatsNew.summary"),
             sections: [
-                ChangeSection(kind: .fixed, entries: [
-                    L("app.whatsNew.fixed1"),
-                    L("app.whatsNew.fixed2"),
-                    L("app.whatsNew.fixed3"),
-                ]),
-                ChangeSection(kind: .added, entries: [
-                    L("app.whatsNew.added1"),
-                ]),
                 ChangeSection(kind: .changed, entries: [
                     L("app.whatsNew.changed1"),
                     L("app.whatsNew.changed2"),
                 ]),
-                ChangeSection(kind: .removed, entries: [
-                    L("app.whatsNew.removed1"),
-                ]),
-                ChangeSection(kind: .improved, entries: [
-                    L("app.whatsNew.improved1"),
+                ChangeSection(kind: .fixed, entries: [
+                    L("app.whatsNew.fixed1"),
                 ]),
             ]
         )
