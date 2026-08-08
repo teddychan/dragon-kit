@@ -9,10 +9,8 @@
 "app.general.playSound" = "Play sound on action";
 "app.general.playSoundHint" = "A sample app-specific setting — included so Backup & Restore has real data to save.";
 "app.general.languageSection" = "Language";
-"app.about.website" = "Website";
-"app.about.source" = "Source";
-"app.about.builtWith" = "Built with";
-"app.about.license" = "License";
+"app.about.updateFramework" = "Update framework";
+
 "app.whatsNew.summary" = "Your settings now survive an app update, and the Settings window has a working menu bar.";
 "app.whatsNew.fixed1" = "Settings no longer reset to their defaults when the app gains a new preference.";
 "app.whatsNew.fixed2" = "Restoring a damaged backup file now refuses it, instead of erasing your settings.";

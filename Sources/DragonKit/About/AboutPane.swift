@@ -1,7 +1,11 @@
 import SwiftUI
 
-/// The shared About view, reproducing ice-2's About pane: centered icon, name, version,
-/// copyright; a links section; and a credits section.
+/// The shared About view: centered icon, name, version and copyright; a links section; and a
+/// Credits section.
+///
+/// This view renders and decides nothing else. Row titles, SF Symbols, ordering and detail text
+/// are assembled by ``AboutContent/linkRows`` and ``AboutContent/creditRows`` as plain data —
+/// which is also what makes the canon testable, since SwiftUI itself is not.
 public struct AboutPane: View {
     private let content: AboutContent
 
@@ -14,15 +18,11 @@ public struct AboutPane: View {
             DragonSection {
                 header
             }
-            if !content.links.isEmpty || content.acknowledgementsURL != nil {
-                DragonSection {
-                    linkRows
-                }
+            DragonSection {
+                linkRows
             }
-            if !content.credits.isEmpty {
-                DragonSection {
-                    creditRows
-                }
+            DragonSection(LocalizedStringKey(L("DragonKit.about.credits"))) {
+                creditRows
             }
         }
     }
@@ -56,42 +56,27 @@ public struct AboutPane: View {
 
     @ViewBuilder
     private var linkRows: some View {
-        // Keyed on position, not on `AboutLink.id`: that id is a fresh `UUID()` per instance, and
-        // apps hand us content rebuilt from scratch each time — sample-app's
-        // `AboutConfig.content` is a computed `static var`, and the settings root rebuilds its
-        // panes on every language change. Keying on `id` therefore handed SwiftUI all-new
-        // identities on each rebuild, so it tore down and recreated every link row instead of
-        // updating it.
-        //
-        // Position rather than `url`, which was the first fix here: `url` is stable across a
-        // rebuild but not guaranteed *unique*, so two links to the same destination would
-        // collapse into one row — the identical bug being fixed for `creditRows` one section
-        // down. Position is both stable and unique, and it gives the whole pane one identity
-        // rule. These rows are stateless, so nothing depends on identity following a reorder.
-        ForEach(Array(content.links.enumerated()), id: \.offset) { _, link in
+        // Keyed on position. `AboutLinkRow.id` is stable across rebuilds, but two rows may
+        // legitimately share a destination, and a `url` key silently collapsed such a pair into
+        // one row — the identical bug that hit credits when they were keyed on `label`. The rows
+        // are a fixed, ordered, kit-built list, so position is both stable and unique, and it
+        // gives the whole pane one identity rule.
+        ForEach(Array(content.linkRows.enumerated()), id: \.offset) { _, row in
             LabeledContent {
-                Link(link.detail, destination: link.url)
+                Link(row.detail, destination: row.url)
             } label: {
-                Label(link.title, systemImage: link.systemImage)
-            }
-        }
-        if let ack = content.acknowledgementsURL {
-            Button {
-                NSWorkspace.shared.open(ack)
-            } label: {
-                Label(L("DragonKit.acknowledgements"), systemImage: "doc.text")
+                Label(row.title, systemImage: row.systemImage)
             }
         }
     }
 
     @ViewBuilder
     private var creditRows: some View {
-        // Keyed on position, not on `label`: labels legitimately repeat — "License: MIT" beside
-        // "License: Apache-2.0", or two "Built with" lines — and `ForEach` requires unique ids,
-        // so a label key silently collapsed such a pair into one row and dropped the rest.
-        // `credits` is a fixed, ordered, app-supplied list, so its index is a sound identity.
-        ForEach(Array(content.credits.enumerated()), id: \.offset) { _, credit in
-            LabeledContent(credit.label) { Text(credit.value) }
+        // Position again, and for the original reason: labels legitimately repeat — two
+        // attributions can share a component name — and `ForEach` ids must be unique, so a label
+        // key dropped every row after the first duplicate.
+        ForEach(Array(content.creditRows.enumerated()), id: \.offset) { _, row in
+            LabeledContent(row.label) { Text(row.value) }
         }
     }
 }

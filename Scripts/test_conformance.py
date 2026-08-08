@@ -68,19 +68,28 @@ struct GeneralPane: SettingsPane {
 COMPLIANT_STRINGS = '"app.pane.general" = "General";\n'
 COMPLIANT_PACKAGE = ('// swift-tools-version: 6.1\n'
                      '.package(url: "https://github.com/teddychan/dragon-kit", from: "9.9.9"),\n')
+COMPLIANT_BUILD = (
+    'BUILD="$(git rev-list --count HEAD)"\n'
+    'PlistBuddy -c "Set :CFBundleVersion $BUILD" Info.plist\n'
+    'COMMIT_DATE="$(git log -1 --format=%cI)"\n'
+    'PlistBuddy -c "Set :DragonCommitDate $COMMIT_DATE" Info.plist\n'
+)
 
 
 def make_app(tmp: str, *, menu: str = COMPLIANT_MENU, panes: str = COMPLIANT_PANES,
              strings: str = COMPLIANT_STRINGS, package: str = COMPLIANT_PACKAGE,
+             build: str = COMPLIANT_BUILD,
              extra: dict[str, str] | None = None, config_over: dict | None = None,
              write_config: bool = True) -> str:
     root = tempfile.mkdtemp(dir=tmp)
     os.makedirs(os.path.join(root, "Sources"), exist_ok=True)
     os.makedirs(os.path.join(root, "Sources", "en.lproj"), exist_ok=True)
+    os.makedirs(os.path.join(root, "scripts"), exist_ok=True)
     open(os.path.join(root, "Sources", "Menu.swift"), "w").write(menu)
     open(os.path.join(root, "Sources", "Panes.swift"), "w").write(panes)
     open(os.path.join(root, "Sources", "en.lproj", "Localizable.strings"), "w").write(strings)
     open(os.path.join(root, "Package.swift"), "w").write(package)
+    open(os.path.join(root, "scripts", "build.sh"), "w").write(build)
     for name, body in (extra or {}).items():
         path = os.path.join(root, name)
         os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -351,6 +360,23 @@ struct MyBackupSection: View {
                 "rule": "R4", "path": "Sources/SyncBackupPane.swift",
                 "reason": "iCloud sync + versioned folder backup; DragonBackup is suite-only",
                 "sanctionedBy": "CONFORMANCE.md R11 table"}]}))
+
+        print("R12 — the build stamps DragonCommitDate")
+        # About shows no timestamp at all when the key is absent — deliberately, since a silent
+        # fallback to the executable's mtime is the drift this replaced. So "nobody stamps it"
+        # has to be a violation rather than a quietly shorter version line.
+        expect_violation("build script never stamps the commit date", make_app(
+            tmp, build='BUILD="$(git rev-list --count HEAD)"\n'), "R12")
+        expect_pass("stamped by a workflow instead of a script", make_app(
+            tmp, build="# packaging happens in CI\n",
+            extra={".github/workflows/release.yml":
+                   'run: PlistBuddy -c "Set :DragonCommitDate $(git log -1 --format=%cI)" x\n'}))
+        expect_pass("stamped via a placeholder in Info.plist", make_app(
+            tmp, build="# stamped by the release workflow\n",
+            extra={"Info.plist": "<key>DragonCommitDate</key><string></string>\n"}))
+        expect_violation("declared buildFiles that don't stamp it", make_app(
+            tmp, build='PlistBuddy -c "Set :DragonCommitDate $D" Info.plist\n',
+            config_over={"buildFiles": ["Package.swift"]}), "R12")
 
         print("no-false-positive checks")
         expect_pass("app builds its own non-lifecycle menu items", make_app(

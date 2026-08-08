@@ -9,10 +9,8 @@
 "app.general.playSound" = "동작 시 소리 재생";
 "app.general.playSoundHint" = "앱 고유의 예시 설정으로, 백업 및 복원에 저장할 실제 데이터를 위해 포함되었습니다.";
 "app.general.languageSection" = "언어";
-"app.about.website" = "웹사이트";
-"app.about.source" = "소스";
-"app.about.builtWith" = "사용 기술";
-"app.about.license" = "라이선스";
+"app.about.updateFramework" = "업데이트 프레임워크";
+
 "app.whatsNew.summary" = "이제 앱을 업데이트해도 설정이 그대로 유지되며, 설정 윈도우에서 메뉴 막대를 사용할 수 있습니다.";
 "app.whatsNew.fixed1" = "앱에 새로운 설정 항목이 추가되어도 설정이 기본값으로 초기화되지 않습니다.";
 "app.whatsNew.fixed2" = "손상된 백업 파일을 복원하려고 하면 설정을 지우지 않고 복원을 거부합니다.";

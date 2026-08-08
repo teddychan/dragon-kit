@@ -9,10 +9,8 @@
 "app.general.playSound" = "操作時播放聲音";
 "app.general.playSoundHint" = "一個 App 專屬的範例設定——包含它是為了讓備份與還原有真實資料可儲存。";
 "app.general.languageSection" = "語言";
-"app.about.website" = "網站";
-"app.about.source" = "原始碼";
-"app.about.builtWith" = "建置於";
-"app.about.license" = "授權";
+"app.about.updateFramework" = "更新框架";
+
 "app.whatsNew.summary" = "現在 App 更新後你的設定不會遺失，設定視窗也有了可用的選單列。";
 "app.whatsNew.fixed1" = "App 新增設定項目時，你的設定不再被重設為預設值。";
 "app.whatsNew.fixed2" = "還原損壞的備份檔案時，現在會拒絕該檔案，而不是清除你的設定。";

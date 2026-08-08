@@ -36,13 +36,34 @@ public struct ChangeSection: Identifiable {
 
 /// App-supplied release notes for the "What's New" pane.
 public struct WhatsNewContent {
-    public let version: String
+    /// Deliberately **not public**. ``WhatsNewPane`` rendered this string verbatim, so whatever
+    /// an app typed is what shipped: ice-2 and spectacle-2 passed the raw plist value and lost
+    /// the `v` prefix that About showed, while yahoo-keykey-2 and the sample app hardcoded a
+    /// literal that would silently disagree with the bundle on the next release.
+    ///
+    /// Only ``displayVersion`` is public, and it is always normalized — so no un-prefixed version
+    /// string is reachable from outside the module and a future pane cannot render one. That, not
+    /// the tests, is what enforces the prefix.
+    let version: String
     public let date: String
     public let summary: String
     public let sections: [ChangeSection]
 
-    public init(version: String, date: String, summary: String = "", sections: [ChangeSection] = []) {
+    /// The version as shown in the UI: exactly one leading `v`.
+    public var displayVersion: String { DragonVersion.display(version) }
+
+    /// - Parameter version: defaults to the bundle's `CFBundleShortVersionString`, so apps stop
+    ///   hardcoding it. Pass one only to show notes for a release other than the current build.
+    public init(
+        version: String? = nil,
+        date: String,
+        summary: String = "",
+        sections: [ChangeSection] = [],
+        bundle: Bundle = .main
+    ) {
         self.version = version
+            ?? bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+            ?? "1.0.0"
         self.date = date
         self.summary = summary
         self.sections = sections

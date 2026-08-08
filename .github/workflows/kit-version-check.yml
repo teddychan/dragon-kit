@@ -1,0 +1,36 @@
+name: Kit version check
+
+# The library's `vX.Y.Z` tags still trigger no build and no release — they are version markers
+# the apps pin against. This job only asserts one thing: that `DragonKitVersion.current` agrees
+# with the tag.
+#
+# Every app's About pane shows "Built with · DragonKit vX.Y.Z" from that constant, and a SwiftPM
+# library has no Info.plist to read it from, so the constant is hand-bumped. A constant nobody
+# checks is a constant that eventually lies about which kit a binary compiled against.
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  version-matches-tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: DragonKitVersion.current matches the tag
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME#v}"
+          FILE=Sources/DragonKit/About/DragonAbout.swift
+          FOUND="$(sed -n 's/.*static let current = "\([0-9][0-9.]*\)".*/\1/p' "$FILE")"
+          if [ -z "$FOUND" ]; then
+            echo "::error file=$FILE::could not read DragonKitVersion.current"
+            exit 1
+          fi
+          if [ "$FOUND" != "$TAG" ]; then
+            echo "::error file=$FILE::tag is v$TAG but DragonKitVersion.current is \"$FOUND\" —"\
+                 "every app's About would report the wrong kit version"
+            exit 1
+          fi
+          echo "DragonKitVersion.current = $FOUND matches tag $GITHUB_REF_NAME"

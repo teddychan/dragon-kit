@@ -214,6 +214,21 @@ permanent. Currently sanctioned:
 | yahoo-keykey-2 | R1 | `includeQuit: false` | an IME is quit by the system; quitting only makes typing unresponsive |
 | yahoo-keykey-2 | R5 | no Permissions pane | an IME receives keystrokes via the IMK server and needs no TCC grant |
 
+## R12 — The build stamps `DragonCommitDate`
+
+Some build step must write `git log -1 --format=%cI` into the packaged `Info.plist` as
+`DragonCommitDate`, alongside the `CFBundleVersion = git rev-list --count HEAD` stamp. The
+checker greps the app's build surface for the key — a shell script, a workflow, an `Info.plist`
+placeholder or an Xcode project all satisfy it. Declare `buildFiles` to narrow where it looks.
+
+**Rationale:** About renders `v2.4.1 (756) · 2026-Aug-07 16:54:20 UTC`. The count came from the
+commit; the timestamp came from the *executable's* modification date — when CI linked and signed
+the binary. The two halves described different things and drifted: rebuild the same commit
+tomorrow and the count holds while the date moves. `DragonAbout` now reads `DragonCommitDate`, so
+the line fingerprints one commit. It shows no date at all when the key is absent — a silent
+fallback to the old meaning is exactly the drift this replaced — which is why *not* stamping it
+has to be a violation rather than a quietly shorter version line.
+
 ## Out of scope, deliberately
 
 - **Shipping localizations.** Not having `.strings` isn't re-implementing a kit module. The

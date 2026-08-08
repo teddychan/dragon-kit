@@ -12,10 +12,14 @@ enum WhatsNewConfig {
     /// Every entry is a localization key resolved through ``L(_:)``; the app ships its own
     /// `Localizable.strings` in seven languages, so the pane switches with the language picker.
     /// Fixed leads because 1.3.0's headline is that settings stop being lost on upgrade.
+    ///
+    /// Write the version bare. DragonKit adds the `v` at render time via ``DragonVersion`` — it
+    /// used to be whatever each app typed, which is how ice-2 and spectacle-2 came to show a
+    /// version here with no prefix while their own About panes showed one.
     @MainActor
     static var content: WhatsNewContent {
         WhatsNewContent(
-            version: "v1.3.1",
+            version: "1.3.1",
             date: "2026-08-07",
             summary: L("app.whatsNew.summary"),
             sections: [

@@ -1,5 +1,4 @@
 "DragonKit.selectSetting" = "설정을 선택하세요";
-"DragonKit.acknowledgements" = "감사의 말";
 "DragonKit.whatsNew.title" = "이 버전의 새로운 기능";
 
 "DragonKit.ok" = "확인";
@@ -7,6 +6,16 @@
 
 "DragonKit.language.label" = "언어";
 "DragonKit.language.system" = "자동";
+
+"DragonKit.about.website" = "웹사이트";
+"DragonKit.about.support" = "GitHub에서 지원";
+"DragonKit.about.original" = "원본 프로젝트";
+"DragonKit.about.licenses" = "오픈 소스 라이선스";
+"DragonKit.about.credits" = "크레딧";
+"DragonKit.about.createdBy" = "제작";
+"DragonKit.about.basedOn" = "기반";
+"DragonKit.about.builtWith" = "사용 기술";
+"DragonKit.about.license" = "라이선스";
 
 "DragonKit.pane.about" = "정보";
 "DragonKit.pane.whatsNew" = "새로운 기능";
@@ -48,6 +57,8 @@
 "DragonKit.uninstall.failedTitle" = "제거가 완료되지 않음";
 "DragonKit.uninstall.failedMessage" = "%@을(를) 휴지통으로 옮기지 못했습니다. 설정과 로그인 항목은 삭제되었지만 앱은 아직 설치되어 있습니다. 직접 휴지통으로 옮기세요.";
 
+"DragonKit.updates.upToDate.title" = "%@은(는) 최신 버전입니다";
+"DragonKit.updates.upToDate.message" = "%@이(가) 현재 사용 가능한 최신 버전입니다.";
 "DragonKit.updates.autoCheck" = "자동으로 업데이트 확인";
 "DragonKit.updates.autoDownload" = "자동으로 업데이트 다운로드";
 "DragonKit.updates.checkNow" = "업데이트 확인…";

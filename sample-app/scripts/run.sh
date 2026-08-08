@@ -37,6 +37,17 @@ BUILD="$(git rev-list --count HEAD 2>/dev/null || echo 1)"
 "$PB" -c "Set :CFBundleVersion $BUILD" "$APP/Contents/Info.plist" 2>/dev/null \
   || "$PB" -c "Add :CFBundleVersion string $BUILD" "$APP/Contents/Info.plist"
 
+# The commit's own timestamp, which About renders after the build number. Committer date
+# (%cI) rather than author date: it matches what `git log` shows and what actually sits on
+# the branch. Paired with the count above, the whole version line fingerprints one commit —
+# it used to end in the executable's mtime, so rebuilding the same commit moved the date
+# while the count stood still.
+COMMIT_DATE="$(git log -1 --format=%cI 2>/dev/null || true)"
+if [ -n "$COMMIT_DATE" ]; then
+  "$PB" -c "Set :DragonCommitDate $COMMIT_DATE" "$APP/Contents/Info.plist" 2>/dev/null \
+    || "$PB" -c "Add :DragonCommitDate string $COMMIT_DATE" "$APP/Contents/Info.plist"
+fi
+
 # Copy every SwiftPM resource bundle next to the binary: DragonKit_DragonKit.bundle (the
 # kit's strings) AND DragonAppTemplate_DragonAppTemplate.bundle (the app's own strings,
 # resolved at runtime via LocalizationManager.appStringsBundle = .module).
