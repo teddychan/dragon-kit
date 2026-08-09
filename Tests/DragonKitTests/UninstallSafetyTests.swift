@@ -244,6 +244,21 @@ import Foundation
         #expect(effects.failureReason == nil)
     }
 
+    /// Item 3: moving the call into the success callback must preserve the *preference* cleanup,
+    /// not just the Homebrew step. Named separately from the ordering test because that is the
+    /// half most easily lost in a refactor — the cask is what everyone watches.
+    @MainActor @Test func theSuccessPathStillCleansPreferencesAndNotOnlyTheCask() async {
+        let effects = await Self.run(cask: "dragon-sample-app", failureReason: nil)
+        let id = "com.dragonapp.dragonkit.tests.sequencing"
+
+        #expect(effects.cleanupPaths.contains { $0.path.hasSuffix("Preferences/\(id).plist") },
+                "the emptied preference plist must still be scheduled for post-exit deletion")
+        #expect(effects.cleanupPaths.contains { $0.path.hasSuffix("Saved Application State/\(id).savedState") })
+        #expect(effects.cleanupCask == "dragon-sample-app", "and the Homebrew step alongside it")
+        // Both halves travel in one call, so neither can be dropped without the other.
+        #expect(effects.order.filter { $0 == "cleanup" }.count == 1)
+    }
+
     /// A failed Trash move schedules nothing. This is the finding: brew must not be able to
     /// delete an app the user was just told is still installed.
     @MainActor @Test func aFailedTrashMoveSchedulesNoCleanupAtAll() async {

@@ -179,12 +179,13 @@ public enum DragonUninstaller {
                 // deliberately did not quit — and was overruled two seconds later by brew
                 // removing the app the user had just been told was still installed.
                 //
-                // The trade on the failure path: this same detached `rm` is what defeats
-                // cfprefsd's on-exit rewrite of the preference plists emptied above, so skipping
-                // it lets those files come back when the app is eventually quit. Emptied-then-
-                // rewritten plists are a trivial residue next to brew deleting a live app — and
-                // on that path the app really is still installed, so a preference file existing
-                // for it is not even wrong. (Direct-download apps only either way: a sandboxed
+                // No cleanup is scheduled on the failure path, and that costs nothing real.
+                // The detached `rm` exists to beat cfprefsd's rewrite of the plists emptied
+                // above — but its `sleep` is measured from the spawn, not from app exit, and on
+                // this path the app deliberately does not quit. The old ordering therefore ran
+                // that `rm` while the app was still alive, and cfprefsd wrote the emptied
+                // domains back at the eventual real exit anyway. There was never durable
+                // protection here to lose. (Direct-download apps only either way: a sandboxed
                 // Mac App Store build can't spawn processes and is removed by the App Store.)
                 scheduleCleanup(leftovers, cask)
                 onComplete()
