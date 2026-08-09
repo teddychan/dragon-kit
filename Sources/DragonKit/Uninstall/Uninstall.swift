@@ -29,6 +29,14 @@ public struct UninstallConfig {
     ///
     /// Best-effort and direct-download only: a sandboxed Mac App Store build can't spawn
     /// processes, and is removed by the App Store anyway.
+    ///
+    /// **Pass `nil` from a debug build.** Dragon debug builds are deliberately re-id'd
+    /// (`<release id>.debug`) so they can't touch the installed copy's settings or TCC grants —
+    /// but a cask token is not bundle-scoped, so a flat token throws that away: uninstalling the
+    /// debug build would run `brew uninstall --cask <token> --force` and delete the *release* app
+    /// from /Applications, along with its receipt. Gate it on the running bundle id, as
+    /// `sample-app`'s `AppDelegate` and ice-2's `IceUninstallConfig` both do. The kit cannot do
+    /// this for you: only the app knows which id Homebrew actually installed.
     public let homebrewCask: String?
 
     public init(

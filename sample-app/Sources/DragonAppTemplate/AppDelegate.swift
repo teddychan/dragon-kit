@@ -7,6 +7,9 @@ import DragonKitUpdates
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let appName = "Dragon Sample App"
     private var bundleID: String { Bundle.main.bundleIdentifier ?? "com.dragonapp.dragon-sample-app" }
+    /// The id Homebrew installs. `scripts/run.sh` builds `\(releaseBundleID).debug` instead, and
+    /// the uninstall flow keys the cask cleanup off the difference.
+    private let releaseBundleID = "com.dragonapp.dragon-sample-app"
     private var appVersion: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.1.0"
     }
@@ -79,7 +82,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // Distributed as a Homebrew cask. An app that deletes itself leaves brew's receipt
             // claiming it is still installed, so `brew install` then refuses for an app that
             // isn't there; the token lets the post-exit cleanup clear that record.
-            homebrewCask: "dragon-sample-app"
+            //
+            // Release build ONLY, and that condition is load-bearing. `scripts/run.sh` re-ids the
+            // debug build to `…dragon-sample-app.debug`, which Homebrew never installed. With a
+            // flat token, uninstalling the *debug* build would run
+            // `brew uninstall --cask dragon-sample-app --force` and delete the *release* app out
+            // of /Applications along with its receipt — a debug build destroying the installed
+            // copy it was re-id'd specifically to stay away from. ice-2 caught this while adopting
+            // the flag and guarded it; this app had shipped the unguarded version first.
+            homebrewCask: bundleID == releaseBundleID ? "dragon-sample-app" : nil
         )
     }
 
