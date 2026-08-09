@@ -6,7 +6,15 @@ import DragonKitUpdates
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let appName = "Dragon Sample App"
+    /// Names caches, storages and the menu-bar autosave slot. The fallback keeps a build that
+    /// can't state its id out of `~/Library/Caches/` itself — it must never stand in for the
+    /// real id anywhere a decision is destructive, which is why the Homebrew cask below asks
+    /// `UninstallConfig.caskToken` (it reads `Bundle.main.bundleIdentifier` unfallen-back)
+    /// rather than comparing this.
     private var bundleID: String { Bundle.main.bundleIdentifier ?? "com.dragonapp.dragon-sample-app" }
+    /// The id Homebrew installs. `scripts/run.sh` builds `\(releaseBundleID).debug` instead, and
+    /// the uninstall flow keys the cask cleanup off the difference.
+    private let releaseBundleID = "com.dragonapp.dragon-sample-app"
     private var appVersion: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.1.0"
     }
@@ -79,7 +87,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // Distributed as a Homebrew cask. An app that deletes itself leaves brew's receipt
             // claiming it is still installed, so `brew install` then refuses for an app that
             // isn't there; the token lets the post-exit cleanup clear that record.
-            homebrewCask: "dragon-sample-app"
+            //
+            // Release build ONLY, and that condition is load-bearing. `scripts/run.sh` re-ids the
+            // debug build to `…dragon-sample-app.debug`, which Homebrew never installed. With a
+            // flat token, uninstalling the *debug* build would run
+            // `brew uninstall --cask dragon-sample-app --force` and delete the *release* app out
+            // of /Applications along with its receipt — a debug build destroying the installed
+            // copy it was re-id'd specifically to stay away from. ice-2 caught this while adopting
+            // the flag and guarded it; this app had shipped the unguarded version first.
+            //
+            // The kit owns the comparison so all five apps get the same one — and so a build with
+            // no bundle id at all resolves to `nil` rather than to `bundleID`'s release-id
+            // fallback, which would have authorised the delete on the one build least entitled
+            // to it.
+            homebrewCask: UninstallConfig.caskToken("dragon-sample-app", ifBundleIs: releaseBundleID)
         )
     }
 

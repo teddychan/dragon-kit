@@ -29,6 +29,14 @@ public struct UninstallConfig {
     ///
     /// Best-effort and direct-download only: a sandboxed Mac App Store build can't spawn
     /// processes, and is removed by the App Store anyway.
+    ///
+    /// **Never pass a token flat.** Dragon debug builds are deliberately re-id'd
+    /// (`<release id>.debug`) so they can't touch the installed copy's settings or TCC grants —
+    /// but a cask token is not bundle-scoped, so a flat token throws that away: uninstalling the
+    /// debug build would run `brew uninstall --cask <token> --force` and delete the *release* app
+    /// from /Applications, along with its receipt. Only the app knows which id Homebrew installed,
+    /// so the app names it — but the comparison itself belongs to the kit: build the value with
+    /// ``UninstallConfig/caskToken(_:ifBundleIs:actual:)``.
     public let homebrewCask: String?
 
     public init(
@@ -50,6 +58,32 @@ public struct UninstallConfig {
     }
 }
 
+public extension UninstallConfig {
+    /// `token`, but only when the running bundle really is the one Homebrew installed —
+    /// otherwise `nil`, so no cask is touched.
+    ///
+    /// `brew uninstall --cask <token> --force` is not bundle-scoped: it deletes whatever the
+    /// receipt points at, which is the *release* app in /Applications, and the Dragon casks
+    /// carry `uninstall quit:` so it terminates that app first. A debug build (re-id'd
+    /// `<release id>.debug` by convention) must therefore never supply one. The sample app and
+    /// ice-2 each hand-wrote `bundleID == releaseBundleID ? token : nil` for that; the
+    /// comparison lives here instead so the next app doesn't write a third version of it.
+    ///
+    /// It fails closed, including on the case both hand-written versions got wrong: a debug id,
+    /// another app's id, and a *missing* id all return `nil`. A missing id is how the sample app
+    /// leaked one — its `Bundle.main.bundleIdentifier ?? releaseBundleID` fallback answered the
+    /// release id for a build that couldn't state its own, which is precisely the build that has
+    /// no business authorising a delete. Two empty strings don't match each other either.
+    static func caskToken(
+        _ token: String,
+        ifBundleIs releaseBundleID: String,
+        actual: String? = Bundle.main.bundleIdentifier
+    ) -> String? {
+        guard let actual, !actual.isEmpty, actual == releaseBundleID else { return nil }
+        return token
+    }
+}
+
 /// Performs a complete self-uninstall: disable the login item, wipe the app's defaults
 /// domains, delete leftover preference/saved-state files, move the app to the Trash, then
 /// quit. Ported from ice-2's uninstall flow, generalized to any bundle id / suites.
@@ -61,6 +95,39 @@ public enum DragonUninstaller {
         config: UninstallConfig,
         deleteOptionalData: Bool = false,
         onComplete: @escaping @MainActor () -> Void = { NSApp.terminate(nil) }
+    ) {
+        run(
+            config: config,
+            deleteOptionalData: deleteOptionalData,
+            onComplete: onComplete,
+            recycle: { url, report in
+                NSWorkspace.shared.recycle([url]) { _, error in report(error?.localizedDescription) }
+            },
+            scheduleCleanup: { urls, cask in schedulePostExitCleanup(of: urls, cask: cask) },
+            reportFailure: { appName, reason in
+                reportBundleRemovalFailure(appName: appName, reason: reason)
+            }
+        )
+    }
+
+    /// ``run(config:deleteOptionalData:onComplete:)`` with its three irreversible effects — the
+    /// Trash move, the detached post-exit cleanup and the failure alert — passed in, so the
+    /// *order* between them is testable without recycling a real bundle, spawning a real shell,
+    /// or blocking a test process on `NSAlert.runModal()`, which never returns there.
+    ///
+    /// An overload rather than three defaulted parameters on the public entry point: a public
+    /// function's default argument may not name an internal declaration ("static method
+    /// 'schedulePostExitCleanup' is internal and cannot be referenced from a default argument
+    /// value"), so those defaults would have had to publish the kit's internals — and with them
+    /// a supported way for an app to substitute its own Trash move or swallow the failure alert.
+    /// The public signature is untouched; the five apps keep compiling.
+    static func run(
+        config: UninstallConfig,
+        deleteOptionalData: Bool,
+        onComplete: @escaping @MainActor () -> Void,
+        recycle: @escaping @MainActor (URL, @escaping @Sendable (String?) -> Void) -> Void,
+        scheduleCleanup: @escaping @MainActor ([URL], String?) -> Void,
+        reportFailure: @escaping @MainActor (_ appName: String, _ reason: String) -> Void
     ) {
         LoginItem.setEnabled(false)
 
@@ -83,11 +150,6 @@ public enum DragonUninstaller {
         for url in leftovers {
             try? fileManager.removeItem(at: url)
         }
-        // cfprefsd rewrites an emptied preference plist when the app exits, recreating the
-        // file we just deleted. Delete the leftovers again from a detached process that runs
-        // after we've quit, so nothing lingers. (Direct-download apps only — a sandboxed Mac
-        // App Store app can't spawn processes and is removed by the App Store instead.)
-        schedulePostExitCleanup(of: leftovers, cask: config.homebrewCask)
 
         // The teardown above is irreversible and has already happened, so the Trash move is the
         // one step whose failure the user has to hear about: on a read-only volume, an
@@ -99,14 +161,34 @@ public enum DragonUninstaller {
         // Only the description crosses the hop: `any Error` isn't Sendable, and the string is
         // all the log line needs.
         let appName = config.appName
-        NSWorkspace.shared.recycle([Bundle.main.bundleURL]) { _, error in
-            let failureReason = error?.localizedDescription
+        let cask = config.homebrewCask
+        recycle(Bundle.main.bundleURL) { failureReason in
             Task { @MainActor in
-                guard let failureReason else {
-                    onComplete()
+                if let failureReason {
+                    // Nothing else runs. The app is still installed, and the post-exit cleanup
+                    // below would not merely misdescribe that — with a cask it would enforce the
+                    // opposite.
+                    reportFailure(appName, failureReason)
                     return
                 }
-                reportBundleRemovalFailure(appName: appName, reason: failureReason)
+                // Scheduled here, and only here. The detached shell ends in
+                // `brew uninstall --cask --force`, which quits the app (the Dragon casks carry
+                // `uninstall quit:`) and deletes the bundle; spawning it before the recycle, as
+                // this did until #50, ordered that behind a fixed `sleep 2` instead of behind
+                // the move having worked. A failed recycle then showed "Uninstall Incomplete",
+                // deliberately did not quit — and was overruled two seconds later by brew
+                // removing the app the user had just been told was still installed.
+                //
+                // No cleanup is scheduled on the failure path, and that costs nothing real.
+                // The detached `rm` exists to beat cfprefsd's rewrite of the plists emptied
+                // above — but its `sleep` is measured from the spawn, not from app exit, and on
+                // this path the app deliberately does not quit. The old ordering therefore ran
+                // that `rm` while the app was still alive, and cfprefsd wrote the emptied
+                // domains back at the eventual real exit anyway. There was never durable
+                // protection here to lose. (Direct-download apps only either way: a sandboxed
+                // Mac App Store build can't spawn processes and is removed by the App Store.)
+                scheduleCleanup(leftovers, cask)
+                onComplete()
             }
         }
     }
@@ -188,11 +270,16 @@ public enum DragonUninstaller {
     /// untouched — Homebrew never watches the filesystem, so its receipt still claims the cask
     /// is installed and `brew install` then refuses outright for an app that isn't there.
     ///
-    /// It runs *after* the bundle is already in the Trash, and that ordering is the whole design:
-    /// `brew uninstall --cask` deletes the app itself, so doing this first would make
-    /// `NSWorkspace.recycle` fail on a bundle that was already gone and fire the "Uninstall
-    /// Incomplete" alert on an uninstall that had actually succeeded. By this point brew's only
-    /// remaining job is clearing its own receipt.
+    /// That it runs *after* the bundle is in the Trash is enforced by **where ``run`` spawns it**
+    /// — inside the successful-recycle callback — and by nothing else. The `sleep` cannot carry
+    /// that: it only holds the shell back until this process has exited. The claim used to be
+    /// written here while the spawn sat above the recycle call, which left
+    /// `brew uninstall --cask --force` (a command that quits the app and deletes the bundle)
+    /// riding a two-second delay rather than a successful move, and overruling the "Uninstall
+    /// Incomplete" alert on the path where the move had failed.
+    ///
+    /// With the ordering actually enforced, brew's only remaining job by the time it runs is
+    /// clearing its own receipt, and `NSWorkspace.recycle` never races it for the bundle.
     ///
     /// A GUI app inherits no shell `PATH`, so the two standard prefixes are probed explicitly
     /// (Apple silicon, then Intel). Errors are swallowed on purpose: the app is gone either way
@@ -231,6 +318,10 @@ public enum DragonUninstaller {
 
     /// Deletes `urls` from a detached shell that outlives this process, defeating cfprefsd's
     /// on-exit flush that would otherwise resurrect emptied preference plists.
+    ///
+    /// One caller, and it has to stay that way: the successful-recycle branch of ``run``. The
+    /// shell can also uninstall the Homebrew cask, which deletes the app, so anywhere earlier
+    /// makes that contingent on a `sleep` instead of on the Trash move having worked.
     private static func schedulePostExitCleanup(of urls: [URL], cask: String?) {
         let arguments = postExitCleanupArguments(for: urls, cask: cask)
         guard !arguments.isEmpty else { return }
