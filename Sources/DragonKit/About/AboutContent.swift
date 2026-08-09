@@ -38,8 +38,15 @@ public struct OriginalWork: Sendable, Equatable {
 /// `Sparkle → MIT` while the sample app wrote `Update framework → Sparkle (MIT)`. Same type, two
 /// shapes, exactly the drift the fixed slots removed everywhere else.
 ///
-/// **The canon is name → licence**: the thing's own name as its authors spell it, then its SPDX
-/// licence. `Sparkle → MIT`, `OpenCC → Apache-2.0`. It reads as a standard acknowledgements list
+/// **The canon is name → licence**: the thing's own name as its authors spell it, then its
+/// licence. Use the SPDX identifier when the upstream component declares one — `Sparkle → MIT`,
+/// `OpenCC → Apache-2.0`. When it does not, preserve the upstream wording exactly rather than
+/// mapping it onto the nearest identifier: yahoo-keykey-2's Cangjie-5 table declares
+/// `Freely redistributable without restriction`, which is not GPL-3.0 (that covers the
+/// surrounding `ibus-table-chinese` repository, not the one table bundled) and is not
+/// "Public Domain" either. Quote it in full — an earlier correction here shortened it to
+/// "Freely redistributable", which is a different, narrower grant than the one the source gives.
+/// It reads as a standard acknowledgements list
 /// and scales to ice-2's six bundled libraries, where inventing a role label for each ("Slider
 /// control", "Accessibility bridge") would be one more thing to get inconsistent.
 ///
@@ -51,7 +58,11 @@ public struct OriginalWork: Sendable, Equatable {
 public struct Attribution: Sendable, Equatable {
     /// The library or data set's own name — `Sparkle`, `OpenCC`, `ibus-table-chinese`.
     public let name: String
-    /// Its licence, SPDX-style — `MIT`, `Apache-2.0`, `GPL-3.0`.
+    /// Its licence: the SPDX identifier where the component declares one — `MIT`, `Apache-2.0`,
+    /// `GPL-3.0` — otherwise the upstream wording verbatim, e.g.
+    /// `Freely redistributable without restriction`. Never an identifier the source does not
+    /// itself claim; this row is an attribution, and a wrong licence in it misstates someone
+    /// else's terms.
     public let license: String
 
     public init(name: String, license: String) {
