@@ -96,17 +96,19 @@ import Foundation
     /// the Cangjie-5 *table*, whose own header declares "Freely redistributable without
     /// restriction". Asserting GPL-3.0 in an MIT app's About pane states something that app's
     /// notices explicitly argue is untrue. Do not "tidy" this into an SPDX identifier the source
-    /// does not claim.
+    /// does not claim — and quote the header in full: the first correction here wrote "Freely
+    /// redistributable", which contradicted the very comment above it and shortened a licence
+    /// grant while claiming to be quoting one.
     @Test func attributionsRenderLastInOrder() {
         let rows = Self.content(attributions: [
             Attribution(name: "McBopomofo", license: "MIT"),
-            Attribution(name: "ibus-table-chinese", license: "Freely redistributable"),
+            Attribution(name: "ibus-table-chinese", license: "Freely redistributable without restriction"),
             Attribution(name: "OpenCC", license: "Apache-2.0"),
         ]).creditRows
 
         #expect(rows.count == 6)
         #expect(rows.suffix(3).map(\.label) == ["McBopomofo", "ibus-table-chinese", "OpenCC"])
-        #expect(rows.suffix(3).map(\.value) == ["MIT", "Freely redistributable", "Apache-2.0"])
+        #expect(rows.suffix(3).map(\.value) == ["MIT", "Freely redistributable without restriction", "Apache-2.0"])
         // The canon rows are still the canon rows, in order, ahead of them. No `originalWork`
         // here, so the Based on slot collapses and Built with sits at index 1.
         #expect(rows[0].label == L("DragonKit.about.createdBy"))
