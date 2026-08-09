@@ -88,16 +88,25 @@ import Foundation
 
     /// App-specific attributions append after the canon rows and never interleave with them —
     /// yahoo-keykey-2 credits a language model, a Cangjie table and a Han-conversion library.
+    ///
+    /// These are that app's **real** attributions, so the licences here must match its
+    /// `docs/THIRD-PARTY-NOTICES.md` — a fixture in the reference repo is exactly what someone
+    /// migrating an app copies. This row said `GPL-3.0` and was wrong in a way that mattered:
+    /// GPL-3.0 covers the `ibus-table-chinese` repository's packaging, while the bundled data is
+    /// the Cangjie-5 *table*, whose own header declares "Freely redistributable without
+    /// restriction". Asserting GPL-3.0 in an MIT app's About pane states something that app's
+    /// notices explicitly argue is untrue. Do not "tidy" this into an SPDX identifier the source
+    /// does not claim.
     @Test func attributionsRenderLastInOrder() {
         let rows = Self.content(attributions: [
             Attribution(name: "McBopomofo", license: "MIT"),
-            Attribution(name: "ibus-table-chinese", license: "GPL-3.0"),
+            Attribution(name: "ibus-table-chinese", license: "Freely redistributable"),
             Attribution(name: "OpenCC", license: "Apache-2.0"),
         ]).creditRows
 
         #expect(rows.count == 6)
         #expect(rows.suffix(3).map(\.label) == ["McBopomofo", "ibus-table-chinese", "OpenCC"])
-        #expect(rows.suffix(3).map(\.value) == ["MIT", "GPL-3.0", "Apache-2.0"])
+        #expect(rows.suffix(3).map(\.value) == ["MIT", "Freely redistributable", "Apache-2.0"])
         // The canon rows are still the canon rows, in order, ahead of them. No `originalWork`
         // here, so the Based on slot collapses and Built with sits at index 1.
         #expect(rows[0].label == L("DragonKit.about.createdBy"))
