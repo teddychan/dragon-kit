@@ -70,7 +70,13 @@ Modules:
   `homebrewCask:` so the post-exit cleanup clears brew's receipt too: Homebrew never watches the
   filesystem, so an app that deletes itself leaves a receipt still claiming it is installed and a
   dangling `Caskroom` symlink, and `brew install` then refuses outright for an app that isn't
-  there. Direct-download only — a sandboxed build can't spawn processes.
+  there. Direct-download only — a sandboxed build can't spawn processes. That cleanup is spawned
+  **only after the Trash move succeeds**: it ends in `brew uninstall --cask --force`, which quits
+  the app and deletes the bundle, so on the failure path it would delete an app the user was just
+  told is still installed. Build the token with
+  `UninstallConfig.caskToken("token", ifBundleIs: releaseBundleID)` rather than passing it flat —
+  a cask token is not bundle-scoped, so a re-id'd debug build's uninstall would otherwise remove
+  the *release* app; the helper fails closed on a debug id, another app's id and a missing one.
 - **Updates** (`DragonKitUpdates`) — `DragonUpdater` (Sparkle wrapper) +
   `UpdatesSettingsPane`. `DragonUpdaterConfig` opts an app into Sparkle's gentle scheduled
   reminders and an `onUpdateFoundInBackground` callback (fires only for *scheduled* checks —

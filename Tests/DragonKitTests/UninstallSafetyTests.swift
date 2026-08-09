@@ -136,4 +136,133 @@ import Foundation
         #expect(UninstallConfig(appName: "Acme", checklistItems: ["x"]).homebrewCask == nil)
         #expect(UninstallConfig(appName: "Acme", checklistItems: ["x"], homebrewCask: "acme").homebrewCask == "acme")
     }
+
+    // MARK: - Who may hold a cask token
+
+    /// `brew uninstall --cask --force` deletes the *release* app, so only the build Homebrew
+    /// installed may name a token. ``UninstallConfig/caskToken(_:ifBundleIs:actual:)`` fails
+    /// closed on everything else — including the missing id that the sample app's
+    /// `Bundle.main.bundleIdentifier ?? releaseBundleID` fallback used to answer *with the
+    /// release id*, handing the delete to the one build that couldn't even state who it was.
+    @Test func aCaskTokenIsOnlyIssuedToTheExactReleaseBundle() {
+        let release = "com.dragonapp.dragon-sample-app"
+        let token = "dragon-sample-app"
+        func issued(to actual: String?) -> String? {
+            UninstallConfig.caskToken(token, ifBundleIs: release, actual: actual)
+        }
+
+        #expect(issued(to: release) == token)
+        #expect(issued(to: release + ".debug") == nil, "the debug re-id is the whole reason this exists")
+        #expect(issued(to: "com.dragonapp.clipmenu-2") == nil)
+        #expect(issued(to: nil) == nil, "a missing id must authorise nothing")
+        #expect(issued(to: "") == nil, "and neither may two empty strings match each other")
+    }
+}
+
+/// The uninstall's sequencing, which is a safety property in its own right: the post-exit
+/// cleanup can end in `brew uninstall --cask --force`, and the Dragon casks carry
+/// `uninstall quit:`, so that shell quits the app and deletes the bundle.
+///
+/// It used to be spawned *before* `NSWorkspace.recycle` was even called, ordered behind the
+/// script's `sleep 2` and nothing else. When the Trash move failed the kit showed "Uninstall
+/// Incomplete" and deliberately stayed running — and two seconds later brew removed the app the
+/// user had just been told was still installed. These tests hold the cleanup to the successful
+/// branch.
+///
+/// They drive the internal `run` overload, whose only reason to exist is that all three of its
+/// injected effects are unrunnable here: no bundle is recycled, no shell is spawned, and the
+/// failure alert — `NSAlert.runModal()`, which never returns in a test process — is never built.
+@Suite struct UninstallSequencingTests {
+    /// Records what happened and in which order. One object, so nothing is captured `var`.
+    @MainActor private final class Effects {
+        var order: [String] = []
+        var recycled: [URL] = []
+        var cleanupPaths: [URL] = []
+        var cleanupCask: String?
+        var failureReason: String?
+
+        /// The Trash-move callback hops back through `Task { @MainActor in … }`, so let that
+        /// task run before asserting. Bounded and sleepless: yield until the run reaches one of
+        /// its two terminal effects.
+        func settle() async {
+            for _ in 0..<100 where !order.contains(where: { $0 == "complete" || $0 == "failure" }) {
+                await Task.yield()
+            }
+        }
+    }
+
+    /// A config whose every *real* side effect is inert: no extra cleanup paths, no settings
+    /// suite, and a bundle id that owns no defaults domain, no preference plist and no saved
+    /// state, so `run`'s own `removeItem` calls find nothing to delete.
+    private static func config(cask: String?) -> UninstallConfig {
+        UninstallConfig(
+            appName: "Sequencing",
+            bundleID: "com.dragonapp.dragonkit.tests.sequencing",
+            checklistItems: ["x"],
+            homebrewCask: cask
+        )
+    }
+
+    /// `run` with the Trash move stubbed to report `failureReason` (nil = the bundle made it).
+    @MainActor private static func run(cask: String?, failureReason: String?) async -> Effects {
+        let effects = Effects()
+        DragonUninstaller.run(
+            config: config(cask: cask),
+            deleteOptionalData: false,
+            onComplete: { effects.order.append("complete") },
+            recycle: { url, report in
+                effects.order.append("recycle")
+                effects.recycled.append(url)
+                report(failureReason)
+            },
+            scheduleCleanup: { urls, scheduledCask in
+                effects.order.append("cleanup")
+                effects.cleanupPaths = urls
+                effects.cleanupCask = scheduledCask
+            },
+            reportFailure: { _, reason in
+                effects.order.append("failure")
+                effects.failureReason = reason
+            }
+        )
+        await effects.settle()
+        return effects
+    }
+
+    /// The cleanup is scheduled only once the bundle is in the Trash, and before the app quits —
+    /// `onComplete` terminates by default, so anything after it may never run.
+    @MainActor @Test func cleanupIsScheduledAfterTheTrashMoveAndBeforeTheAppQuits() async {
+        let effects = await Self.run(cask: "dragon-sample-app", failureReason: nil)
+
+        #expect(effects.order == ["recycle", "cleanup", "complete"])
+        #expect(effects.recycled == [Bundle.main.bundleURL])
+        #expect(effects.cleanupCask == "dragon-sample-app")
+        // The paths handed over are the leftovers `run` computed, not an empty stand-in.
+        #expect(effects.cleanupPaths.contains {
+            $0.path.hasSuffix("Preferences/com.dragonapp.dragonkit.tests.sequencing.plist")
+        })
+        #expect(effects.failureReason == nil)
+    }
+
+    /// A failed Trash move schedules nothing. This is the finding: brew must not be able to
+    /// delete an app the user was just told is still installed.
+    @MainActor @Test func aFailedTrashMoveSchedulesNoCleanupAtAll() async {
+        let effects = await Self.run(cask: "dragon-sample-app", failureReason: "Permission denied")
+
+        #expect(effects.order == ["recycle", "failure"])
+        #expect(!effects.order.contains("cleanup"))
+        #expect(effects.cleanupPaths.isEmpty)
+        #expect(effects.cleanupCask == nil)
+        #expect(effects.failureReason == "Permission denied")
+    }
+
+    /// And it does not quit: `onComplete` terminates by default, which would hide the failure
+    /// behind a window that just disappeared.
+    @MainActor @Test func onCompleteRunsOnlyWhenTheBundleReachedTheTrash() async {
+        let failed = await Self.run(cask: nil, failureReason: "Read-only volume")
+        #expect(!failed.order.contains("complete"))
+
+        let succeeded = await Self.run(cask: nil, failureReason: nil)
+        #expect(succeeded.order == ["recycle", "cleanup", "complete"])
+    }
 }

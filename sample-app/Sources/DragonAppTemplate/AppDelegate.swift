@@ -6,6 +6,11 @@ import DragonKitUpdates
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let appName = "Dragon Sample App"
+    /// Names caches, storages and the menu-bar autosave slot. The fallback keeps a build that
+    /// can't state its id out of `~/Library/Caches/` itself — it must never stand in for the
+    /// real id anywhere a decision is destructive, which is why the Homebrew cask below asks
+    /// `UninstallConfig.caskToken` (it reads `Bundle.main.bundleIdentifier` unfallen-back)
+    /// rather than comparing this.
     private var bundleID: String { Bundle.main.bundleIdentifier ?? "com.dragonapp.dragon-sample-app" }
     /// The id Homebrew installs. `scripts/run.sh` builds `\(releaseBundleID).debug` instead, and
     /// the uninstall flow keys the cask cleanup off the difference.
@@ -90,7 +95,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // of /Applications along with its receipt — a debug build destroying the installed
             // copy it was re-id'd specifically to stay away from. ice-2 caught this while adopting
             // the flag and guarded it; this app had shipped the unguarded version first.
-            homebrewCask: bundleID == releaseBundleID ? "dragon-sample-app" : nil
+            //
+            // The kit owns the comparison so all five apps get the same one — and so a build with
+            // no bundle id at all resolves to `nil` rather than to `bundleID`'s release-id
+            // fallback, which would have authorised the delete on the one build least entitled
+            // to it.
+            homebrewCask: UninstallConfig.caskToken("dragon-sample-app", ifBundleIs: releaseBundleID)
         )
     }
 
