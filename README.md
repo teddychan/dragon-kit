@@ -224,6 +224,12 @@ it from the app's `Info.plist` (`CFBundleShortVersionString`) — never hardcode
 [`sample-app/Sources/DragonAppTemplate/AboutConfig.swift`](sample-app/Sources/DragonAppTemplate/AboutConfig.swift))
 — so About, backups, and update checks all report the same value.
 
+The development-to-release boundary is specified in
+[`docs/MAC-APP-RELEASE-LIFECYCLE.md`](docs/MAC-APP-RELEASE-LIFECYCLE.md). In particular, Debug
+is only a local build-and-test configuration; it is not another version or release channel.
+Every public tag gates current What's New content, and marketing-site refreshes are asynchronous
+and non-blocking.
+
 ## Roadmap
 Done: App Settings, Permissions, Backup & Restore, Check for Update, Uninstall, What's New,
 7-language live localization, the canonical `DragonAppMenu` dropdown, and the machine-checked

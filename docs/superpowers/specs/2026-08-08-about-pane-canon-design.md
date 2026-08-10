@@ -379,6 +379,15 @@ Breaking by design — removing `AboutLink`, the free-form arrays, and public `W
 
 Shipping the tag is not finished until the apps bump.
 
+### Subsequent release-lifecycle decision (2026-08-10)
+
+[`../../MAC-APP-RELEASE-LIFECYCLE.md`](../../MAC-APP-RELEASE-LIFECYCLE.md) supersedes this
+document wherever it discusses the ongoing app-release process. In particular, Debug is local
+only, every public tag gates current What's New content, and a successful app release notifies
+the independently deployed marketing site without waiting for it. The implementation notes
+below remain the historical record of the DragonKit 3.0 migration; their one-release exceptions
+are not the rule for future public releases.
+
 ## Implementation notes — where the build differed from this design
 
 - **The sample app still passes an explicit What's New version.** `WhatsNewContent.version` now
