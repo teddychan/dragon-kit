@@ -53,6 +53,51 @@ import Foundation
         #expect(result == "v2.3.0 (23)")
     }
 
+    /// The exact shape `MAC-APP-RELEASE-LIFECYCLE.md` specifies for a local build:
+    /// `vX.Y.Z Debug (<build>)`. The channel sits between the version and the build number, and
+    /// the version itself stays the numeric candidate — clipmenu-2, ice-2 and spectacle-2 each
+    /// used to reach this by writing ` (Debug)` into `CFBundleShortVersionString` instead.
+    @Test func versionStringRendersTheChannelAfterTheVersion() {
+        let result = DragonAbout.versionString(short: "2.10.1", build: "756", commitDate: nil,
+                                               channel: "Debug")
+        #expect(result == "v2.10.1 Debug (756)")
+    }
+
+    @Test func versionStringPlacesTheChannelBeforeTheCommitDate() {
+        // 2026-07-07 13:34:56 UTC
+        let date = Date(timeIntervalSince1970: 1_783_431_296)
+        let result = DragonAbout.versionString(short: "2.10.1", build: "756", commitDate: date,
+                                               channel: "Debug")
+        #expect(result == "v2.10.1 Debug (756) · 2026-Jul-07 13:34:56 UTC")
+    }
+
+    /// A release build stamps no channel, and must render exactly what it rendered before the key
+    /// existed — the whole point of making the channel additive rather than a format change.
+    @Test func versionStringIsUnchangedWhenNoChannelIsStamped() {
+        let result = DragonAbout.versionString(short: "2.10.1", build: "756", commitDate: nil)
+        #expect(result == "v2.10.1 (756)")
+    }
+
+    /// Absent, empty and whitespace-only all mean "release build". A blank key must not render a
+    /// stray trailing space between the version and the build number.
+    @Test func blankChannelIsTreatedAsAbsent() {
+        #expect(DragonAbout.normalizedChannel(nil) == nil)
+        #expect(DragonAbout.normalizedChannel("") == nil)
+        #expect(DragonAbout.normalizedChannel("   ") == nil)
+        #expect(DragonAbout.normalizedChannel("  Debug  ") == "Debug")
+        #expect(DragonAbout.versionString(short: "2.10.1", build: "756", commitDate: nil,
+                                          channel: DragonAbout.normalizedChannel("  "))
+                == "v2.10.1 (756)")
+    }
+
+    /// The safe default: a bundle with no `DragonBuildChannel` is not a Debug build. Apps gate
+    /// updater initialization on this, so an inverted default would arm the production updater in
+    /// every Debug build — or disarm it in every release one.
+    @Test func bundleWithoutTheChannelKeyIsNotADebugBuild() {
+        #expect(DragonAbout.buildChannel(bundle: .module) == nil)
+        #expect(DragonAbout.isDebugBuild(bundle: .module) == false)
+    }
+
     @Test func parsesGitCommitterDateFormat() {
         // `git log -1 --format=%cI`
         let date = DragonAbout.parseISO8601("2026-08-07T16:54:20+08:00")

@@ -37,6 +37,29 @@ BUILD="$(git rev-list --count HEAD 2>/dev/null || echo 1)"
 "$PB" -c "Set :CFBundleVersion $BUILD" "$APP/Contents/Info.plist" 2>/dev/null \
   || "$PB" -c "Add :CFBundleVersion string $BUILD" "$APP/Contents/Info.plist"
 
+# The version field stays the numeric candidate for the next public release — never
+# "X.Y.Z (Debug)". MAC-APP-RELEASE-LIFECYCLE.md makes this field the sole source of truth that
+# the release tag is asserted against, so a channel label inside it breaks the tag gate. Assert
+# it rather than trusting it: this script is the reference the app repos copy, and three of them
+# had grown exactly that mutation.
+SHORT="$("$PB" -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist")"
+if [[ ! "$SHORT" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  echo "error: CFBundleShortVersionString must be a numeric X.Y.Z candidate, got '$SHORT'" >&2
+  exit 1
+fi
+
+# The word "Debug" lives here instead, as build-channel metadata. DragonAbout renders
+# "v$SHORT Debug ($BUILD)" from it, so the build is identifiable in a screenshot or a bug report
+# without the version field ever carrying a non-numeric value.
+"$PB" -c "Set :DragonBuildChannel Debug" "$APP/Contents/Info.plist" 2>/dev/null \
+  || "$PB" -c "Add :DragonBuildChannel string Debug" "$APP/Contents/Info.plist"
+
+# Belt and braces with the AppDelegate's `isDebugBuild()` guard: the app never starts Sparkle in
+# a Debug build, and this makes the plist say so too, so a stray scheduled check is impossible
+# even if the guard is ever removed.
+"$PB" -c "Set :SUEnableAutomaticChecks false" "$APP/Contents/Info.plist" 2>/dev/null \
+  || "$PB" -c "Add :SUEnableAutomaticChecks bool false" "$APP/Contents/Info.plist"
+
 # The commit's own timestamp, which About renders after the build number. Committer date
 # (%cI) rather than author date: it matches what `git log` shows and what actually sits on
 # the branch. Paired with the count above, the whole version line fingerprints one commit —
@@ -73,8 +96,16 @@ else
   echo "      '$SIGN_IDENTITY' in Keychain Access (Certificate Assistant → Create a Certificate)."
 fi
 
-# Quit any previously-launched debug instance so a stale menu-bar icon doesn't linger.
-pkill -f "/Contents/MacOS/$BIN_NAME" 2>/dev/null || true
+# Quit any previously-launched DEBUG instance so a stale menu-bar icon doesn't linger.
+#
+# Anchored on the full debug bundle path, not on "/Contents/MacOS/$BIN_NAME". The executable is
+# named DragonAppTemplate in BOTH bundles — only CFBundleName/CFBundleDisplayName differ — so the
+# bare pattern matched an installed release copy too and this script terminated the user's public
+# app. spectacle-2 shipped and fixed the same defect; the lifecycle spec now requires quit and
+# cleanup scripts to match only the Debug bundle path.
+pkill -f "$APP/Contents/MacOS/$BIN_NAME" 2>/dev/null || true
 sleep 1
-open "$APP"
+# -n launches the bundle at THIS exact path. A plain `open` resolves through LaunchServices,
+# which is free to activate some other registered copy of the same bundle id.
+open -n "$APP"
 echo "Launched $APP"
