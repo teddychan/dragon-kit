@@ -5,7 +5,22 @@ import DragonKitUpdates
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    private let appName = "Dragon Sample App"
+    /// Read from the bundle, never hardcoded — `UninstallConfig.optionalDataToggle` builds
+    /// `Application Support/\(appName)` from this, so a literal meant a Debug build offered to
+    /// delete the *release* build's data directory, and the uninstall sheet named the release app.
+    ///
+    /// Found by the first hands-on Debug-isolation test, in the app the other four mirror. It is
+    /// the same defect spectacle-2's `AppIdentity` was written to prevent — its doc comment spells
+    /// it out — and yahoo-keykey-2 had it too. Static review of the scripts had missed it here
+    /// because nothing in this file *looked* like a path.
+    ///
+    /// In a release build `CFBundleDisplayName` is "Dragon Sample App", so this resolves to exactly
+    /// the string it replaced.
+    private var appName: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
+            ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String
+            ?? "Dragon Sample App"
+    }
     /// Names caches, storages and the menu-bar autosave slot. The fallback keeps a build that
     /// can't state its id out of `~/Library/Caches/` itself — it must never stand in for the
     /// real id anywhere a decision is destructive, which is why the Homebrew cask below asks

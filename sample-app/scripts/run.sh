@@ -54,6 +54,15 @@ fi
 "$PB" -c "Set :DragonBuildChannel Debug" "$APP/Contents/Info.plist" 2>/dev/null \
   || "$PB" -c "Add :DragonBuildChannel string Debug" "$APP/Contents/Info.plist"
 
+# Cut the Debug build off from the production appcast at the DATA layer, not the UI layer.
+# Without a feed, `SPUUpdater.start()` throws, so `DragonUpdater.updater` returns nil
+# (Sources/DragonKitUpdates/Updates.swift:155-166), `canCheckForUpdates` is false (:184) and the
+# Updates pane's button disables itself (:248). Every route goes inert — pane, toggle and button —
+# which hiding the pane would not achieve, and the canon §R9 sidebar stays identical in both
+# channels. ice-2 and yahoo-keykey-2 arrived at this independently; it is now the standard across
+# all five apps, so the reference app must carry it too.
+"$PB" -c "Delete :SUFeedURL" "$APP/Contents/Info.plist" 2>/dev/null || true
+
 # Belt and braces with the AppDelegate's `isDebugBuild()` guard: the app never starts Sparkle in
 # a Debug build, and this makes the plist say so too, so a stray scheduled check is impossible
 # even if the guard is ever removed.
