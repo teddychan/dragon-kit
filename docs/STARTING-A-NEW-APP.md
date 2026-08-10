@@ -29,7 +29,9 @@ accessory apps, and a localization helper.
 - **The release lifecycle is shared too.** Read
   [`MAC-APP-RELEASE-LIFECYCLE.md`](MAC-APP-RELEASE-LIFECYCLE.md): Debug is a local test loop,
   not a second version or public channel; only a passing public tag may ship, and the marketing
-  site refreshes independently afterward.
+  site refreshes independently afterward. Every app—including Dragon Sample App—uses an exact
+  `vX.Y.Z` public tag. One repository owns one public version series; never invent a Debug,
+  Sample, App Store, or other channel-specific tag prefix.
 - The kit's own design spec + plan live in that repo under `docs/superpowers/` if you want the rationale.
 
 Your job = **scaffold a runnable shell first** (this doc gives you the complete starter files),
@@ -51,7 +53,8 @@ Your job = **scaffold a runnable shell first** (this doc gives you the complete 
   identity — bundle id `<release-bundle-id>.debug`, display name `"<App> Debug"` — so it runs beside
   any installed copy without TCC/UserDefaults/menu-bar clashes. This is local packaging only:
   do not create a Debug tag, GitHub Release, appcast, or separate marketing version, and do not
-  put `Debug` inside `CFBundleShortVersionString`.
+  put `Debug` inside `CFBundleShortVersionString`. Render it only as the Debug bundle's name and
+  build-channel label; the local bundle remains runtime-independent through its `.debug` identity.
 
 ---
 

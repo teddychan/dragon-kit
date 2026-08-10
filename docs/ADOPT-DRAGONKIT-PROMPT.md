@@ -26,11 +26,13 @@ menu-bar app, so each app builds them once and updates them centrally.
                           NOT in a Mac App Store build.
 
 FIRST, before writing code, read these (they are the source of truth):
-  1. ~/git/dragon-kit/CONFORMANCE.md  — NORMATIVE. Rules R0-R11 are machine-checked by
+  1. ~/git/dragon-kit/CONFORMANCE.md  — NORMATIVE. Rules R0-R12 are machine-checked by
      ~/git/dragon-kit/Scripts/dragon-conformance.py, which runs in this app's CI, so a
      violation fails the PR. Read it first: it defines what "adopted" actually means.
   2. ~/git/dragon-kit/docs/MAC-APP-RELEASE-LIFECYCLE.md — canonical Debug/test/tag/release/site
-     lifecycle. Debug is local only, never another version, tag, prerelease or public artifact.
+     lifecycle. Debug is local only, never part of a version, tag, prerelease or public artifact.
+     Every app, including Dragon Sample App, uses exactly vX.Y.Z for public releases. One repo
+     owns one public tag series; never add an app-specific tag prefix.
   3. ~/git/dragon-kit/docs/STARTING-A-NEW-APP.md  — self-contained guide + starter files
   4. ~/git/dragon-kit/sample-app/  — a runnable reference app wiring up EVERY module
      end-to-end (esp. sample-app/Sources/DragonAppTemplate/AppDelegate.swift and the
@@ -81,6 +83,10 @@ Menu-bar wiring to copy from sample-app/AppDelegate.swift:
   • Version is single-sourced from Info.plist (CFBundleShortVersionString /
     CFBundleVersion) — never hardcode it. Use DragonAbout.versionString() for the About
     pane; it formats as "v<short> (<build>) · <UTC build time>".
+  • Debug keeps CFBundleShortVersionString numeric and unchanged. Render "Debug" from build-
+    channel metadata and use <release-bundle-id>.debug so it runs independently beside Release.
+  • A public release tag is exactly vX.Y.Z. No sample-v/mas-v/app-v/release-v prefix is allowed.
+    Debug has no tag, and every distribution channel consumes the same exact app release tag.
 
 CONSTRAINTS:
   • Depend on DragonKit; never fork or re-implement its shared behavior. If a shared

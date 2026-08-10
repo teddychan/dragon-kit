@@ -28,6 +28,10 @@ app product, an independently numbered version, a prerelease channel, or a relea
 to users. macOS gives it a separate local bundle identity so it can run safely beside the
 installed release; that is an implementation detail, not a second version stream.
 
+`Debug` is never part of a version number. It is only a naming and build-channel label on a
+runtime-independent local bundle. Removing that label and the `.debug` bundle identity exposes
+the same tested numeric candidate as the public release.
+
 ## Development and release flow
 
 ```mermaid
@@ -107,6 +111,32 @@ prerelease suffix, or marketing-site revision belongs in it.
   built bundle. App code never hand-types the current version into those surfaces.
 - There are no Debug tags, Debug GitHub Releases, Debug appcasts, Debug Homebrew releases, or
   Debug marketing-site events.
+
+## One public tag namespace per repository
+
+Every public Dragon app, including Dragon Sample App, uses exactly `vX.Y.Z`. Prefixes such as
+`sample-vX.Y.Z`, `mas-vX.Y.Z`, `app-vX.Y.Z`, or `release-vX.Y.Z` are not permitted. Debug has no
+tag at all.
+
+A repository may own only one independently versioned public `vX.Y.Z` release series. DragonKit's
+repository already uses `vX.Y.Z` for the Swift package, so an independently versioned Dragon
+Sample App cannot publish from that same repository. Treat the Sample App as a normal app:
+
+- its public releases must be owned by a separate app repository with exact `vX.Y.Z` tags;
+- its production appcast and downloadable artifacts must be owned by that app repository;
+- the in-tree `sample-app/` may remain the kit's source-level integration fixture while the
+  release-owned copy is synchronized or extracted during implementation; and
+- existing `sample-v*` tags, releases, and appcast entries are historical migration data only.
+  Do not create another one.
+
+The public tag gate is therefore unconditional rather than configurable by prefix: it accepts
+only `^v[0-9]+\.[0-9]+\.[0-9]+$`. A manual workflow dispatch must name an existing exact tag or
+run as verification-only; a branch name can never become a release version.
+
+Multiple distribution channels do not create multiple version series. For example, a direct
+download, Homebrew cask, and Mac App Store submission for one app all consume the same tested
+`vX.Y.Z` release. A channel-specific workflow may run separately, but it must reference that
+existing exact tag rather than inventing `mas-v*` or another prefixed tag.
 
 ## Local Debug identity
 
@@ -213,6 +243,9 @@ mirroring the old and new locations until installed versions have moved to the a
 | App-owned update feed | Production Sparkle appcast |
 | Marketing-site repository | Fetch releases, generate changelog pages, test and deploy site |
 
+Dragon Sample App follows the same ownership table as every other app. Its lack of product
+features does not make it a special release type; its purpose is to exercise DragonKit end to end.
+
 ## Acceptance criteria
 
 The lifecycle is correctly implemented when:
@@ -226,6 +259,8 @@ The lifecycle is correctly implemented when:
 - The installed public release and local Debug build can run simultaneously without sharing
   settings, terminating one another, or targeting one another's update or uninstall paths.
 - A public tag cannot publish when the tag, bundle version, or What's New content is stale.
+- Every app repository accepts only exact public `vX.Y.Z` tags; the Sample App has no prefixed
+  exception and no longer releases from DragonKit's package-version namespace.
 - The in-app version is derived from the bundle on every user-visible surface.
 - Only a successful public release notifies the marketing site.
 - A site failure cannot fail or delay the app release.
