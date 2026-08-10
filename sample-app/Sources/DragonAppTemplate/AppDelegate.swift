@@ -153,7 +153,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // `canCheckForUpdates` to force it, which is what `start()` exists to replace. Info.plist
         // ships `SUEnableAutomaticChecks = false`, so this schedules nothing until the user turns
         // the Updates pane's toggle on; without it that toggle would do nothing this launch.
-        updater.start()
+        //
+        // Not in a Debug build. MAC-APP-RELEASE-LIFECYCLE.md requires the local build to never
+        // read the production appcast, and clearing `SUEnableAutomaticChecks` alone does not
+        // achieve that — the user can still turn the toggle on, and `start()` having run is what
+        // makes that live. Leaving Sparkle uninitialized is the actual off switch.
+        if !DragonAbout.isDebugBuild() {
+            updater.start()
+        }
     }
 
     /// Build the canonical Dragon menu-bar menu via `DragonAppMenu` — the single source of
@@ -161,11 +168,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// mirrors.
     /// Rebuilt on language change.
     private func buildMenu() -> NSMenu {
+        // A Debug build passes `onCheckForUpdates: nil`, which drops the item from the dropdown
+        // entirely — the same mechanism a Mac App Store build uses (§R1/§R6). An item left in
+        // place but made inert reads as a bug; the lifecycle spec wants the Debug build to have
+        // no route to the production appcast at all, not a route that silently does nothing.
         DragonAppMenu.menu(DragonAppMenu.Config(
             appName: appName,
             onAbout: { [weak self] in self?.openAbout() },
             onSettings: { [weak self] in self?.openSettings() },
-            onCheckForUpdates: { [weak self] in self?.checkForUpdates() }
+            onCheckForUpdates: DragonAbout.isDebugBuild()
+                ? nil
+                : { [weak self] in self?.checkForUpdates() }
         ))
     }
 
