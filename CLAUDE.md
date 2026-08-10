@@ -1,8 +1,14 @@
 # DragonKit — working notes for Claude
 
 DragonKit is a **published SwiftPM package**: the one place the shared parts of every Dragon
-menu-bar app live. Four downstream apps depend on it (`clipmenu-2`, `ice-2`, `spectacle-2`,
-`yahoo-keykey-2`), plus the in-repo Dragon Sample App. A change here ships to all of them.
+menu-bar app live. Five downstream apps depend on it, one repository each — `clipmenu-2`, `ice-2`,
+`spectacle-2`, `yahoo-keykey-2` and `dragon-sample-app`. A change here ships to all of them.
+
+There is no app inside this repository. Dragon Sample App lived here as `sample-app/` until
+release ownership moved to `teddychan/dragon-sample-app`, because
+[`docs/MAC-APP-RELEASE-LIFECYCLE.md`](docs/MAC-APP-RELEASE-LIFECYCLE.md) allows a repository only
+one public `vX.Y.Z` series and this one's belongs to the package. Its wiring is still the
+reference every app mirrors — read it there.
 
 The prime directive, from [CONFORMANCE.md](CONFORMANCE.md):
 
@@ -20,13 +26,11 @@ depending on, and keep it from breaking five apps at once.
 | `Sources/DragonKit/Resources/*.lproj/DragonKit.strings` | Kit-owned strings, 7 languages. |
 | `Tests/DragonKitTests/` | swift-testing suites for the core library. |
 | `Tests/DragonKitUpdatesTests/` | swift-testing suites for the Sparkle-backed target. Separate on purpose: keeping Sparkle out of the core test target is what keeps the two-product split honest. |
+| `Tests/*/HostWiringTests.swift` | The host-app integration fixture: assembles the shared panes and configs from a plain, non-`@testable` import, in both link shapes. Replaced `sample-app/`'s build — see [Verify before claiming done](#verify-before-claiming-done). |
 | `CONFORMANCE.md` + `Scripts/dragon-conformance.py` + `Scripts/test_conformance.py` | The rules apps are held to, their implementation, and the tests for that implementation. |
-| `.github/workflows/conformance.yml` | Reusable workflow the four apps call from their own CI. |
-| `sample-app/` | Dragon Sample App — a release-grade reference fixture wiring every module; public release ownership is moving to a normal app repo. |
-| `docs/dragon-sample-app/appcast.xml` | Self-hosted Sparkle appcast (written by release CI — don't hand-edit). |
+| `.github/workflows/conformance.yml` | Reusable workflow all five apps call from their own CI. |
 
-`Example/` is not tracked; it is leftover build output from before the sample app moved to
-`sample-app/`. Ignore it.
+`Example/` is not tracked; it is leftover build output from an earlier sample-app layout. Ignore it.
 
 ## Non-negotiables
 
@@ -127,25 +131,40 @@ These look like gaps and are not. Don't "fix" them; do flag a PR that quietly un
 - **The reusable conformance workflow is pinned `@main` on purpose.** It reads the kit's default
   branch anyway, so a tag pin would freeze the interface while the rules moved.
 - **The `exceptions` in CONFORMANCE §R11 are sanctioned**, each with a reason and an owner.
-- `sample-app/Info.plist` carries `CFBundleVersion = 1` as an inert placeholder; every build
-  stamps `git rev-list --count HEAD` over it.
+- **`Tests/*/HostWiringTests.swift` import the kit plainly, not `@testable`.** They stand in for a
+  host app, and an app sees only the public surface — `@testable` would let a public-API break
+  pass there while breaking five apps.
 
 ## Verify before claiming done
 
 This is what CI runs, in this order:
 
 ```bash
-swift test && (cd sample-app && swift build) && python3 Scripts/test_conformance.py && python3 Scripts/dragon-conformance.py --app sample-app --kit .
+swift test && python3 Scripts/test_conformance.py
 ```
 
-The sample app is the reference every other app mirrors, so it must pass its own spec. Two
-packaging bugs only ever appear in the CI-packaged `.app`, never under `sample-app/scripts/run.sh` —
-if you touch `sample-app/Package.swift`, preserve both:
+`swift test` also carries the integration coverage `cd sample-app && swift build` used to provide.
+`Tests/DragonKitTests/HostWiringTests.swift` assembles the Mac App Store shape — every shared pane
+and config a sandboxed host wires, with `DragonKitUpdates` out of scope — and
+`Tests/DragonKitUpdatesTests/HostWiringTests.swift` adds the Sparkle shape and the full canonical
+sidebar. Between them they are the only place here that constructs a real `AboutSettingsPane`,
+`BackupConfig` or `UninstallConfig`: every other suite uses a `FakePane`, so before they existed
+the kit could add a non-defaulted parameter to any public initializer, go green, ship a tag, and
+break five apps on bump.
 
-1. the `@loader_path/../Frameworks` rpath in `linkerSettings`, or dyld can't find the bundled
-   `Sparkle.framework` and the app crashes on launch;
-2. the `AppResources` bundle shim, because SwiftPM's synthesized `Bundle.module` looks in the
-   `.app` root rather than `Contents/Resources` where CI puts the resource bundle.
+`dragon-sample-app` cannot supply that signal from its own CI — it builds against the *published*
+pin, so a break on a branch here stays invisible until this repo tags a release and the app bumps.
+Cloning it into this workflow instead would be worse: an intentional breaking change would red-X
+CI with no way to fix it in the same PR.
+
+To check a real app against the spec, point the checker at its clone:
+
+```bash
+python3 Scripts/dragon-conformance.py --app ~/git/dragon-sample-app --kit .
+```
+
+That is a local convenience only. Each app's own CI runs the same checker through the reusable
+workflow, which is where a violation actually blocks a PR.
 
 ## Git and releases
 
@@ -160,17 +179,17 @@ for it.
 
 One public tag series lives in this repo:
 
-- **`vX.Y.Z`** — the library. **Triggers a version-consistency check only — still no build and no
-  release**; it is purely a version marker the four apps pin against. `kit-version-check.yml`
-  asserts `DragonKitVersion.current` equals the tag, because every app's About reports that
-  constant as "Built with · DragonKit vX.Y.Z" and nothing else can catch a missed bump. Shipping
-  one isn't finished until the apps bump.
+- **`vX.Y.Z`** — the library, and nothing else. **Triggers a version-consistency check only —
+  still no build and no release**; it is purely a version marker the five apps pin against.
+  `kit-version-check.yml` asserts `DragonKitVersion.current` equals the tag, because every app's
+  About reports that constant as "Built with · DragonKit vX.Y.Z" and nothing else can catch a
+  missed bump. Shipping one isn't finished until the apps bump.
 
-Dragon Sample App is a normal app used to exercise the kit end to end. Normal apps also use exact
-`vX.Y.Z` tags, so its independently versioned releases must move to a separate app repository;
-two release products cannot share this repository's one `vX.Y.Z` namespace. Do not create new
-`sample-v*` tags. Existing prefixed tags and the in-repo release workflow are migration debt;
-`sample-app/` remains the source-level reference fixture until release ownership is extracted.
+This repository builds and publishes no app. Dragon Sample App is a normal app, so it uses exact
+`vX.Y.Z` tags too — and two release products cannot share one `vX.Y.Z` namespace, so it releases
+from `teddychan/dragon-sample-app`, which owns its source, appcast, artifacts and Homebrew cask.
+The `sample-v*` tags left here are historical migration data: they stay for provenance, and no new
+one is ever created.
 
 Never delete and re-push a release tag to retry — GitHub turns the published Release into a
 draft whose asset 404s. Bump the plist version and push a fresh tag.

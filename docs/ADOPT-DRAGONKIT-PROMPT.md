@@ -34,9 +34,10 @@ FIRST, before writing code, read these (they are the source of truth):
      Every app, including Dragon Sample App, uses exactly vX.Y.Z for public releases. One repo
      owns one public tag series; never add an app-specific tag prefix.
   3. ~/git/dragon-kit/docs/STARTING-A-NEW-APP.md  — self-contained guide + starter files
-  4. ~/git/dragon-kit/sample-app/  — a runnable reference app wiring up EVERY module
-     end-to-end (esp. sample-app/Sources/DragonAppTemplate/AppDelegate.swift and the
-     *Config.swift files). Mirror its patterns.
+  4. github.com/teddychan/dragon-sample-app  — a runnable reference app, in its own repo,
+     wiring up EVERY module end-to-end (esp. Sources/DragonAppTemplate/AppDelegate.swift and
+     the *Config.swift files). Mirror its patterns. It is not inside dragon-kit: one repo owns
+     one public vX.Y.Z series, and the kit's belongs to the package.
   5. ~/git/dragon-kit/README.md  — module list
 
 GOAL: replace this app's bespoke implementations of these features with DragonKit
@@ -71,7 +72,7 @@ Dragon app's Settings sidebar matches (the order is host-owned; the shell just r
 what you give it):
   General → (this app's own panes) → Permissions → Backup & Restore → What's New → Updates → About → Uninstall
 
-Menu-bar wiring to copy from sample-app/AppDelegate.swift:
+Menu-bar wiring to copy from dragon-sample-app's AppDelegate.swift:
   • NSStatusItem whose menu is built by DragonAppMenu.menu(...) — NOT a hand-rolled NSMenu.
     Rebuild it on .dragonLanguageChanged so the titles switch language live.
     If this app has its own menu content (clipboard history, IME toggles, an Accessibility

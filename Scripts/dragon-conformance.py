@@ -320,11 +320,17 @@ def rule_r9_pane_order(root: str, cfg: Config) -> list[Violation]:
 
 def rule_r10_pin(root: str, cfg: Config, kit: str) -> list[Violation]:
     spec = cfg.pin
-    # A path dependency (the sample app lives inside dragon-kit) is current by construction —
-    # there is no version to fall behind. Still requires the declaration, so it's a stated
-    # fact rather than a silently skipped rule.
+    # `{"kind": "path"}` used to return no violations, for the one app that lived inside
+    # dragon-kit and depended on it by `path: ".."`: current by construction, no version to fall
+    # behind. That app owns its own repository now — MAC-APP-RELEASE-LIFECYCLE.md allows one
+    # public vX.Y.Z series per repository and this one's belongs to the Swift package — so nothing
+    # qualifies any more, and a branch that answers "compliant" to whichever app declares it is a
+    # hole rather than an exemption. It is the same shape as deleting .dragon-conformance.json,
+    # which §R0 makes a violation for exactly this reason. test_conformance.py never covered it,
+    # which is how an untested always-pass branch sat in the checker unnoticed.
     if spec.get("kind") == "path":
-        return []
+        return [Violation("R10", 'pin declares {"kind": "path"}; the exemption is retired — '
+                          "every app pins a published DragonKit version")]
     if not spec.get("file") or not spec.get("pattern"):
         return [Violation("R10", "config declares no 'pin' — cannot verify the DragonKit "
                           "version is current")]

@@ -30,10 +30,12 @@ If nothing changed, say so and stop.
 
 ```bash
 swift test
-(cd sample-app && swift build)
 python3 Scripts/test_conformance.py
-python3 Scripts/dragon-conformance.py --app sample-app --kit .
 ```
+
+`swift test` includes the host-wiring suites, which are what a client app's build used to prove.
+There is no app in this repository to point the checker at; if a rule changed, also run it against
+a real app's clone: `python3 Scripts/dragon-conformance.py --app ~/git/dragon-sample-app --kit .`
 
 If one fails, report the failure verbatim as the top finding and keep reviewing — don't
 hand-analyze what the output already tells you. If you can't run them (no macOS 26 toolchain,
@@ -73,11 +75,11 @@ new regex anchored on `dragon-kit` (an unanchored one matches whichever dependen
 in the file — it matched Sparkle's version in ice-2's `.pbxproj`)? Does the rule stay
 enforceable if the app deletes its `.dragon-conformance.json`?
 
-**Sample app.** A new kit module that `sample-app/` doesn't wire up is a module nobody can see
-working. And if `sample-app/Package.swift` changed, confirm both packaging fixes survive — the
-`@loader_path/../Frameworks` rpath in `linkerSettings`, and the `AppResources` bundle shim.
-Both are launch crashes that appear only in the CI-packaged `.app`, never under `run.sh`, so
-neither the build nor the tests will catch a regression.
+**Host wiring.** A new public pane, config or initializer that `Tests/*/HostWiringTests.swift`
+doesn't construct is API nothing here compiles as a client. Those two suites replaced the in-tree
+sample app's build, and they import the kit plainly — a diff that switches either to `@testable`,
+or adds a shared pane without wiring it there, puts the five-app contract back on review alone.
+The Mac App Store shape (`DragonKitTests`) must stay free of `DragonKitUpdates`.
 
 **Concurrency.** `@MainActor` on new types touching AppKit or SwiftUI; Swift 6 strict-concurrency
 correctness in anything crossing an isolation boundary.
@@ -102,9 +104,7 @@ created.
 - Nitpicks a senior engineer wouldn't raise: formatting, naming taste, import order.
 - Missing app-side localizations. Out of scope by design — the rule is that localization *goes
   through* `L()`, not that every app ships seven languages.
-- `CFBundleVersion = 1` in `sample-app/Info.plist`. Inert placeholder; every build stamps
-  `git rev-list --count HEAD` over it.
-- The untracked `Example/` directory. Stale build output from before the sample app moved.
+- The untracked `Example/` directory. Stale build output from an earlier sample-app layout.
 - Missing test coverage or documentation in general, unless the change is to canon or to a
   conformance rule — where both are required.
 
