@@ -4,8 +4,12 @@ Normative rules every Dragon app must satisfy. The point is narrow and absolute:
 
 > **An app supplies content and app-domain logic. It never re-implements what DragonKit owns.**
 
-Five apps are in scope — `dragon-kit/sample-app` (Dragon Sample App), `clipmenu-2`, `ice-2`,
-`spectacle-2`, `yahoo-keykey-2`.
+Five apps are in scope, one repository each — `dragon-sample-app` (Dragon Sample App),
+`clipmenu-2`, `ice-2`, `spectacle-2`, `yahoo-keykey-2`. The Sample App used to live inside
+dragon-kit as `sample-app/`; it moved out because
+[`docs/MAC-APP-RELEASE-LIFECYCLE.md`](docs/MAC-APP-RELEASE-LIFECYCLE.md) allows a repository only
+one public `vX.Y.Z` series and this one's belongs to the Swift package. It is checked here like
+any other app, not exempted as the kit's own fixture.
 
 These rules are **machine-checked**, not review-enforced. `Scripts/dragon-conformance.py`
 implements them; `.github/workflows/conformance.yml` is a reusable workflow each app calls
@@ -193,13 +197,16 @@ order. Three names for one slot, and the gap was in the app the rule most needed
 ## R10 — The DragonKit pin is current
 
 The version at `pin.file`/`pin.pattern` must be `>=` the newest `vX.Y.Z` tag in dragon-kit.
-An app that depends on the kit by path rather than version declares `"pin": {"kind": "path"}`
-and satisfies the rule by construction — only the Dragon Sample App, which lives inside
-dragon-kit, qualifies. It must still be declared, so it reads as a stated fact rather than a
-silently skipped rule.
+**Every app pins a published version — there is no path-dependency exemption.**
 
 **Rationale:** a stale pin is how an app silently misses shared fixes. Every app sat on 1.3.0
 while the kit was at 1.4.0, so none had the shared menu at all.
+
+`"pin": {"kind": "path"}` used to satisfy this rule by construction, for the one app that
+depended on the kit by `path: ".."` because it lived inside it. That app owns its own repository
+now, so nothing qualifies — and the branch was an always-pass with no fixture behind it, which
+made it the cheapest way for any app to opt out of the staleness check. Declaring it is now
+itself an R10 violation, the same way §R0 makes deleting `.dragon-conformance.json` one.
 
 ## R11 — Exceptions are explicit, reasoned, and few
 

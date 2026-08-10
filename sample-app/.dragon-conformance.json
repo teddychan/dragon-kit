@@ -1,9 +1,0 @@
-{
-  "app": "Dragon Sample App",
-  "sources": ["Sources"],
-  "strings": ["Sources/**/*.lproj/Localizable.strings"],
-  "pin": { "kind": "path" },
-  "paneOrder": { "file": "Sources/DragonAppTemplate/AppDelegate.swift" },
-  "traits": ["sparkle"],
-  "exceptions": []
-}

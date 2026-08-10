@@ -322,6 +322,13 @@ enum SettingsNavigationIdentifier: String {
         print("R10 — pin must be current")
         expect_violation("stale pin", make_app(tmp, package=(
             '.package(url: "https://github.com/teddychan/dragon-kit", from: "0.0.1"),\n')), "R10")
+        # The retired path-pin exemption, which returned "no violations" for any app declaring it
+        # and had no fixture of its own — so the checker carried an always-pass branch that
+        # nothing here would have noticed. It existed only for an app living inside the kit, an
+        # arrangement MAC-APP-RELEASE-LIFECYCLE.md no longer permits. This fixture is what stops
+        # it coming back as the cheapest way for a stale app to pass.
+        expect_violation("retired path-pin exemption is itself a violation", make_app(
+            tmp, config_over={"pin": {"kind": "path"}}), "R10")
         # Regression, and the reason §R0 now insists the pattern be anchored on dragon-kit.
         # The pattern is one search over the whole file, so an unanchored version regex matches
         # whichever dependency appears first. In ice-2's .pbxproj that was Sparkle at 2.5.2 —

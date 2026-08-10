@@ -372,7 +372,7 @@ final class SettingsSelection {
 }
 
 /// Settings root. Observing `LocalizationManager` and applying `.dragonLocalized()` makes the
-/// whole window switch language live; `sample-app/` additionally rebuilds its panes on that
+/// whole window switch language live; dragon-sample-app additionally rebuilds its panes on that
 /// change so injected content (About / What's New) re-localizes too.
 private struct SettingsRoot: View {
     @ObservedObject private var localization = LocalizationManager.shared
@@ -573,9 +573,9 @@ Once the shell runs:
    `DragonSection` / `.dragonAnnotation` for the look so it matches every other Dragon app.
 4. Keep `AboutConfig` / `WhatsNewConfig` updated per release.
 5. App Settings, Permissions, Backup & Restore, Check for Update, and Uninstall now ship
-   in DragonKit (see the cheat-sheet above; the `sample-app/` app wires up all of them). For
-   anything DragonKit still doesn't provide, flag it: it should be added to DragonKit and
-   consumed, not reimplemented per app.
+   in DragonKit (see the cheat-sheet above; https://github.com/teddychan/dragon-sample-app wires
+   up all of them). For anything DragonKit still doesn't provide, flag it: it should be added to
+   DragonKit and consumed, not reimplemented per app.
 6. Keep the pin current. §R10 fails a pin behind the newest kit tag, and that is the whole
    point — every app once sat on 1.3.0 while the kit was at 1.4.0, so none of them had the
    shared menu at all.

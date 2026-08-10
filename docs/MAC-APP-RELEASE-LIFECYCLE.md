@@ -124,8 +124,12 @@ Sample App cannot publish from that same repository. Treat the Sample App as a n
 
 - its public releases must be owned by a separate app repository with exact `vX.Y.Z` tags;
 - its production appcast and downloadable artifacts must be owned by that app repository;
-- the in-tree `sample-app/` may remain the kit's source-level integration fixture while the
-  release-owned copy is synchronized or extracted during implementation; and
+- the kit keeps no in-tree copy of the app. The transitional allowance for one — a source-level
+  integration fixture alongside the release-owned copy — expired when the extraction completed on
+  2026-08-10. Two copies of one app is drift waiting to happen, and the in-tree copy had already
+  begun: it still passed an explicit `version:` to `WhatsNewContent` after the released copy
+  stopped. A kit needing integration coverage adds it to the kit's own tests, not a second app;
+  and
 - existing `sample-v*` tags, releases, and appcast entries are historical migration data only.
   Do not create another one.
 

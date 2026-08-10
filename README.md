@@ -87,9 +87,10 @@ Modules:
   `LocalizationManager` + `LanguagePicker` and `.dragonLocalized()`. Ships **7 languages**
   (en, es, fr, ja, ko, zh-Hans, zh-Hant); switches **live, no restart**. Apps add their own
   `Localizable.strings` per language and drop in `LanguagePicker`.
-- **sample-app/** — the **Dragon Sample App**, a runnable, installable **reference app** wiring up every module end-to-end:
-  General (real persisted toggles), Permissions, Backup & Restore, What's New, Updates,
-  About, Uninstall — plus About, Check-for-Updates, Settings and Quit in the menu.
+- **[dragon-sample-app](https://github.com/teddychan/dragon-sample-app)** — the **Dragon Sample
+  App**, a runnable, installable **reference app** in its own repository, wiring up every module
+  end-to-end: General (real persisted toggles), Permissions, Backup & Restore, What's New,
+  Updates, About, Uninstall — plus About, Check-for-Updates, Settings and Quit in the menu.
 
 ## Requirements
 macOS 26+, Swift 6.1.
@@ -132,7 +133,8 @@ for following this convention:
 General → (the app's own panes) → Permissions → Backup & Restore → What's New → Updates → About → Uninstall
 ```
 
-The Dragon Sample App (`sample-app/`) wires its panes up in this order — mirror it in new apps.
+[Dragon Sample App](https://github.com/teddychan/dragon-sample-app) wires its panes up in this
+order — mirror it in new apps.
 
 ## Menu-bar dropdown order
 
@@ -159,32 +161,33 @@ next to Quit. Every app ships that pane in its sidebar, so uninstalling is still
 
 Apps whose dropdown is only these items use `DragonAppMenu.menu(_:)`; apps with their own
 content above (clipboard history, input-method toggles, …) build that and append
-`DragonAppMenu.items(_:)` after their own separator. The Dragon Sample App (`sample-app/`) uses
-`DragonAppMenu.menu(_:)` — mirror it in new apps.
+`DragonAppMenu.items(_:)` after their own separator.
+[Dragon Sample App](https://github.com/teddychan/dragon-sample-app) uses `DragonAppMenu.menu(_:)`
+— mirror it in new apps.
 
 ## Try it: the Dragon Sample App
 
-DragonKit ships a real, installable reference app — **Dragon Sample App** — that wires up
-every module (Settings, Permissions, Backup & Restore, Updates, Uninstall, About, What's New,
-live localization). Install the released build with Homebrew:
+**Dragon Sample App** is a real, installable reference app that wires up every module (Settings,
+Permissions, Backup & Restore, Updates, Uninstall, About, What's New, live localization). Install
+the released build with Homebrew:
 
 ```bash
 brew install --cask teddychan/tap/dragon-sample-app
 ```
 
-Or build and run it locally from source. `run.sh` produces a separate **Dragon Sample App
-Debug** build (`com.dragonapp.dragon-sample-app.debug`) so it won't collide with an installed
-copy's permissions or settings:
+Or build and run it from source. `run.sh` produces a separate **Dragon Sample App Debug** build
+(`com.dragonapp.dragon-sample-app.debug`) so it won't collide with an installed copy's permissions
+or settings:
 
 ```bash
-cd sample-app && ./scripts/run.sh
+git clone https://github.com/teddychan/dragon-sample-app && cd dragon-sample-app && ./scripts/run.sh
 ```
 
-Dragon Sample App follows the same release rules as every other app: its public tag is exactly
-`vX.Y.Z`, while `Debug` is only a local name/channel label. Because this repository's `vX.Y.Z`
-namespace belongs to the DragonKit package, the Sample App's public releases are being separated
-into app-owned release infrastructure. Historical `sample-v*` releases are not the future tag
-format; the in-tree app remains the kit's integration fixture.
+It lives in [its own repository](https://github.com/teddychan/dragon-sample-app), not in this one.
+It is a normal app, so its public tag is exactly `vX.Y.Z` — and a repository owns only one public
+`vX.Y.Z` series, which here belongs to the Swift package. So the app owns its source, appcast,
+artifacts and cask, and this repository builds no app at all. The `sample-v*` tags left here are
+historical migration data.
 
 ## Start a new app on DragonKit
 See [`docs/STARTING-A-NEW-APP.md`](docs/STARTING-A-NEW-APP.md) — a self-contained guide
@@ -195,8 +198,9 @@ See [`docs/STARTING-A-NEW-APP.md`](docs/STARTING-A-NEW-APP.md) — a self-contai
 DragonKit is a **published SwiftPM package** — the one place the shared parts of every
 Dragon menu-bar app live. **Depend on it; never copy its code into your app.**
 
-1. Read [`docs/STARTING-A-NEW-APP.md`](docs/STARTING-A-NEW-APP.md) (self-contained) and the
-   `sample-app/` app — `sample-app/` is the reference wiring for every module.
+1. Read [`docs/STARTING-A-NEW-APP.md`](docs/STARTING-A-NEW-APP.md) (self-contained) and
+   [dragon-sample-app](https://github.com/teddychan/dragon-sample-app) — the reference wiring for
+   every module.
 2. Create an SPM executable app that depends on `dragon-kit` at a version tag
    (pin the **newest** tag; §R10 fails a stale pin). Link `DragonKit`; add
    `DragonKitUpdates` **only** for direct-download (non-Mac-App-Store) apps.
@@ -227,7 +231,7 @@ So, for example, to change the **About pane's layout for every app**, edit `Abou
 `dragon-kit` and release a new tag. To change **one app's About content** (name, links),
 edit that app's `AboutConfig`. And the **version** is itself a single source of truth: read
 it from the app's `Info.plist` (`CFBundleShortVersionString`) — never hardcode it (see
-[`sample-app/Sources/DragonAppTemplate/AboutConfig.swift`](sample-app/Sources/DragonAppTemplate/AboutConfig.swift))
+[dragon-sample-app's `AboutConfig.swift`](https://github.com/teddychan/dragon-sample-app/blob/main/Sources/DragonAppTemplate/AboutConfig.swift))
 — so About, backups, and update checks all report the same value.
 
 The development-to-release boundary is specified in
@@ -242,10 +246,11 @@ For the cross-repository rollout, use the ready-to-paste
 ## Roadmap
 Done: App Settings, Permissions, Backup & Restore, Check for Update, Uninstall, What's New,
 7-language live localization, the canonical `DragonAppMenu` dropdown, and the machine-checked
-conformance spec (all demonstrated in `sample-app/`). The migration phase is over: all four
-apps — ice-2, clipmenu-2, spectacle-2, KeyKey — depend on the kit and run
-[`conformance.yml`](.github/workflows/conformance.yml) in their own CI, so re-implementing a
-kit module now fails a PR instead of passing review.
+conformance spec (all demonstrated in
+[dragon-sample-app](https://github.com/teddychan/dragon-sample-app)). The migration phase is over:
+all five apps — ice-2, clipmenu-2, spectacle-2, KeyKey and Dragon Sample App — depend on the kit
+from their own repository and run [`conformance.yml`](.github/workflows/conformance.yml) in their
+own CI, so re-implementing a kit module now fails a PR instead of passing review.
 
 Deferred, deliberately: a generalized **folder-based versioned backup** pane
 (versioned snapshot files of arbitrary app data, retention, restore list — the shape

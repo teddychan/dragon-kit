@@ -11,14 +11,18 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0   # conformance R10 compares against the newest vX.Y.Z tag
+      # Also carries the host-app integration coverage that `cd sample-app && swift build` used
+      # to provide: `Tests/*/HostWiringTests.swift` assemble the shared panes and configs from a
+      # plain (non-`@testable`) import, in both the Mac App Store and Sparkle link shapes. Dragon
+      # Sample App's own repository can't supply that signal — it builds against the *published*
+      # pin, so a break here is invisible there until this repo tags a release.
       - name: Build & test DragonKit
         run: swift test
-      - name: Build the sample app
-        run: cd sample-app && swift build
-      # The checker is the enforcement mechanism for all five apps, so a broken checker is
-      # worse than no checker — it would silently pass everything.
+      # The checker is the enforcement mechanism for all four apps, so a broken checker is
+      # worse than no checker — it would silently pass everything. Every rule has a fixture that
+      # must fail and a compliant fixture that must pass, so this needs no real app to check.
+      #
+      # The reference app itself is checked in its own repository now, by this same checker via
+      # the reusable workflow at @main — the same way the other three are.
       - name: Test the conformance checker
         run: python3 Scripts/test_conformance.py
-      # The sample app is the reference every other app mirrors; it must pass its own spec.
-      - name: Check the sample app's conformance
-        run: python3 Scripts/dragon-conformance.py --app sample-app --kit .
