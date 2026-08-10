@@ -7,7 +7,7 @@ import Foundation
 /// constant is the only mechanism that exists. Bumped with the `vX.Y.Z` tag; the tag-push
 /// workflow fails when the two disagree, which is what keeps the row honest.
 public enum DragonKitVersion {
-    public static let current = "3.2.0"
+    public static let current = "3.3.0"
 }
 
 /// The one place a version becomes user-visible text.
@@ -31,10 +31,11 @@ public enum DragonVersion {
 /// its version and copyright identically. Read both from `Info.plist` — never hardcode either.
 public enum DragonAbout {
     /// The formatted version string shown in the About pane, e.g.
-    /// `v2.3.0 (23) · 2026-Jul-06 13:34:56 UTC`.
+    /// `v2.3.0 (23) · 2026-Jul-06 13:34:56 UTC`, or `v2.3.0 Debug (23) · …` for a local build.
     ///
     /// - `CFBundleShortVersionString` → the marketing version, `v`-prefixed by ``DragonVersion``.
     /// - `CFBundleVersion` → the build number, which every build stamps as `git rev-list --count HEAD`.
+    /// - `DragonBuildChannel` → the build channel, rendered after the version; absent in a release build.
     /// - `DragonCommitDate` → the commit's own timestamp, formatted in UTC.
     ///
     /// The timestamp used to be the executable's modification date — when CI linked and signed
@@ -44,17 +45,56 @@ public enum DragonAbout {
     public static func versionString(bundle: Bundle = .main) -> String {
         let short = bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0.0"
         let build = bundle.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "1"
-        return versionString(short: short, build: build, commitDate: commitDate(bundle: bundle))
+        return versionString(short: short, build: build, commitDate: commitDate(bundle: bundle),
+                             channel: buildChannel(bundle: bundle))
     }
 
     /// Pure assembly of the version string from its parts, so the format is testable without a
-    /// bundle. `commitDate` is omitted from the output when `nil`.
-    static func versionString(short: String, build: String, commitDate: Date?) -> String {
-        var result = "\(DragonVersion.display(short)) (\(build))"
+    /// bundle. `commitDate` and `channel` are omitted from the output when `nil`.
+    static func versionString(short: String, build: String, commitDate: Date?,
+                              channel: String? = nil) -> String {
+        var result = DragonVersion.display(short)
+        if let channel {
+            result += " \(channel)"
+        }
+        result += " (\(build))"
         if let date = commitDate {
             result += " · \(formattedUTC(date))"
         }
         return result
+    }
+
+    /// The build channel stamped into `Info.plist` as `DragonBuildChannel` — `Debug` for a local
+    /// hands-on build, absent for a release build.
+    ///
+    /// This exists so the word `Debug` never enters `CFBundleShortVersionString`. clipmenu-2,
+    /// ice-2 and spectacle-2 each appended ` (Debug)` to that field in their debug scripts, which
+    /// made the version non-numeric and put a channel label inside the one string the release tag
+    /// is asserted against — `MAC-APP-RELEASE-LIFECYCLE.md` now forbids it outright. The channel
+    /// is presentation; the version stays the numeric candidate `X.Y.Z`.
+    ///
+    /// Returns `nil` for a missing or blank value, so an unstamped release build renders exactly
+    /// what it rendered before this key existed.
+    public static func buildChannel(bundle: Bundle = .main) -> String? {
+        normalizedChannel(bundle.object(forInfoDictionaryKey: "DragonBuildChannel") as? String)
+    }
+
+    /// Whether this bundle was stamped as a local Debug build.
+    ///
+    /// The lifecycle spec requires a Debug build to disable production updating, and the
+    /// `macos-debug-build` recipe notes that clearing `SUEnableAutomaticChecks` is not enough —
+    /// the app must also avoid *initializing or manually invoking* its updater. That check is
+    /// app-side Swift, so the kit exposes the channel rather than leaving five apps to re-read
+    /// the plist key five ways.
+    public static func isDebugBuild(bundle: Bundle = .main) -> Bool {
+        buildChannel(bundle: bundle)?.caseInsensitiveCompare("Debug") == .orderedSame
+    }
+
+    /// Pure normalization of the raw plist value, so blank-vs-absent is testable without a bundle.
+    static func normalizedChannel(_ raw: String?) -> String? {
+        guard let raw else { return nil }
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
 
     /// The commit the bundle was built from, as stamped into `Info.plist` by the build script
