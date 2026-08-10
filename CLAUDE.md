@@ -147,6 +147,12 @@ if you touch `sample-app/Package.swift`, preserve both:
 **PR-first, always.** Branch → `gh pr create` → `gh pr merge` → push the tag. Never push to
 `main` directly, even for a release.
 
+[`docs/MAC-APP-RELEASE-LIFECYCLE.md`](docs/MAC-APP-RELEASE-LIFECYCLE.md) is the canonical
+lifecycle for every Dragon macOS app. Debug is a local build-and-test configuration, never a
+tag, prerelease, appcast or public artifact. Only a public app tag enters the release gate; a
+successful public release notifies the independently deployed marketing site without waiting
+for it.
+
 Two independent tag series live in this repo:
 
 - **`vX.Y.Z`** — the library. **Triggers a version-consistency check only — still no build and no

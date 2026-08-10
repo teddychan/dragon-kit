@@ -26,6 +26,10 @@ accessory apps, and a localization helper.
 - **The kit's rules are machine-checked.** `CONFORMANCE.md` is normative and a checker enforces
   it in your app's CI — read it alongside this guide. The §3 scaffold wires your new app into
   it and is written to pass.
+- **The release lifecycle is shared too.** Read
+  [`MAC-APP-RELEASE-LIFECYCLE.md`](MAC-APP-RELEASE-LIFECYCLE.md): Debug is a local test loop,
+  not a second version or public channel; only a passing public tag may ship, and the marketing
+  site refreshes independently afterward.
 - The kit's own design spec + plan live in that repo under `docs/superpowers/` if you want the rationale.
 
 Your job = **scaffold a runnable shell first** (this doc gives you the complete starter files),
@@ -45,7 +49,9 @@ Your job = **scaffold a runnable shell first** (this doc gives you the complete 
 - **Do not push / create the GitHub repo until the owner confirms** (outward-facing). Build locally first.
 - **Debug/test builds:** when building a local hands-on test build (not a release), give it its own
   identity — bundle id `<release-bundle-id>.debug`, display name `"<App> Debug"` — so it runs beside
-  any installed copy without TCC/UserDefaults/menu-bar clashes. (This is the standard Dragon-app rule.)
+  any installed copy without TCC/UserDefaults/menu-bar clashes. This is local packaging only:
+  do not create a Debug tag, GitHub Release, appcast, or separate marketing version, and do not
+  put `Debug` inside `CFBundleShortVersionString`.
 
 ---
 

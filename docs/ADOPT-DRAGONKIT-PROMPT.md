@@ -29,11 +29,13 @@ FIRST, before writing code, read these (they are the source of truth):
   1. ~/git/dragon-kit/CONFORMANCE.md  — NORMATIVE. Rules R0-R11 are machine-checked by
      ~/git/dragon-kit/Scripts/dragon-conformance.py, which runs in this app's CI, so a
      violation fails the PR. Read it first: it defines what "adopted" actually means.
-  2. ~/git/dragon-kit/docs/STARTING-A-NEW-APP.md  — self-contained guide + starter files
-  3. ~/git/dragon-kit/sample-app/  — a runnable reference app wiring up EVERY module
+  2. ~/git/dragon-kit/docs/MAC-APP-RELEASE-LIFECYCLE.md — canonical Debug/test/tag/release/site
+     lifecycle. Debug is local only, never another version, tag, prerelease or public artifact.
+  3. ~/git/dragon-kit/docs/STARTING-A-NEW-APP.md  — self-contained guide + starter files
+  4. ~/git/dragon-kit/sample-app/  — a runnable reference app wiring up EVERY module
      end-to-end (esp. sample-app/Sources/DragonAppTemplate/AppDelegate.swift and the
      *Config.swift files). Mirror its patterns.
-  4. ~/git/dragon-kit/README.md  — module list
+  5. ~/git/dragon-kit/README.md  — module list
 
 GOAL: replace this app's bespoke implementations of these features with DragonKit
 modules, supplying only this app's own content/config. Use:
