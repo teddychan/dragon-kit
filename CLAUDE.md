@@ -22,7 +22,7 @@ depending on, and keep it from breaking five apps at once.
 | `Tests/DragonKitUpdatesTests/` | swift-testing suites for the Sparkle-backed target. Separate on purpose: keeping Sparkle out of the core test target is what keeps the two-product split honest. |
 | `CONFORMANCE.md` + `Scripts/dragon-conformance.py` + `Scripts/test_conformance.py` | The rules apps are held to, their implementation, and the tests for that implementation. |
 | `.github/workflows/conformance.yml` | Reusable workflow the four apps call from their own CI. |
-| `sample-app/` | Dragon Sample App — a real, releasable reference app that wires up every module. |
+| `sample-app/` | Dragon Sample App — a release-grade reference fixture wiring every module; public release ownership is moving to a normal app repo. |
 | `docs/dragon-sample-app/appcast.xml` | Self-hosted Sparkle appcast (written by release CI — don't hand-edit). |
 
 `Example/` is not tracked; it is leftover build output from before the sample app moved to
@@ -153,20 +153,19 @@ tag, prerelease, appcast or public artifact. Only a public app tag enters the re
 successful public release notifies the independently deployed marketing site without waiting
 for it.
 
-Two independent tag series live in this repo:
+One public tag series lives in this repo:
 
 - **`vX.Y.Z`** — the library. **Triggers a version-consistency check only — still no build and no
   release**; it is purely a version marker the four apps pin against. `kit-version-check.yml`
   asserts `DragonKitVersion.current` equals the tag, because every app's About reports that
   constant as "Built with · DragonKit vX.Y.Z" and nothing else can catch a missed bump. Shipping
   one isn't finished until the apps bump.
-- **`sample-vX.Y.Z`** — the Dragon Sample App. Triggers `sample-app-release.yml`, which builds,
-  signs, notarizes, self-hosts the appcast and bumps the Homebrew cask. Its GitHub Release is
-  demoted to pre-release so the kit's own tags keep the "Latest" badge.
 
-`git describe --tags` is unreliable here: both series can land on the same commit (`v2.0.0` and
-`sample-v1.2.0` are both `808d5a7`) and `describe` reports the sample tag. Use
-`git tag --points-at HEAD` instead.
+Dragon Sample App is a normal app used to exercise the kit end to end. Normal apps also use exact
+`vX.Y.Z` tags, so its independently versioned releases must move to a separate app repository;
+two release products cannot share this repository's one `vX.Y.Z` namespace. Do not create new
+`sample-v*` tags. Existing prefixed tags and the in-repo release workflow are migration debt;
+`sample-app/` remains the source-level reference fixture until release ownership is extracted.
 
 Never delete and re-push a release tag to retry — GitHub turns the published Release into a
 draft whose asset 404s. Bump the plist version and push a fresh tag.

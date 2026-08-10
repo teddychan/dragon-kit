@@ -1,5 +1,12 @@
 # Dragon Sample App — turn the DragonKit Example into a real, releasable app
 
+> **Superseded release topology (2026-08-10):** This historical design used `sample-v*` because
+> the Sample App shared DragonKit's repository. The accepted
+> [`../../MAC-APP-RELEASE-LIFECYCLE.md`](../../MAC-APP-RELEASE-LIFECYCLE.md) now treats Dragon
+> Sample App as a normal app: exact `vX.Y.Z` public tags, no Debug tag, and separate app-owned
+> release infrastructure because DragonKit's repository already owns its own `vX.Y.Z` series.
+> Keep the prefixed tags and URLs below as historical implementation evidence; do not copy them.
+
 **Date:** 2026-07-04
 **Status:** Approved design → implementation planning
 **Scope:** 5 repos (`dragon-release-ci`, `dragon-kit`, `homebrew-tap`, `www.dragonapp.com`, `clipmenu-2`)

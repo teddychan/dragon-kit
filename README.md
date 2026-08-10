@@ -180,6 +180,12 @@ copy's permissions or settings:
 cd sample-app && ./scripts/run.sh
 ```
 
+Dragon Sample App follows the same release rules as every other app: its public tag is exactly
+`vX.Y.Z`, while `Debug` is only a local name/channel label. Because this repository's `vX.Y.Z`
+namespace belongs to the DragonKit package, the Sample App's public releases are being separated
+into app-owned release infrastructure. Historical `sample-v*` releases are not the future tag
+format; the in-tree app remains the kit's integration fixture.
+
 ## Start a new app on DragonKit
 See [`docs/STARTING-A-NEW-APP.md`](docs/STARTING-A-NEW-APP.md) — a self-contained guide
 (API cheat-sheet + complete starter files) for scaffolding a new menu-bar app on this kit.
@@ -229,6 +235,9 @@ The development-to-release boundary is specified in
 is only a local build-and-test configuration; it is not another version or release channel.
 Every public tag gates current What's New content, and marketing-site refreshes are asynchronous
 and non-blocking.
+
+For the cross-repository rollout, use the ready-to-paste
+[`docs/IMPLEMENT-MAC-APP-RELEASE-LIFECYCLE-PROMPT.md`](docs/IMPLEMENT-MAC-APP-RELEASE-LIFECYCLE-PROMPT.md).
 
 ## Roadmap
 Done: App Settings, Permissions, Backup & Restore, Check for Update, Uninstall, What's New,
