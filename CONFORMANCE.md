@@ -305,11 +305,25 @@ by the app's own build.
 
 `copyright` is a plain `String`, so no signature can close it — which is exactly why it gets the
 rule. The dual-holder line (`© 2008–2014 Naotaka Morimoto · © 2026 Teddy Chan`) was in two of five
-apps, and dropping it is not only about consistency: a Dragon app reimplements its upstream rather
-than reusing its source, so asserting the upstream author's copyright over *this* binary
-contradicts the app's own notices — yahoo-keykey-2 had already reasoned its way to the
-single-holder form on those grounds. Lineage is carried by `OriginalWork`, twice; upstream licence
-text that must travel with copies belongs on the licences page.
+apps and not the other three.
+
+**The rule is about this slot, not about who holds the copyright.** An earlier draft of it argued
+that a Dragon app reimplements its upstream rather than reusing its source and therefore has no
+upstream copyright to assert. That is true of yahoo-keykey-2, which had reasoned its way to the
+single-holder form on exactly those grounds — and false of the two apps the rule actually touched.
+ice-2 is a **git fork** of Jordan Baird's Ice, 1371 commits from its `Initial commit`, GPL-3.0, and
+GPL §4 requires the upstream notice to travel with a derivative work; clipmenu-2's own `LICENSE`
+names both Naotaka Morimoto and Teddy Chan. Generalising from one app's situation to a legal claim
+about all five was wrong, and it was caught by an agent that refused the instruction and went and
+read the licences.
+
+So the reason is narrower and holds regardless of lineage: **the About header is a presentation
+slot in a settings pane, and it read one way in three apps and another in two.** The upstream
+copyright is carried where it legally belongs — the `LICENSE` file, `NSHumanReadableCopyright`, and
+the licences page — none of which this rule touches. ice-2 keeps `Copyright © 2025 Jordan Baird ·
+© 2026 Teddy Chan` in its `Info.plist` while rendering one holder in About, and that is correct,
+not an exception. Lineage in the pane is `OriginalWork`'s job, twice over: the `Original project`
+link and the `Based on` credit.
 
 ## Out of scope, deliberately
 

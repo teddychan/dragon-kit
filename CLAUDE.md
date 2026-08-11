@@ -79,10 +79,18 @@ drift living there: `licensesURL` is **required** (spectacle-2 and the sample ap
 `OriginalWork`, so the `Original project` link and the `Based on` credit are one value that cannot
 half-ship (clipmenu-2 and ice-2 both credited an upstream the pane never linked). The copyright
 names **one holder — the app's own**; the dual-holder `© 2008–2014 Naotaka Morimoto · © 2026 Teddy
-Chan` form is gone, because a Dragon app reimplements its upstream rather than reusing its source
-and so has no upstream copyright to assert. Lineage is `OriginalWork`'s job, twice; upstream
-licence text belongs on the licences page. It is a plain `String`, so the compiler can't close it
-— **CONFORMANCE §R14** does.
+Chan` form is gone. It is a plain `String`, so the compiler can't close it — **CONFORMANCE §R14**
+does.
+
+That last one is **a rule about a presentation slot, not about who holds a copyright**, and the
+distinction was learned the hard way: the first draft justified it by claiming a Dragon app
+reimplements its upstream rather than reusing its source and so has no upstream copyright to
+assert. True of yahoo-keykey-2, false of both apps it touched — ice-2 is a GPL-3.0 *fork* whose §4
+requires the upstream notice to travel, and clipmenu-2's `LICENSE` names two holders. Don't
+reinstate that reasoning, and don't let this rule near a legal notice: `LICENSE`,
+`NSHumanReadableCopyright` and the licences page are all out of scope, and ice-2 rightly keeps both
+holders in its `Info.plist` while rendering one in About. Lineage inside the pane is
+`OriginalWork`'s job, twice.
 
 `<channel>` is `DragonBuildChannel` from the bundle — `Debug` for a local
 build, absent for a release one, so a release renders exactly as it did before the key existed.

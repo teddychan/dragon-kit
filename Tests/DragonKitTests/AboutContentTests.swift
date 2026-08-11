@@ -135,9 +135,11 @@ import Foundation
     /// yahoo-keykey-2 put a description in the slot instead of a copyright.
     ///
     /// One holder, and exactly one `©`. The dual-holder form clipmenu-2 and ice-2 used —
-    /// `© 2008–2014 Naotaka Morimoto · © 2026 Teddy Chan` — is gone: the upstream author is
-    /// credited by ``OriginalWork`` and their licence text by the licences page, and a Dragon app
-    /// reimplements rather than reuses upstream source, so it has no upstream copyright to assert.
+    /// `© 2008–2014 Naotaka Morimoto · © 2026 Teddy Chan` — is gone, because this row read one way
+    /// in three apps and another in two. It is a presentation rule and not a claim about who holds
+    /// the copyright: ice-2 is a GPL-3.0 fork and clipmenu-2's `LICENSE` names two holders, so both
+    /// keep the upstream notice where it legally belongs. Inside the pane, the upstream author is
+    /// credited by ``OriginalWork`` and their licence text by the licences page.
     @Test func copyrightNamesOneHolder() {
         let line = DragonAbout.copyright(years: "2026", holder: "Teddy Chan")
         #expect(line == "© 2026 Teddy Chan")
