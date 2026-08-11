@@ -66,6 +66,9 @@ struct GeneralPane: SettingsPane {
 }
 """
 COMPLIANT_STRINGS = '"app.pane.general" = "General";\n'
+# The seven locales DragonKit ships, which is what clipmenu-2, spectacle-2 and dragon-sample-app
+# each ship too — so for them the picker's default is the correct list (R13).
+ALL_LOCALES = ("en", "es", "fr", "ja", "ko", "zh-Hans", "zh-Hant")
 # Same rule as STALE_PBXPROJ below: a fixture pin that must read as *current* has to stay above
 # dragon-kit's newest real tag, or every compliant-app test starts failing the day the kit
 # catches up.
@@ -79,18 +82,37 @@ COMPLIANT_BUILD = (
 )
 
 
+def language_pane(argument: str = "") -> str:
+    """A General-pane section that constructs the kit's `LanguagePicker`, as all five apps do."""
+    return """import SwiftUI
+import DragonKit
+
+struct LanguageSection: View {
+    var body: some View {
+        DragonSection("Language") {
+            LanguagePicker(%s)
+        }
+    }
+}
+""" % argument
+
+
 def make_app(tmp: str, *, menu: str = COMPLIANT_MENU, panes: str = COMPLIANT_PANES,
              strings: str = COMPLIANT_STRINGS, package: str = COMPLIANT_PACKAGE,
-             build: str = COMPLIANT_BUILD,
+             build: str = COMPLIANT_BUILD, locales: tuple[str, ...] = ("en",),
              extra: dict[str, str] | None = None, config_over: dict | None = None,
              write_config: bool = True) -> str:
     root = tempfile.mkdtemp(dir=tmp)
     os.makedirs(os.path.join(root, "Sources"), exist_ok=True)
-    os.makedirs(os.path.join(root, "Sources", "en.lproj"), exist_ok=True)
     os.makedirs(os.path.join(root, "scripts"), exist_ok=True)
     open(os.path.join(root, "Sources", "Menu.swift"), "w").write(menu)
     open(os.path.join(root, "Sources", "Panes.swift"), "w").write(panes)
-    open(os.path.join(root, "Sources", "en.lproj", "Localizable.strings"), "w").write(strings)
+    # `locales` is the app's own localization set, which R13 derives from these very directories.
+    # An empty tuple is ice-2's shape: no `.lproj` at all.
+    for locale in locales:
+        os.makedirs(os.path.join(root, "Sources", f"{locale}.lproj"), exist_ok=True)
+        open(os.path.join(root, "Sources", f"{locale}.lproj",
+                          "Localizable.strings"), "w").write(strings)
     open(os.path.join(root, "Package.swift"), "w").write(package)
     open(os.path.join(root, "scripts", "build.sh"), "w").write(build)
     for name, body in (extra or {}).items():
@@ -392,6 +414,101 @@ struct MyBackupSection: View {
         expect_violation("declared buildFiles that don't stamp it", make_app(
             tmp, build='PlistBuddy -c "Set :DragonCommitDate $D" Info.plist\n',
             config_over={"buildFiles": ["Package.swift"]}), "R12")
+
+        print("R13 — the language picker offers exactly what the app ships")
+        # The false-positive trap this rule has to survive. clipmenu-2, spectacle-2 and
+        # dragon-sample-app all call LanguagePicker() bare AND ship all seven .lproj, so the
+        # default is the correct list for them — a rule that merely demanded an explicit argument
+        # would fail three conforming apps.
+        expect_pass("bare picker in an app that ships all seven", make_app(
+            tmp, locales=ALL_LOCALES, extra={"Sources/Lang.swift": language_pane()}))
+        # The bug itself: yahoo-keykey-2 through v2.11.4 shipped App/en.lproj and
+        # App/zh-Hant.lproj while its Settings offered Español, Français, 日本語, 한국어 and
+        # 简体中文. Choosing one translated the kit's four panes and left every app string in
+        # English, and nothing anywhere failed on it.
+        expect_violation("bare picker in an app that ships two", make_app(
+            tmp, locales=("en", "zh-Hant"), extra={"Sources/Lang.swift": language_pane()}), "R13")
+        expect_pass("explicit list matching the shipped .lproj", make_app(
+            tmp, locales=("en", "zh-Hant"),
+            extra={"Sources/Lang.swift": language_pane("languages: [.en, .zhHant]")}))
+        expect_violation("explicit list wider than the shipped .lproj", make_app(
+            tmp, locales=("en", "zh-Hant"),
+            extra={"Sources/Lang.swift": language_pane("languages: [.en, .zhHant, .ja]")}), "R13")
+        # The other direction: a translation shipped that no user can select. Equality catches it
+        # because the picker is the app's statement of its own coverage, and keykey's own
+        # testLanguagePickerOffersExactlyTheShippedLocalizations asserts the same both ways.
+        expect_violation("shipped .lproj the picker never offers", make_app(
+            tmp, locales=("en", "zh-Hant", "ja"),
+            extra={"Sources/Lang.swift": language_pane("languages: [.en, .zhHant]")}), "R13")
+        # Source case names are not locale codes — `.zhHant` is `zh-Hant.lproj` on disk. An
+        # unrecognized token has to be reported rather than dropped, or a typo shrinks the offered
+        # set until it agrees with a shorter .lproj list by accident.
+        expect_violation("a token that is no DragonLanguage case", make_app(
+            tmp, locales=("en", "zh-Hant"),
+            extra={"Sources/Lang.swift": language_pane("languages: [.en, .zhhant]")}), "R13")
+        expect_violation("non-literal languages: argument", make_app(
+            tmp, locales=("en", "zh-Hant"),
+            extra={"Sources/Lang.swift": language_pane("languages: Self.supported")}), "R13")
+        expect_pass("multi-line call site", make_app(
+            tmp, locales=("en", "zh-Hant"), extra={"Sources/Lang.swift": """import SwiftUI
+import DragonKit
+
+struct LanguageSection: View {
+    var body: some View {
+        LanguagePicker(
+            languages: [.en, .zhHant]
+        )
+    }
+}
+"""}))
+        # ice-2's shape: English-only, no picker. R13 constrains what a picker claims, not how
+        # many languages an app ships — see CONFORMANCE.md "Out of scope, deliberately".
+        expect_pass("an app with no picker at all is outside R13", make_app(tmp, locales=()))
+        # A picker with nothing to compare against must FAIL rather than skip. A silent skip is
+        # the "passes everything" failure the whole spec exists to prevent, and it would make R13
+        # unenforceable for any app that localizes with String Catalogs instead of .lproj.
+        expect_violation("picker with no .lproj to compare against", make_app(
+            tmp, locales=(), extra={"Sources/Lang.swift": language_pane()}), "R13")
+        expect_pass("...and that is what §R11 is for", make_app(
+            tmp, locales=(), extra={"Sources/Lang.swift": language_pane()},
+            config_over={"exceptions": [{
+                "rule": "R13",
+                "reason": "String Catalogs, so no .lproj exists for the checker to read",
+                "sanctionedBy": "CONFORMANCE.md R11 table"}]}))
+        # A `.lproj` DragonLanguage has no case for is dropped, not counted: Base.lproj is not a
+        # language and the picker physically cannot list `de`, so counting either would leave R13
+        # with no satisfiable form — the mistake §R4 records about IceGroupBox.
+        expect_pass("a locale the kit has no case for is not counted", make_app(
+            tmp, locales=ALL_LOCALES + ("de", "Base"),
+            extra={"Sources/Lang.swift": language_pane()}))
+        # Regression: yahoo-keykey-2 declares sources ["App", "Packages"], which covers the
+        # app-side test enforcing this same rule — and that test contains
+        # `code.range(of: "LanguagePicker(languages:")` as a STRING LITERAL, not a comment. So
+        # stripping comments alone reports a call site inside the test written to catch the bug.
+        expect_pass("a string literal naming the call is not a call site", make_app(
+            tmp, locales=("en", "zh-Hant"),
+            extra={"Sources/Lang.swift": language_pane("languages: [.en, .zhHant]"),
+                   "Sources/PickerTests.swift": '''import XCTest
+
+final class PickerTests: XCTestCase {
+    func testPickerIsConfigured() throws {
+        let code = try String(contentsOfFile: "Lang.swift", encoding: .utf8)
+        guard code.range(of: "LanguagePicker(languages:") != nil else {
+            return XCTFail("Lang.swift calls LanguagePicker() bare")
+        }
+    }
+}
+'''}))
+        expect_pass("a comment naming the call does not trip R13", make_app(
+            tmp, locales=("en", "zh-Hant"),
+            extra={"Sources/Lang.swift": language_pane("languages: [.en, .zhHant]") + """
+// Historical note: this was bare through 2.11.4, which meant
+// LanguagePicker(languages: [.en, .es, .fr, .ja, .ko, .zhHans, .zhHant]) in effect.
+"""}))
+        expect_violation("a comment naming the call does not satisfy R13 either", make_app(
+            tmp, locales=("en", "zh-Hant"), extra={"Sources/Lang.swift": language_pane() + """
+// TODO: LanguagePicker(languages: [.en, .zhHant]) once the strings land.
+"""}), "R13")
 
         print("R14 — the About copyright is kit-assembled and names one holder")
         compliant_about = """import Foundation

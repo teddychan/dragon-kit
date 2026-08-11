@@ -147,6 +147,33 @@ def strip_comment(line: str) -> str:
     return line if idx < 0 else line[:idx]
 
 
+def strip_literals(line: str) -> str:
+    """Blank out "…" string literals so code that merely *names* a call isn't read as one.
+
+    R13 needs this on top of ``strip_comment``. yahoo-keykey-2 declares
+    `sources: ["App", "Packages"]`, which covers
+    `Packages/KeyKeyApp/Tests/KeyKeyAppTests/ConfigContentTests.swift` — the app-side test that
+    enforces this very rule, and which contains `code.range(of: "LanguagePicker(languages:")`.
+    That is a literal, not a comment, so comment-stripping alone reports a call site inside the
+    test written to catch the bug. A rule whose first false positive is the app it was written
+    for is not a rule anyone will keep.
+    """
+    return re.sub(r'"[^"\n]*"', '""', line)
+
+
+def balanced(text: str, start: int) -> str | None:
+    """Text between the bracket at `text[start]` and its match, or None if unbalanced."""
+    depth = 0
+    for index in range(start, len(text)):
+        if text[index] in "([{":
+            depth += 1
+        elif text[index] in ")]}":
+            depth -= 1
+            if depth == 0:
+                return text[start + 1:index]
+    return None
+
+
 def kit_public_types(kit: str) -> set[str]:
     """Derive the kit's public type names from its sources, so the list can't go stale."""
     names: set[str] = set()
@@ -165,6 +192,42 @@ def kit_public_types(kit: str) -> set[str]:
                 if match:
                     names.add(match.group(1))
     return names
+
+
+def kit_languages(kit: str) -> dict[str, str]:
+    """Map `DragonLanguage` case names to `.lproj` locale codes, read from the kit's own source.
+
+    `zhHant` in Swift is `zh-Hant.lproj` on disk, so R13 cannot compare a written argument list
+    against a directory listing without this. Derived rather than hardcoded for the same reason
+    ``kit_public_types`` is: the day the kit adds a language, a frozen list of seven would leave
+    R13 quietly demanding the old set from every app.
+    """
+    case = re.compile(r"^\s*case\s+([A-Za-z_][A-Za-z0-9_]*)\s*(?:=\s*\"([^\"]+)\")?\s*$")
+    for dirpath, dirnames, filenames in os.walk(os.path.join(kit, "Sources")):
+        dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
+        for name in sorted(filenames):
+            if not name.endswith(".swift"):
+                continue
+            lines = read(os.path.join(dirpath, name))
+            start = next((i for i, line in enumerate(lines)
+                          if re.match(r"public\s+enum\s+DragonLanguage\b", line)), None)
+            if start is None:
+                continue
+            found: dict[str, str] = {}
+            for line in lines[start + 1:]:
+                if line.startswith("}"):  # the enum's own close; nested braces are indented
+                    break
+                match = case.match(strip_comment(line))
+                # `.system` is not a language — it means "follow the OS order" — and the picker
+                # renders it separately above the divider. The switch in `displayName` is scanned
+                # too, harmlessly: its `case .en:` starts with a dot, which this pattern rejects.
+                if match and match.group(1) != "system":
+                    found[match.group(1)] = match.group(2) or match.group(1)
+            if found:
+                return found
+    raise SystemExit("R13  cannot find 'public enum DragonLanguage' in the kit's sources, so the "
+                     "language set is unknown.\n     Fix the checker — do not let R13 pass by "
+                     "having nothing to compare against.")
 
 
 def latest_kit_version(kit: str) -> tuple[int, int, int] | None:
@@ -382,6 +445,104 @@ def rule_r12_commit_date(root: str, cfg: Config) -> list[Violation]:
                       f"{cfg.build_files or DEFAULT_BUILD_FILES})")]
 
 
+def app_localizations(root: str, cfg: Config, kit_codes: set[str]) -> set[str]:
+    """The locale codes the app ships its OWN strings in, from the `.lproj` path components of
+    the `strings` globs R8 already declares — an app states its localization set once.
+
+    A code `DragonLanguage` has no case for is dropped rather than counted. `Base.lproj` is not a
+    language, and a `de.lproj` is one the picker physically cannot list, so counting either would
+    leave R13 with no satisfiable form — the `IceGroupBox` mistake, a rule whose only compliant
+    path is to game it. The direction that matters is untouched: a code the kit lacks can never
+    appear in the offered list either.
+    """
+    found: set[str] = set()
+    for pattern in cfg.strings:
+        for path in glob.glob(os.path.join(root, pattern), recursive=True):
+            if skipped(path, root):
+                continue
+            for part in os.path.relpath(path, root).split(os.sep):
+                code = part[:-len(".lproj")] if part.endswith(".lproj") else ""
+                if code in kit_codes:
+                    found.add(code)
+    return found
+
+
+def rule_r13_language_picker(root: str, cfg: Config, files: list[str],
+                             languages: dict[str, str]) -> list[Violation]:
+    """Every `LanguagePicker` must offer exactly the languages the app has translated itself into.
+
+    yahoo-keykey-2 shipped through v2.11.4 calling `LanguagePicker()` bare while shipping only
+    `App/en.lproj` and `App/zh-Hant.lproj`, so Settings offered Español, Français, 日本語, 한국어
+    and 简体中文 — and choosing one translated the kit's four panes while every KeyKey string fell
+    back to English. ice-2 hit the same default first (PR #83 added Simplified Chinese alone) and
+    its contributor hand-rolled a three-option picker in `GeneralSettingsPane`, the
+    re-implementation §R4 forbids. DragonKit 3.4.0 added the `languages:` parameter for exactly
+    this, and the parameter existing did not stop it happening again: nothing failed on keykey's
+    picker, which was found by eye while verifying an unrelated pin bump.
+
+    Compared as equality, in both directions, because the picker is the app's statement of its own
+    coverage. Offering more than it ships is the shipping bug above; shipping more than it offers
+    is translation work no user can reach. A bare call is not itself a violation — it means the
+    default, `DragonLanguage.selectable`, which is the correct list for the three apps whose
+    coverage matches the kit's. Requiring an explicit argument instead would fail clipmenu-2,
+    spectacle-2 and dragon-sample-app for being right.
+    """
+    kit_codes = set(languages.values())
+    shipped = app_localizations(root, cfg, kit_codes)
+    everything = ", ".join(sorted(kit_codes))
+    out: list[Violation] = []
+    for path in files:
+        if cfg.excuses("R13", path):
+            continue
+        body = "\n".join(strip_literals(strip_comment(raw.rstrip("\n"))) for raw in read(path))
+        for call in re.finditer(r"\bLanguagePicker\s*\(", body):
+            number = body.count("\n", 0, call.start()) + 1
+            args = balanced(body, call.end() - 1) or ""
+            if not shipped:
+                out.append(Violation("R13", "constructs LanguagePicker, but no '.lproj' is "
+                                     f"reachable through 'strings' ({cfg.strings or '[]'}) — the "
+                                     "checker cannot tell which languages this app ships. Point "
+                                     "'strings' at the app's locale files, or sanction R13 in "
+                                     "'exceptions' with a reason and an owner (§R11)", path,
+                                     number))
+                continue
+            if "languages:" not in args:  # took the default, DragonLanguage.selectable
+                if shipped == kit_codes:
+                    continue
+                fix = ", ".join("." + name for name, code in sorted(languages.items())
+                                if code in shipped)
+                out.append(Violation("R13", f"LanguagePicker takes the kit's default of all "
+                                     f"{len(kit_codes)} languages ({everything}) but this app "
+                                     f"ships only {', '.join(sorted(shipped))} — the others "
+                                     f"translate the kit's panes and leave every app string in "
+                                     f"English. Pass languages: [{fix}]", path, number))
+                continue
+            start = args.find("[", args.find("languages:"))
+            listed = balanced(args, start) if start >= 0 else None
+            if listed is None:
+                out.append(Violation("R13", "passes a non-literal 'languages:' argument — R13 "
+                                     "compares the written list against the app's '.lproj', so it "
+                                     "has to be a literal like [.en, .zhHant]", path, number))
+                continue
+            tokens = [token.strip().lstrip(".") for token in listed.split(",")]
+            tokens = [token for token in tokens if token]
+            # Mapping through the case names, and reporting an unrecognized one instead of
+            # dropping it, is what stops a typo'd `.zhhant` from shrinking the offered set until
+            # it accidentally agrees with a shorter `.lproj` list.
+            unknown = [token for token in tokens if token not in languages]
+            if unknown:
+                out.append(Violation("R13", f"'languages:' names {', '.join(unknown)}, which is "
+                                     f"no DragonLanguage case", path, number))
+                continue
+            offered = {languages[token] for token in tokens}
+            if offered != shipped:
+                out.append(Violation("R13", f"LanguagePicker offers "
+                                     f"{', '.join(sorted(offered)) or '(nothing)'} but the app "
+                                     f"ships {', '.join(sorted(shipped))} — the picker and the "
+                                     f"app's '.lproj' must agree", path, number))
+    return out
+
+
 def rule_r14_about_copyright(root: str, cfg: Config, files: list[str]) -> list[Violation]:
     """The About copyright is kit-assembled and names one holder — the app's own.
 
@@ -471,6 +632,7 @@ def main() -> int:
         return 1
 
     kit_types = kit_public_types(kit)
+    languages = kit_languages(kit)
     violations: list[Violation] = []
     violations += rule_r1_r2_menu(root, cfg, files)
     violations += rule_r3_shadowed_types(root, cfg, files, kit_types)
@@ -481,10 +643,11 @@ def main() -> int:
     violations += rule_r9_pane_order(root, cfg)
     violations += rule_r10_pin(root, cfg, kit)
     violations += rule_r12_commit_date(root, cfg)
+    violations += rule_r13_language_picker(root, cfg, files, languages)
     violations += rule_r14_about_copyright(root, cfg, files)
 
     print(f"DragonKit conformance — {cfg.app} ({len(files)} Swift files, "
-          f"{len(kit_types)} kit types)")
+          f"{len(kit_types)} kit types, {len(languages)} kit languages)")
     # R11: exceptions are printed every run so they stay visible rather than becoming permanent.
     for exc in cfg.exceptions:
         print(f"  exception  {exc.get('rule')}  {exc.get('path', '(app-wide)')} — "

@@ -66,6 +66,8 @@ deleting the file would be the easiest way to "pass").
 {
   "app": "ClipMenu 2",
   "sources": ["app/Sources"],            // Swift source roots to scan
+  // Does double duty: §R8 reads the keys inside these files, and §R13 reads the `.lproj`
+  // directory names in the paths to learn which languages the app ships its own strings in.
   "strings": ["app/Sources/**/*.lproj/Localizable.strings"],
   "pin": {                               // where the DragonKit version is declared
     "file": "app/Package.swift",
@@ -220,6 +222,13 @@ permanent. Currently sanctioned:
 | clipmenu-2 | R6 | MAS target links `DragonKit` only | Sparkle is forbidden in a sandboxed App Store build |
 | yahoo-keykey-2 | R1 | `includeQuit: false` | an IME is quit by the system; quitting only makes typing unresponsive |
 | yahoo-keykey-2 | R5 | no Permissions pane | an IME receives keystrokes via the IMK server and needs no TCC grant |
+| ice-2 | R13 | no `.lproj` to check the picker against | English-only, and it localizes with String Catalogs, so nothing on disk states its coverage |
+
+The ice-2 row has an owner and an expiry: its maintainer is adding the seven locales, and the
+exception lifts when they land. It also isn't load-bearing yet — ice-2 constructs no
+`LanguagePicker` at all, so R13 is silent for it today. The row is here so the sanction is already
+agreed when it adopts one, and the matching `exceptions` entry then goes in **ice-2's own**
+`.dragon-conformance.json`, which is where the checker reads exceptions from.
 
 ## R12 — The build stamps `DragonCommitDate`
 
@@ -236,13 +245,50 @@ the line fingerprints one commit. It shows no date at all when the key is absent
 fallback to the old meaning is exactly the drift this replaced — which is why *not* stamping it
 has to be a violation rather than a quietly shorter version line.
 
-## R14 — The About copyright is kit-assembled and names one holder
+## R13 — The language picker offers exactly the languages the app ships
 
-> **R13 is deliberately vacant here.** It belongs to the language-picker rule in the open PR #60,
-> which had claimed the number first — including a sanctioned ice-2 exception recorded against it
-> — while this rule was written and merged in parallel. Two live rules sharing one number is worse
-> than a gap, and the reusable workflow reads this repo's default branch, so whichever number sits
-> on `main` is immediately live for all five apps. Delete this note when #60 lands.
+Every `LanguagePicker(` construction must offer **exactly** the locales the app has translated
+its own strings into. The app's set is read from the `.lproj` directory names in the paths its
+`strings` globs match (§R0) — the same config §R8 already uses — and the offered set is either the
+literal `languages:` argument or, when there is none, the kit's default of
+`DragonLanguage.selectable`.
+
+So a bare `LanguagePicker()` is correct for an app whose coverage matches the kit's, and a
+violation for one whose coverage is narrower. clipmenu-2, spectacle-2 and dragon-sample-app all
+call it bare and all ship seven `.lproj`; a rule that simply demanded an explicit argument would
+fail three conforming apps.
+
+**Violation:** the offered set differs from the shipped set in either direction; a `languages:`
+argument that isn't a literal list, or that names something which is no `DragonLanguage` case; or
+a picker in an app with no `.lproj` reachable through `strings` at all, where nothing can be
+compared and the rule would otherwise pass by having no work to do.
+
+Compared as equality because the picker is the app's own statement of its coverage. Offering more
+than it ships is the shipping bug below; shipping more than it offers is translation work no user
+can select. A `.lproj` `DragonLanguage` has no case for is not counted — `Base.lproj` is not a
+language, and a `de.lproj` is one the picker physically cannot list, so counting either would
+leave the rule with no satisfiable form. The direction that matters is untouched: a locale the kit
+lacks can never enter the offered list either.
+
+**Rationale:** yahoo-keykey-2 shipped through v2.11.4 calling `LanguagePicker()` bare while
+shipping only `App/en.lproj` and `App/zh-Hant.lproj`, so its Settings offered Español, Français,
+日本語, 한국어 and 简体中文 — and choosing one translated the kit's four panes while every KeyKey
+string fell back to English. ice-2 hit the same default first: PR #83 added Simplified Chinese
+alone, and its contributor hand-rolled a three-option picker in `GeneralSettingsPane`, the
+re-implementation §R4 forbids. DragonKit 3.4.0 added the `languages:` parameter for exactly this
+— and **the parameter existing did not stop it happening again.** Nothing failed on keykey's
+picker; it was found by eye while verifying an unrelated pin bump, which is the definition of a
+rule that needs machine-checking. Fixed in yahoo-keykey-2 PR #103 as
+`LanguagePicker(languages: [.en, .zhHant])`.
+
+The checker reads the written argument rather than asserting through the type, because
+`LanguagePicker.languages` is `private` and `offeredLanguages` is `internal`, so a constructed
+picker reveals nothing to an app-side test. yahoo-keykey-2's
+`ConfigContentTests.testLanguagePickerOffersExactlyTheShippedLocalizations` is the app-local
+version of this comparison and stays as it is; this rule is what gives the other four apps the
+same signal.
+
+## R14 — The About copyright is kit-assembled and names one holder
 
 `copyright:` must come from `DragonAbout.copyright(years:holder:)` and name the app's own
 copyright holder only. The checker rejects a string literal in the slot, two `©` on one line, and
@@ -269,6 +315,8 @@ text that must travel with copies belongs on the licences page.
 
 - **Shipping localizations.** Not having `.strings` isn't re-implementing a kit module. The
   rule is that localization *goes through* `L()`/`LocalizationManager` — not that every app
-  must ship 7 languages. ice-2 is English-only and compliant.
+  must ship 7 languages. ice-2 is English-only and compliant. §R13 doesn't change this: it
+  constrains what a picker *claims*, so an app with no `LanguagePicker` is outside it entirely,
+  and an app with one is only ever asked to agree with whatever it does ship.
 - **App-domain code.** Hot-key recorders, window-management engines, clipboard capture,
   input-method engines: the kit has no such modules, so there is nothing to duplicate.
