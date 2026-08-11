@@ -49,7 +49,7 @@ Modules:
   closed again in 4.0.0, after the same drift reappeared in the gaps between them: `licensesURL`
   is **required**, and the upstream repository lives **inside** `OriginalWork`, so the
   `Original project` link and the `Based on` credit are one value. The copyright names **one
-  holder** — the app's own (CONFORMANCE §R13).
+  holder** — the app's own (CONFORMANCE §R14).
 - **What's New** — release-notes pane: `WhatsNewContent` / `ChangeSection` (Added /
   Changed / Fixed …) + `WhatsNewPane` / `WhatsNewSettingsPane`. `version` is not public; the
   pane renders `displayVersion`, so every version in the UI carries exactly one `v`.

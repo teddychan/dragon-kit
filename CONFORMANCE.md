@@ -236,7 +236,13 @@ the line fingerprints one commit. It shows no date at all when the key is absent
 fallback to the old meaning is exactly the drift this replaced — which is why *not* stamping it
 has to be a violation rather than a quietly shorter version line.
 
-## R13 — The About copyright is kit-assembled and names one holder
+## R14 — The About copyright is kit-assembled and names one holder
+
+> **R13 is deliberately vacant here.** It belongs to the language-picker rule in the open PR #60,
+> which had claimed the number first — including a sanctioned ice-2 exception recorded against it
+> — while this rule was written and merged in parallel. Two live rules sharing one number is worse
+> than a gap, and the reusable workflow reads this repo's default branch, so whichever number sits
+> on `main` is immediately live for all five apps. Delete this note when #60 lands.
 
 `copyright:` must come from `DragonAbout.copyright(years:holder:)` and name the app's own
 copyright holder only. The checker rejects a string literal in the slot, two `©` on one line, and

@@ -382,7 +382,7 @@ def rule_r12_commit_date(root: str, cfg: Config) -> list[Violation]:
                       f"{cfg.build_files or DEFAULT_BUILD_FILES})")]
 
 
-def rule_r13_about_copyright(root: str, cfg: Config, files: list[str]) -> list[Violation]:
+def rule_r14_about_copyright(root: str, cfg: Config, files: list[str]) -> list[Violation]:
     """The About copyright is kit-assembled and names one holder — the app's own.
 
     Every other slot in the About pane is now closed by the kit's own signature: `licensesURL` is
@@ -407,24 +407,24 @@ def rule_r13_about_copyright(root: str, cfg: Config, files: list[str]) -> list[V
     literal = re.compile(r"\bcopyright:\s*\"")
     dual_form = re.compile(r"DragonAbout\.copyright\s*\(\s*original\s*:")
     for path in files:
-        if cfg.excuses("R13", path):
+        if cfg.excuses("R14", path):
             continue
         stripped: list[str] = []
         for number, raw in enumerate(read(path), 1):
             line = strip_comment(raw)
             stripped.append(line)
             if literal.search(line):
-                out.append(Violation("R13", "the About copyright is a string literal — assemble "
+                out.append(Violation("R14", "the About copyright is a string literal — assemble "
                                      "it with DragonAbout.copyright(years:holder:) so every app "
                                      "formats it identically", path, number))
             if line.count("©") > 1:
-                out.append(Violation("R13", "two copyright holders on one line — the About "
+                out.append(Violation("R14", "two copyright holders on one line — the About "
                                      "copyright names the app's own holder only; the upstream "
                                      "author is credited by OriginalWork and their licence text "
                                      "by the licences page", path, number))
         match = dual_form.search("".join(stripped))
         if match:
-            out.append(Violation("R13", "DragonAbout.copyright(original:) — the dual-holder "
+            out.append(Violation("R14", "DragonAbout.copyright(original:) — the dual-holder "
                                  "copyright was removed in DragonKit 4.0.0; call "
                                  "copyright(years:holder:)", path))
     return out
@@ -481,7 +481,7 @@ def main() -> int:
     violations += rule_r9_pane_order(root, cfg)
     violations += rule_r10_pin(root, cfg, kit)
     violations += rule_r12_commit_date(root, cfg)
-    violations += rule_r13_about_copyright(root, cfg, files)
+    violations += rule_r14_about_copyright(root, cfg, files)
 
     print(f"DragonKit conformance — {cfg.app} ({len(files)} Swift files, "
           f"{len(kit_types)} kit types)")

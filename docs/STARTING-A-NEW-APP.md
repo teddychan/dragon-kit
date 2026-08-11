@@ -134,7 +134,7 @@ error instead of something spotted in a screenshot months later.
 AboutContent(
     appName: "My App",
     versionString: DragonAbout.versionString(),  // "v1.0.0 (1) · 2026-Jul-06 13:34:56 UTC"
-    copyright: DragonAbout.copyright(years: "2026", holder: "Teddy Chan"),  // ONE holder — §R13
+    copyright: DragonAbout.copyright(years: "2026", holder: "Teddy Chan"),  // ONE holder — §R14
     websiteURL: URL(string: "https://www.dragonapp.com/my-app-1/")!,
     supportURL: URL(string: "https://github.com/teddychan/my-app-1/issues")!,
     licensesURL: URL(string: "https://www.dragonapp.com/my-app-1/licenses/")!,  // required
@@ -173,7 +173,7 @@ Five rules the type carries, each because an app got it wrong:
 - **The copyright names one holder** — the app's own, via `DragonAbout.copyright(years:holder:)`.
   A Dragon app reimplements its upstream rather than reusing its source, so it has no upstream
   copyright to assert; lineage is `OriginalWork`'s job and upstream licence text the licences
-  page's. CONFORMANCE §R13 rejects a hand-typed string here.
+  page's. CONFORMANCE §R14 rejects a hand-typed string here.
 - **An attribution is `name → licence`**, never a role label: `Attribution(name: "Sparkle",
   license: "MIT")`, not `Attribution(name: "Update framework", license: "Sparkle (MIT)")`.
   Use the SPDX identifier when the component declares one, otherwise the upstream wording
