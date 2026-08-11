@@ -393,7 +393,7 @@ struct MyBackupSection: View {
             tmp, build='PlistBuddy -c "Set :DragonCommitDate $D" Info.plist\n',
             config_over={"buildFiles": ["Package.swift"]}), "R12")
 
-        print("R13 — the About copyright is kit-assembled and names one holder")
+        print("R14 — the About copyright is kit-assembled and names one holder")
         compliant_about = """import Foundation
 import DragonKit
 
@@ -416,12 +416,12 @@ enum AboutConfig {
         expect_violation("copyright hand-typed as a literal", make_app(
             tmp, extra={"Sources/AboutConfig.swift": compliant_about.replace(
                 'DragonAbout.copyright(years: "2026", holder: "Teddy Chan")',
-                '"Copyright © 2026 Teddy Chan"')}), "R13")
+                '"Copyright © 2026 Teddy Chan"')}), "R14")
         # The exact line 4.0.0 removed, hand-typed back in — the one route no signature can close.
         expect_violation("two copyright holders on one line", make_app(
             tmp, extra={"Sources/AboutConfig.swift": compliant_about.replace(
                 'DragonAbout.copyright(years: "2026", holder: "Teddy Chan")',
-                '"© 2008–2014 Naotaka Morimoto · © 2026 Teddy Chan"')}), "R13")
+                '"© 2008–2014 Naotaka Morimoto · © 2026 Teddy Chan"')}), "R14")
         # Multi-line, exactly as clipmenu-2 and ice-2 wrote it. A compile error under 4.0.0 too,
         # but only while the @available(*, unavailable) overload carrying the message survives.
         expect_violation("the removed original: argument", make_app(
@@ -431,7 +431,7 @@ enum AboutConfig {
                 original: (years: "2008–2014", holder: "Naotaka Morimoto"),
                 years: "2026",
                 holder: "Teddy Chan"
-            )""")}), "R13")
+            )""")}), "R14")
         # Real cases from the apps, both of which must pass. yahoo-keykey-2's test suite asserts
         # the expected copyright, and ice-2's AboutConfig discusses the old spelling in a comment.
         expect_pass("a test asserting the expected copyright is not the slot", make_app(

@@ -82,7 +82,7 @@ names **one holder — the app's own**; the dual-holder `© 2008–2014 Naotaka 
 Chan` form is gone, because a Dragon app reimplements its upstream rather than reusing its source
 and so has no upstream copyright to assert. Lineage is `OriginalWork`'s job, twice; upstream
 licence text belongs on the licences page. It is a plain `String`, so the compiler can't close it
-— **CONFORMANCE §R13** does.
+— **CONFORMANCE §R14** does.
 
 `<channel>` is `DragonBuildChannel` from the bundle — `Debug` for a local
 build, absent for a release one, so a release renders exactly as it did before the key existed.
