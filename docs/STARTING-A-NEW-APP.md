@@ -46,8 +46,6 @@ Your job = **scaffold a runnable shell first** (this doc gives you the complete 
 - **GitHub:** `gh` is authenticated as **teddychan**. Create repos under `teddychan/`.
 - **Git identity:** commit/push as `teddychan <teddychan@gmail.com>` (a global hook enforces this;
   a new local repo needs `git config user.name teddychan` + `git config user.email teddychan@gmail.com`).
-- **Commit messages:** end every commit body with:
-  `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`
 - **Do not push / create the GitHub repo until the owner confirms** (outward-facing). Build locally first.
 - **Debug/test builds:** when building a local hands-on test build (not a release), give it its own
   identity — bundle id `<release-bundle-id>.debug`, display name `"<App> Debug"` — so it runs beside
@@ -125,23 +123,59 @@ controller.show()   // flips app to .regular + fronts the window; back to .acces
 ```
 
 ### About module
+**Fixed slots.** You supply URLs and proper nouns; the kit assembles every row title, SF Symbol,
+order and detail string. There is no `links` / `credits` / `acknowledgementsURL` array and no
+`AboutLink` type — they existed until 3.0.0, and five apps used them to ship five visibly
+different panes ("Support on GitHub" beside "Report an issue on GitHub" beside "Source", three
+symbols for that one row). Adding, renaming, re-iconing or reordering a row is now a compile
+error instead of something spotted in a screenshot months later.
+
 ```swift
 AboutContent(
     appName: "My App",
-    versionString: DragonAbout.versionString(), // "v1.0.0 (1) · 2026-Jul-06 13:34:56 UTC"
-    copyright: "© 2026 Teddy Chan",
+    versionString: DragonAbout.versionString(),  // "v1.0.0 (1) · 2026-Jul-06 13:34:56 UTC"
+    copyright: DragonAbout.copyright(years: "2026", holder: "Teddy Chan"),
+    websiteURL: URL(string: "https://www.dragonapp.com/my-app-1/")!,
+    supportURL: URL(string: "https://github.com/teddychan/my-app-1/issues")!,
+    license: "MIT",                              // the app's OWN licence, not third-party notices
+    // Everything below is optional; an omitted slot collapses without reordering the rest.
     appIcon: NSImage? = <app icon by default>,
-    links: [AboutLink(title: "Website", detail: "dragonapp.com", systemImage: "globe", url: URL(...))],
-    credits: [(label: "Created by", value: "Teddy Chan")],
-    acknowledgementsURL: URL? = nil
+    originalProjectURL: URL? = nil,              // the upstream repo, if the app reimplements one
+    licensesURL: URL? = nil,                     // dragonapp.com/{app}/licenses
+    createdBy: String = "Teddy Chan",
+    originalWork: OriginalWork? = nil,           // OriginalWork(name:author:) → "<name> by <author>"
+    attributions: [Attribution] = []             // Attribution(name: "Sparkle", license: "MIT")
 )
 AboutSettingsPane(content: AboutContent)   // drop-in SettingsPane (id "about", icon "info.circle")
 ```
+Rows the kit assembles from the above, in this order — the `*` slots collapse when nil:
+```
+header:  icon → name → versionString → copyright
+links:   Website globe · Support on GitHub lifepreserver · Original project heart* · Open-source licenses doc.text*
+Credits: Created by · Based on* · Built with → DragonKit vX.Y.Z · License · attributions*
+```
+Three rules the type carries, each because an app got it wrong:
+
+- **`websiteURL` must address `dragonapp.com/{app-name}-{major}`, the same string as
+  `supportURL`'s repo name** — `content.websiteMatchesSupportRepo` checks one against the other,
+  so pick a repo name that carries the major (`my-app-1`) and reuse it in both.
+- **Never type the detail text beside a link.** `AboutLinkDetail` derives it from the URL, so a
+  typed string can't disagree with where the row goes.
+- **An attribution is `name → licence`**, never a role label: `Attribution(name: "Sparkle",
+  license: "MIT")`, not `Attribution(name: "Update framework", license: "Sparkle (MIT)")`.
+  Use the SPDX identifier when the component declares one, otherwise the upstream wording
+  verbatim. `Attribution(component:source:)` is deprecated for exactly this reason. DragonKit
+  itself is not an attribution — the kit writes its own "Built with" row.
 
 ### What's New module (release notes)
 ```swift
 WhatsNewContent(
-    version: "v1.0.0",
+    // No `version:`. The heading derives from CFBundleShortVersionString, and its `v` comes from
+    // DragonVersion.display(_:). Passing one is a release blocker, not a style preference: the
+    // tag gate's check 5 (MAC-APP-RELEASE-LIFECYCLE.md) rejects an explicit current-version
+    // argument here, because a literal goes stale against the bundle on the very next release —
+    // which is what the retired in-tree sample app did. `version` is not even public; only the
+    // normalized `displayVersion` is.
     date: "2026-07-01",
     summary: "One-line summary of the release.",
     sections: [
@@ -226,7 +260,10 @@ Create a new **SPM executable app** at `~/git/<APP_DIR>`. Replace the placeholde
 - `<APP_DISPLAY>` — display name, e.g. `My App`
 - `<TARGET>` — Swift target name (no spaces), e.g. `MyApp`
 - `<BUNDLE_ID>` — e.g. `com.dragonapp.myapp`
-- `<APP_DIR>` — repo folder name, e.g. `myapp`
+- `<APP_DIR>` — repo folder **and** GitHub repo name, `{app-name}-{major}`, e.g. `my-app-1`. The
+  major belongs in the name (`ice-2`, `clipmenu-2`, `spectacle-2`), and the same string is the
+  marketing page — `dragonapp.com/<APP_DIR>` — which is why `AboutContent` can check the website
+  row against the support row without a table to maintain.
 
 Structure:
 ```
@@ -261,8 +298,12 @@ let package = Package(
             name: "<TARGET>",
             dependencies: [
                 .product(name: "DragonKit", package: "dragon-kit"),
-                // Add ONLY for direct-download (non-Mac-App-Store) apps that want Sparkle:
-                .product(name: "DragonKitUpdates", package: "dragon-kit"),
+                // Sparkle updates — direct-download apps only; a Mac App Store build must not
+                // link this. Uncommenting it is three changes, not one, or §R5 fails the first
+                // PR: add the product here, add "sparkle" to `traits` in
+                // .dragon-conformance.json, AND put `UpdatesSettingsPane` in the sidebar
+                // between What's New and About.
+                // .product(name: "DragonKitUpdates", package: "dragon-kit"),
             ]
         ),
     ]
@@ -426,17 +467,20 @@ enum AboutConfig {
     static var content: AboutContent {
         AboutContent(
             appName: "<APP_DISPLAY>",
-            versionString: DragonAbout.versionString(), // v<short> (<build>) · <UTC build time>
-            copyright: "© 2026 Teddy Chan",
-            links: [
-                AboutLink(title: "Website", detail: "dragonapp.com",
-                          systemImage: "globe", url: URL(string: "https://www.dragonapp.com")!),
-            ],
-            credits: [(label: "Created by", value: "Teddy Chan")]
+            versionString: DragonAbout.versionString(), // v<short> (<build>) · <commit date> UTC
+            copyright: DragonAbout.copyright(years: "2026", holder: "Teddy Chan"),
+            // Same repo name on both rows — `websiteMatchesSupportRepo` compares them.
+            websiteURL: URL(string: "https://www.dragonapp.com/<APP_DIR>/")!,
+            supportURL: URL(string: "https://github.com/teddychan/<APP_DIR>/issues")!,
+            license: "MIT"
         )
     }
 }
 ```
+Every other slot is optional and omitted here on purpose: this scaffold reimplements no upstream
+project (`originalProjectURL` / `originalWork`), bundles no third-party code to attribute
+(`attributions` — DragonKit is not one; the kit writes its own "Built with" row), and so needs no
+licences page (`licensesURL`). Add each one when it becomes true, not before.
 
 ### `Sources/<TARGET>/WhatsNewConfig.swift`
 ```swift
@@ -445,8 +489,9 @@ import DragonKit
 
 enum WhatsNewConfig {
     static var content: WhatsNewContent {
+        // No `version:` — the heading reads CFBundleShortVersionString, so it can never disagree
+        // with the build. Passing one fails the release gate (check 5). See §2.
         WhatsNewContent(
-            version: "v0.1.0",
             date: "2026-07-01",
             summary: "First build.",
             sections: [
@@ -482,6 +527,12 @@ enum WhatsNewConfig {
 </dict>
 </plist>
 ```
+`CFBundleShortVersionString` stays the bare numeric candidate `X.Y.Z` — no `v`, no `Debug`, no
+prerelease suffix; the release tag is asserted against this exact string. `CFBundleVersion` is a
+placeholder that `scripts/run.sh` overwrites with the commit count, and the script also adds
+`DragonCommitDate`; between them About's `v0.1.0 (123) · … UTC` line is a fingerprint of one
+commit. Whatever else packages this app — a release workflow, an Xcode target — has to stamp both
+the same way.
 
 ### `scripts/run.sh` (then `chmod +x scripts/run.sh`)
 ```bash
@@ -500,8 +551,20 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN_DIR/$BIN_NAME" "$APP/Contents/MacOS/$BIN_NAME"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
-/usr/libexec/PlistBuddy -c "Add :CFBundleExecutable string $BIN_NAME" "$APP/Contents/Info.plist" 2>/dev/null \
-  || /usr/libexec/PlistBuddy -c "Set :CFBundleExecutable $BIN_NAME" "$APP/Contents/Info.plist"
+
+PLIST="$APP/Contents/Info.plist"
+stamp() {  # Add-or-Set, because the key may or may not already be in the source plist
+  /usr/libexec/PlistBuddy -c "Add :$1 string $2" "$PLIST" 2>/dev/null \
+    || /usr/libexec/PlistBuddy -c "Set :$1 $2" "$PLIST"
+}
+stamp CFBundleExecutable "$BIN_NAME"
+# Both halves of About's version line must describe the SAME commit. The build number is the
+# commit count, never a hardcoded "1"; DragonCommitDate is that commit's own timestamp, and
+# CONFORMANCE §R12 fails a repo where no build step stamps it — About then silently renders no
+# timestamp at all rather than falling back to something that means something else.
+stamp CFBundleVersion "$(git rev-list --count HEAD)"
+stamp DragonCommitDate "$(git log -1 --format=%cI)"
+
 cp -R "$BIN_DIR"/*.bundle "$APP/Contents/MacOS/" 2>/dev/null || true
 codesign --force --deep --sign - "$APP" >/dev/null 2>&1 || true
 
@@ -521,23 +584,32 @@ Package.resolved
 ### `.dragon-conformance.json` (repo root — required by §R0)
 Without this file the app is in violation by definition: the checker can't find your sources,
 and a missing config had to count as a failure or deleting it would be the easiest way to pass.
-```jsonc
+**Strict JSON — no comments.** The checker parses it with `json.load`, so a `//` line does not
+"document" the file, it crashes the run with a `JSONDecodeError` before a single rule is
+evaluated. (CONFORMANCE §R0 annotates the schema in prose; that listing is not a file to copy.)
+
+```json
 {
   "app": "<APP_DISPLAY>",
   "sources": ["Sources"],
   "strings": ["Sources/**/*.lproj/Localizable.strings"],
   "pin": {
     "file": "Package.swift",
-    // MUST anchor on dragon-kit: the pattern is one search over the whole file, so an
-    // unanchored version regex matches whichever dependency appears first. That is a live
-    // trap — in ice-2's .pbxproj it matched Sparkle's version and reported a false PASS.
     "pattern": "dragon-kit\", from: \"([0-9.]+)\""
   },
   "paneOrder": { "file": "Sources/<TARGET>/AppDelegate.swift" },
-  "traits": [],          // add "sparkle" when you link DragonKitUpdates; "mac-app-store" for a MAS target
-  "exceptions": []       // §R11 — each needs a `reason` and a `sanctionedBy`
+  "traits": [],
+  "exceptions": []
 }
 ```
+
+- **`pin.pattern` must anchor on `dragon-kit`.** The pattern is one search over the whole file, so
+  an unanchored version regex matches whichever dependency appears first. That is a live trap, not
+  a hypothetical — in ice-2's `.pbxproj` it matched Sparkle's version and reported a false PASS.
+- **`traits`** — add `"sparkle"` when you link `DragonKitUpdates` (and then §R5 requires
+  `UpdatesSettingsPane`), `"mac-app-store"` for a sandboxed target, `"no-permissions"` if the app
+  genuinely needs no TCC grant.
+- **`exceptions`** — §R11; each needs a `reason` and a `sanctionedBy`.
 
 ### `.github/workflows/conformance.yml`
 ```yaml
@@ -552,11 +624,24 @@ default branch for the rules anyway, so a tag pin would freeze the interface whi
 moved. Rules live in dragon-kit and only there, so you get every future rule for free.
 
 ### Verify the scaffold
+
+`scripts/run.sh` stamps the build number and commit date from git, so the repo needs one commit
+before it will run (`set -euo pipefail` + `git rev-list --count HEAD` in a repo with no `HEAD`
+aborts the script). Local only — still no `gh repo create` until the owner confirms.
+
 ```bash
 cd ~/git/<APP_DIR>
+git init && git add -A && git commit -m "chore: scaffold <APP_DISPLAY> on DragonKit"
+```
+```bash
 swift build            # expect: Build complete!
+```
+```bash
 ./scripts/run.sh       # ✦ menu-bar icon appears → About / Settings… / Quit; Settings shows
-                       #   General / Permissions / What's New / About / Uninstall
+                       #   General / Permissions / What's New / About / Uninstall,
+                       #   and About reads "v0.1.0 (1) · <commit date> UTC"
+```
+```bash
 python3 ~/git/dragon-kit/Scripts/dragon-conformance.py --app . --kit ~/git/dragon-kit
                        # expect: PASS — no violations
 ```
@@ -571,7 +656,11 @@ Once the shell runs:
 2. Write a **spec**, then an **implementation plan** with **bite-sized TDD tasks**.
 3. Add feature panes as `SettingsPane` conformers (like `GeneralPane`); use `DragonForm` /
    `DragonSection` / `.dragonAnnotation` for the look so it matches every other Dragon app.
-4. Keep `AboutConfig` / `WhatsNewConfig` updated per release.
+4. Keep `AboutConfig` / `WhatsNewConfig` updated per release — every public release edits the
+   What's New content, maintenance-only ones included, because the tag gate requires that source
+   to have changed since the previous public tag (check 4) and to carry real notes or an explicit
+   maintenance-only statement (check 6). Bump `CFBundleShortVersionString` to the candidate `X.Y.Z`
+   and leave the version out of the notes; the heading follows the bundle.
 5. App Settings, Permissions, Backup & Restore, Check for Update, and Uninstall now ship
    in DragonKit (see the cheat-sheet above; https://github.com/teddychan/dragon-sample-app wires
    up all of them). For anything DragonKit still doesn't provide, flag it: it should be added to
@@ -585,7 +674,16 @@ Once the shell runs:
 - `SettingsPane.title` is a `String` localization key resolved via `L()`, **not** a
   `LocalizedStringKey`. It changed in v1.1.0 (live localization) and this guide was not
   updated, so for a month the starter pane it shipped did not conform to `SettingsPane` and
-  failed to compile. The scaffold above is now compile-verified against the kit.
+  failed to compile. It then happened a second time at 3.0.0: `AboutContent`'s `links` / `credits`
+  arrays were removed, this cheat-sheet kept printing them, and the `AboutConfig.swift` it handed
+  out did not compile either — while the sentence claiming verification sat right here.
+- **Verified against DragonKit 3.3.0.** §3's starter files were assembled into a scratch package
+  pinned `from: "3.3.0"`, built clean with `swift build`, and passed
+  `dragon-conformance.py`. Re-run that before touching this claim — and note that the kit's own
+  `Tests/DragonKitTests/HostWiringTests.swift` and `Tests/DragonKitUpdatesTests/HostWiringTests.swift`
+  now build the same `AboutContent` / `WhatsNewContent` / `BackupConfig` / `UninstallConfig` call
+  sites from a plain, non-`@testable` import, so the kit can no longer change one of them and go
+  green.
 - Never build an `NSMenuItem` for About / Check for Updates / Settings / Quit — §R1. Use
   `DragonAppMenu`, and note there is no way to add Uninstall to the menu (§R2), by design.
 - `List` selection: DragonKit already handles optional-selection tags; you only supply panes.
