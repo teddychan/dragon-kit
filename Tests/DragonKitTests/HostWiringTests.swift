@@ -152,6 +152,19 @@ import DragonKit
         #expect(whatsNewContent.displayVersion.hasPrefix("v"))
     }
 
+    /// Both call shapes of the language picker a host drops into its own General pane, from the
+    /// plain import an app has. The no-argument form is what the four apps matching the kit's
+    /// language coverage write; the restricted form is ice-2's, which ships Simplified Chinese
+    /// alone and relaunches because a SwiftUI String Catalog resolves at launch.
+    ///
+    /// Wired here for the reason this whole suite exists: both parameters are defaulted today, so
+    /// nothing else in the repository would notice one becoming required — `LanguagePickerOptionTests`
+    /// calls the static option logic, never the initializer.
+    @Test func bothLanguagePickerShapesCompileForAHost() {
+        _ = LanguagePicker()
+        _ = LanguagePicker(languages: [.en, .zhHans]) { _ in }
+    }
+
     /// The host supplies URLs and proper nouns; the kit assembles every row. `AboutCanonTests`
     /// pins the rows themselves — this only checks that a host's own values survive the trip,
     /// which is what a free-form `links`/`credits` array used to let five apps get wrong.

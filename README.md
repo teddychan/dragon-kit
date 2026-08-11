@@ -86,7 +86,10 @@ Modules:
 - **Localization** — `L(_:)` (module bundle → app bundle → key) with a runtime
   `LocalizationManager` + `LanguagePicker` and `.dragonLocalized()`. Ships **7 languages**
   (en, es, fr, ja, ko, zh-Hans, zh-Hant); switches **live, no restart**. Apps add their own
-  `Localizable.strings` per language and drop in `LanguagePicker`.
+  `Localizable.strings` per language and drop in `LanguagePicker`. An app translated into fewer
+  languages than the kit passes its own set — `LanguagePicker(languages: [.en, .zhHans])` — so it
+  never offers a language its own strings don't have; `onChange:` covers apps whose strings can't
+  switch live (a SwiftUI String Catalog resolves at launch, so it needs a relaunch).
 - **[dragon-sample-app](https://github.com/teddychan/dragon-sample-app)** — the **Dragon Sample
   App**, a runnable, installable **reference app** in its own repository, wiring up every module
   end-to-end: General (real persisted toggles), Permissions, Backup & Restore, What's New,
