@@ -393,6 +393,63 @@ struct MyBackupSection: View {
             tmp, build='PlistBuddy -c "Set :DragonCommitDate $D" Info.plist\n',
             config_over={"buildFiles": ["Package.swift"]}), "R12")
 
+        print("R13 — the About copyright is kit-assembled and names one holder")
+        compliant_about = """import Foundation
+import DragonKit
+
+enum AboutConfig {
+    static var content: AboutContent {
+        AboutContent(
+            appName: "Fixture App",
+            versionString: DragonAbout.versionString(),
+            copyright: DragonAbout.copyright(years: "2026", holder: "Teddy Chan"),
+            websiteURL: URL(string: "https://www.dragonapp.com/fixture-2/")!,
+            supportURL: URL(string: "https://github.com/teddychan/fixture-2/issues")!,
+            licensesURL: URL(string: "https://www.dragonapp.com/fixture-2/licenses/")!,
+            license: "MIT"
+        )
+    }
+}
+"""
+        expect_pass("copyright assembled by the kit helper", make_app(
+            tmp, extra={"Sources/AboutConfig.swift": compliant_about}))
+        expect_violation("copyright hand-typed as a literal", make_app(
+            tmp, extra={"Sources/AboutConfig.swift": compliant_about.replace(
+                'DragonAbout.copyright(years: "2026", holder: "Teddy Chan")',
+                '"Copyright © 2026 Teddy Chan"')}), "R13")
+        # The exact line 4.0.0 removed, hand-typed back in — the one route no signature can close.
+        expect_violation("two copyright holders on one line", make_app(
+            tmp, extra={"Sources/AboutConfig.swift": compliant_about.replace(
+                'DragonAbout.copyright(years: "2026", holder: "Teddy Chan")',
+                '"© 2008–2014 Naotaka Morimoto · © 2026 Teddy Chan"')}), "R13")
+        # Multi-line, exactly as clipmenu-2 and ice-2 wrote it. A compile error under 4.0.0 too,
+        # but only while the @available(*, unavailable) overload carrying the message survives.
+        expect_violation("the removed original: argument", make_app(
+            tmp, extra={"Sources/AboutConfig.swift": compliant_about.replace(
+                'DragonAbout.copyright(years: "2026", holder: "Teddy Chan")',
+                """DragonAbout.copyright(
+                original: (years: "2008–2014", holder: "Naotaka Morimoto"),
+                years: "2026",
+                holder: "Teddy Chan"
+            )""")}), "R13")
+        # Real cases from the apps, both of which must pass. yahoo-keykey-2's test suite asserts
+        # the expected copyright, and ice-2's AboutConfig discusses the old spelling in a comment.
+        expect_pass("a test asserting the expected copyright is not the slot", make_app(
+            tmp, extra={"Sources/AboutConfig.swift": compliant_about,
+                        "Sources/ConfigContentTests.swift": """import XCTest
+
+final class ConfigContentTests: XCTestCase {
+    func testCopyright() {
+        XCTAssertEqual(content.copyright, "© 2026 Teddy Chan")
+    }
+}
+"""}))
+        expect_pass("copyright prose in a comment is not a violation", make_app(
+            tmp, extra={"Sources/AboutConfig.swift": compliant_about.replace(
+                "enum AboutConfig {",
+                "// Was © 2008–2014 Naotaka Morimoto · © 2026 Teddy Chan before DragonKit 4.0.0.\n"
+                "enum AboutConfig {")}))
+
         print("no-false-positive checks")
         expect_pass("app builds its own non-lifecycle menu items", make_app(
             tmp, menu=COMPLIANT_MENU + """

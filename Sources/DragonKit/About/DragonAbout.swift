@@ -7,7 +7,7 @@ import Foundation
 /// constant is the only mechanism that exists. Bumped with the `vX.Y.Z` tag; the tag-push
 /// workflow fails when the two disagree, which is what keeps the row honest.
 public enum DragonKitVersion {
-    public static let current = "3.4.0"
+    public static let current = "4.0.0"
 }
 
 /// The one place a version becomes user-visible text.
@@ -121,19 +121,35 @@ public enum DragonAbout {
         return formatter.date(from: raw)
     }
 
-    /// The copyright line, e.g. `© 2008–2014 Naotaka Morimoto · © 2026 Teddy Chan`.
+    /// The copyright line, e.g. `© 2026 Teddy Chan`.
     ///
     /// Assembled here because the apps each wrote their own: ice-2 spelled out `Copyright © …`
     /// where the others used the symbol alone, and yahoo-keykey-2 put `倉頡／簡易 輸入法` in the
     /// slot — a description, not a copyright at all.
+    ///
+    /// **One holder — the app's own.** This took an `original:` pair until 4.0.0 and rendered
+    /// `© 2008–2014 Naotaka Morimoto · © 2026 Teddy Chan`, which clipmenu-2 and ice-2 used and the
+    /// other three apps did not, so two of five About panes carried a second copyright the rest
+    /// lacked. Dropping it is not only about consistency: a Dragon app is an independent
+    /// reimplementation that uses none of the upstream source, so asserting the upstream author's
+    /// copyright over *this* binary states something the app's own notices contradict —
+    /// yahoo-keykey-2 had already reasoned its way to the single-holder form for exactly that
+    /// reason. The lineage is carried, twice, by ``OriginalWork``: the `Original project` link and
+    /// the `Based on` credit. Upstream licence text that must travel with copies belongs on the
+    /// licences page, which is now a required row.
+    public static func copyright(years: String, holder: String) -> String {
+        "© \(years) \(holder)"
+    }
+
+    /// Kept only to turn a stale call site into a readable compile error rather than
+    /// "extra argument 'original' in call". Removing it once every app is on 4.0.0 is fine.
+    @available(*, unavailable, message: "The About copyright names one holder — the app's own. An upstream author is credited by OriginalWork (the Original project link and the Based on row), and their licence text belongs on the licences page. Call copyright(years:holder:).")
     public static func copyright(
-        original: (years: String, holder: String)? = nil,
+        original: (years: String, holder: String)?,
         years: String,
         holder: String
     ) -> String {
-        let current = "© \(years) \(holder)"
-        guard let original else { return current }
-        return "© \(original.years) \(original.holder) · \(current)"
+        copyright(years: years, holder: holder)
     }
 
     /// Format a date as `YYYY-MMM-DD HH:MM:SS UTC` (e.g. `2026-Jul-06 13:34:56 UTC`) using a

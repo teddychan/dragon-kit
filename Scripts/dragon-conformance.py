@@ -382,6 +382,54 @@ def rule_r12_commit_date(root: str, cfg: Config) -> list[Violation]:
                       f"{cfg.build_files or DEFAULT_BUILD_FILES})")]
 
 
+def rule_r13_about_copyright(root: str, cfg: Config, files: list[str]) -> list[Violation]:
+    """The About copyright is kit-assembled and names one holder — the app's own.
+
+    Every other slot in the About pane is now closed by the kit's own signature: `licensesURL` is
+    a required parameter, and the upstream project's URL lives inside `OriginalWork`, so an app
+    cannot ship a `Based on` credit with no `Original project` link (clipmenu-2 and ice-2 both
+    did) or list bundled components with no notices page (spectacle-2 and the sample app both
+    did). Those are compile errors in DragonKit 4.0.0 and need no rule here.
+
+    `copyright` is the exception, and the reason this rule exists: it is a plain `String`, so no
+    signature can stop an app hand-typing `© 2008–2014 Naotaka Morimoto · © 2026 Teddy Chan` and
+    reintroducing the dual-holder line 4.0.0 removed. A Dragon app reimplements its upstream
+    rather than reusing its source, so asserting the upstream author's copyright over *this*
+    binary states something the app's own notices contradict; the lineage belongs to
+    `OriginalWork` and the upstream licence text to the licences page.
+
+    Three ways in, all checked: a literal in the slot, two copyright symbols on one line, and the
+    removed `original:` argument (a compile error today, but the `@available(*, unavailable)`
+    overload carrying that message is temporary, and after it goes the compiler only says "extra
+    argument").
+    """
+    out: list[Violation] = []
+    literal = re.compile(r"\bcopyright:\s*\"")
+    dual_form = re.compile(r"DragonAbout\.copyright\s*\(\s*original\s*:")
+    for path in files:
+        if cfg.excuses("R13", path):
+            continue
+        stripped: list[str] = []
+        for number, raw in enumerate(read(path), 1):
+            line = strip_comment(raw)
+            stripped.append(line)
+            if literal.search(line):
+                out.append(Violation("R13", "the About copyright is a string literal — assemble "
+                                     "it with DragonAbout.copyright(years:holder:) so every app "
+                                     "formats it identically", path, number))
+            if line.count("©") > 1:
+                out.append(Violation("R13", "two copyright holders on one line — the About "
+                                     "copyright names the app's own holder only; the upstream "
+                                     "author is credited by OriginalWork and their licence text "
+                                     "by the licences page", path, number))
+        match = dual_form.search("".join(stripped))
+        if match:
+            out.append(Violation("R13", "DragonAbout.copyright(original:) — the dual-holder "
+                                 "copyright was removed in DragonKit 4.0.0; call "
+                                 "copyright(years:holder:)", path))
+    return out
+
+
 # --------------------------------------------------------------------------- driver
 
 def load_config(root: str, override: str | None = None) -> Config:
@@ -433,6 +481,7 @@ def main() -> int:
     violations += rule_r9_pane_order(root, cfg)
     violations += rule_r10_pin(root, cfg, kit)
     violations += rule_r12_commit_date(root, cfg)
+    violations += rule_r13_about_copyright(root, cfg, files)
 
     print(f"DragonKit conformance — {cfg.app} ({len(files)} Swift files, "
           f"{len(kit_types)} kit types)")

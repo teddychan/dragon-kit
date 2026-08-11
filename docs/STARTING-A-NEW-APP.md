@@ -134,33 +134,46 @@ error instead of something spotted in a screenshot months later.
 AboutContent(
     appName: "My App",
     versionString: DragonAbout.versionString(),  // "v1.0.0 (1) · 2026-Jul-06 13:34:56 UTC"
-    copyright: DragonAbout.copyright(years: "2026", holder: "Teddy Chan"),
+    copyright: DragonAbout.copyright(years: "2026", holder: "Teddy Chan"),  // ONE holder — §R13
     websiteURL: URL(string: "https://www.dragonapp.com/my-app-1/")!,
     supportURL: URL(string: "https://github.com/teddychan/my-app-1/issues")!,
+    licensesURL: URL(string: "https://www.dragonapp.com/my-app-1/licenses/")!,  // required
     license: "MIT",                              // the app's OWN licence, not third-party notices
     // Everything below is optional; an omitted slot collapses without reordering the rest.
     appIcon: NSImage? = <app icon by default>,
-    originalProjectURL: URL? = nil,              // the upstream repo, if the app reimplements one
-    licensesURL: URL? = nil,                     // dragonapp.com/{app}/licenses
     createdBy: String = "Teddy Chan",
-    originalWork: OriginalWork? = nil,           // OriginalWork(name:author:) → "<name> by <author>"
+    // OriginalWork(name:author:url:) → a "Based on <name> by <author>" credit AND an
+    // "Original project" link to `url`. One value, both rows — see below.
+    originalWork: OriginalWork? = nil,
     attributions: [Attribution] = []             // Attribution(name: "Sparkle", license: "MIT")
 )
 AboutSettingsPane(content: AboutContent)   // drop-in SettingsPane (id "about", icon "info.circle")
 ```
-Rows the kit assembles from the above, in this order — the `*` slots collapse when nil:
+Rows the kit assembles from the above, in this order — the `*` slot collapses when nil:
 ```
 header:  icon → name → versionString → copyright
-links:   Website globe · Support on GitHub lifepreserver · Original project heart* · Open-source licenses doc.text*
+links:   Website globe · Support on GitHub lifepreserver · Original project heart* · Open-source licenses doc.text
 Credits: Created by · Based on* · Built with → DragonKit vX.Y.Z · License · attributions*
 ```
-Three rules the type carries, each because an app got it wrong:
+Five rules the type carries, each because an app got it wrong:
 
 - **`websiteURL` must address `dragonapp.com/{app-name}-{major}`, the same string as
   `supportURL`'s repo name** — `content.websiteMatchesSupportRepo` checks one against the other,
   so pick a repo name that carries the major (`my-app-1`) and reuse it in both.
 - **Never type the detail text beside a link.** `AboutLinkDetail` derives it from the URL, so a
   typed string can't disagree with where the row goes.
+- **The upstream project is one value, not two.** `OriginalWork` carries the repository URL, so
+  the `Original project` link and the `Based on` credit cannot ship apart. They were separate
+  optionals until 4.0.0 and clipmenu-2 and ice-2 both filled the credit and left the link nil,
+  shipping "Based on ClipMenu by Naotaka Morimoto" with nothing linking to ClipMenu.
+- **`licensesURL` is required.** Name a bundled component in `attributions` and its notices have
+  to be reachable; spectacle-2 and the sample app both listed `Sparkle → MIT` with no page. Every
+  Dragon app links Sparkle or bundles third-party data, so the row belongs on all of them —
+  publish `dragonapp.com/{app-name}-{major}/licenses/` as part of shipping the app.
+- **The copyright names one holder** — the app's own, via `DragonAbout.copyright(years:holder:)`.
+  A Dragon app reimplements its upstream rather than reusing its source, so it has no upstream
+  copyright to assert; lineage is `OriginalWork`'s job and upstream licence text the licences
+  page's. CONFORMANCE §R13 rejects a hand-typed string here.
 - **An attribution is `name → licence`**, never a role label: `Attribution(name: "Sparkle",
   license: "MIT")`, not `Attribution(name: "Update framework", license: "Sparkle (MIT)")`.
   Use the SPDX identifier when the component declares one, otherwise the upstream wording
@@ -469,18 +482,23 @@ enum AboutConfig {
             appName: "<APP_DISPLAY>",
             versionString: DragonAbout.versionString(), // v<short> (<build>) · <commit date> UTC
             copyright: DragonAbout.copyright(years: "2026", holder: "Teddy Chan"),
-            // Same repo name on both rows — `websiteMatchesSupportRepo` compares them.
+            // Same repo name on all three rows — `websiteMatchesSupportRepo` compares the first
+            // two, and the licences page lives under the same canonical path.
             websiteURL: URL(string: "https://www.dragonapp.com/<APP_DIR>/")!,
             supportURL: URL(string: "https://github.com/teddychan/<APP_DIR>/issues")!,
+            licensesURL: URL(string: "https://www.dragonapp.com/<APP_DIR>/licenses/")!,
             license: "MIT"
         )
     }
 }
 ```
-Every other slot is optional and omitted here on purpose: this scaffold reimplements no upstream
-project (`originalProjectURL` / `originalWork`), bundles no third-party code to attribute
-(`attributions` — DragonKit is not one; the kit writes its own "Built with" row), and so needs no
-licences page (`licensesURL`). Add each one when it becomes true, not before.
+`licensesURL` is required, so publishing that page is part of shipping the app — the row exists
+because naming a bundled component in `attributions` and linking its notices nowhere is the half
+of MIT compliance the page carries. The remaining slots are optional and omitted here on purpose:
+this scaffold reimplements no upstream project (`originalWork`, which carries both the `Based on`
+credit and the `Original project` link) and attributes no third-party code (`attributions` —
+DragonKit is not one; the kit writes its own "Built with" row). Add each when it becomes true, not
+before.
 
 ### `Sources/<TARGET>/WhatsNewConfig.swift`
 ```swift
@@ -677,9 +695,11 @@ Once the shell runs:
   failed to compile. It then happened a second time at 3.0.0: `AboutContent`'s `links` / `credits`
   arrays were removed, this cheat-sheet kept printing them, and the `AboutConfig.swift` it handed
   out did not compile either — while the sentence claiming verification sat right here.
-- **Verified against DragonKit 3.3.0.** §3's starter files were assembled into a scratch package
-  pinned `from: "3.3.0"`, built clean with `swift build`, and passed
-  `dragon-conformance.py`. Re-run that before touching this claim — and note that the kit's own
+- **Verified against DragonKit 4.0.0.** §3's starter files were assembled into a scratch package,
+  built clean with `swift build`, and passed `dragon-conformance.py` — R10 excepted, because the
+  scratch package pinned the kit by `path:` (4.0.0's required `licensesURL` and
+  `OriginalWork.url` predate its tag) and the pin pattern finds no version in a path dependency.
+  Re-run that before touching this claim — and note that the kit's own
   `Tests/DragonKitTests/HostWiringTests.swift` and `Tests/DragonKitUpdatesTests/HostWiringTests.swift`
   now build the same `AboutContent` / `WhatsNewContent` / `BackupConfig` / `UninstallConfig` call
   sites from a plain, non-`@testable` import, so the kit can no longer change one of them and go

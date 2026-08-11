@@ -49,6 +49,7 @@ import DragonKitUpdates
                 copyright: DragonAbout.copyright(years: "2026", holder: "Teddy Chan"),
                 websiteURL: URL(string: "https://www.dragonapp.com/host-app-1/")!,
                 supportURL: URL(string: "https://github.com/teddychan/host-app-1/issues")!,
+                licensesURL: URL(string: "https://www.dragonapp.com/host-app-1/licenses/")!,
                 license: "MIT"
             ))),
             AnySettingsPane(UninstallSettingsPane(config: UninstallConfig(

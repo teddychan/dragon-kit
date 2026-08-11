@@ -67,12 +67,24 @@ the arrays are gone. An app supplies URLs and proper nouns — the kit assembles
 Symbol, order and detail string:
 
 ```
-header:  icon → name → v<ver> <channel>* (<count>) · <commit date> UTC → © …
-links:   Website globe · Support on GitHub lifepreserver · Original project heart* · Open-source licenses doc.text*
+header:  icon → name → v<ver> <channel>* (<count>) · <commit date> UTC → © <years> <holder>
+links:   Website globe · Support on GitHub lifepreserver · Original project heart* · Open-source licenses doc.text
 Credits: Created by · Based on* · Built with → DragonKit vX.Y.Z · License · attributions*
 ```
 
-`*` optional slots. `<channel>` is `DragonBuildChannel` from the bundle — `Debug` for a local
+`*` optional slots — and there are only two left, both of them the *pair* an app either has or
+doesn't. 4.0.0 closed the gaps *between* the slots, after a screenshot comparison found the same
+drift living there: `licensesURL` is **required** (spectacle-2 and the sample app listed
+`Sparkle → MIT` in Credits with no notices page), and the upstream repository lives **inside**
+`OriginalWork`, so the `Original project` link and the `Based on` credit are one value that cannot
+half-ship (clipmenu-2 and ice-2 both credited an upstream the pane never linked). The copyright
+names **one holder — the app's own**; the dual-holder `© 2008–2014 Naotaka Morimoto · © 2026 Teddy
+Chan` form is gone, because a Dragon app reimplements its upstream rather than reusing its source
+and so has no upstream copyright to assert. Lineage is `OriginalWork`'s job, twice; upstream
+licence text belongs on the licences page. It is a plain `String`, so the compiler can't close it
+— **CONFORMANCE §R13** does.
+
+`<channel>` is `DragonBuildChannel` from the bundle — `Debug` for a local
 build, absent for a release one, so a release renders exactly as it did before the key existed.
 It is the only sanctioned way to show `Debug`: per
 [`docs/MAC-APP-RELEASE-LIFECYCLE.md`](docs/MAC-APP-RELEASE-LIFECYCLE.md) the word must never enter

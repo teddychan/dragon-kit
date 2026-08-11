@@ -10,6 +10,7 @@ import Foundation
             copyright: "© 2026 Someone",
             websiteURL: URL(string: "https://www.dragonapp.com/test-2/")!,
             supportURL: URL(string: "https://github.com/teddychan/test-2/issues")!,
+            licensesURL: URL(string: "https://www.dragonapp.com/test-2/licenses/")!,
             license: "MIT",
             appIcon: nil
         )
@@ -23,13 +24,32 @@ import Foundation
             appName: "X", versionString: "v1", copyright: "©",
             websiteURL: URL(string: "https://www.dragonapp.com/x-2/")!,
             supportURL: URL(string: "https://github.com/teddychan/x-2/issues")!,
+            licensesURL: URL(string: "https://www.dragonapp.com/x-2/licenses/")!,
             license: "MIT", appIcon: nil
         )
-        #expect(content.originalProjectURL == nil)
-        #expect(content.licensesURL == nil)
         #expect(content.originalWork == nil)
+        #expect(content.originalProjectURL == nil)
         #expect(content.attributions.isEmpty)
         #expect(content.createdBy == "Teddy Chan")
+    }
+
+    /// The `Original project` link and the `Based on` credit are one value, so an app cannot ship
+    /// one without the other. clipmenu-2 and ice-2 shipped the credit with no link for two
+    /// releases, which is what folded the URL into ``OriginalWork``.
+    @Test func originalProjectURLIsDerivedFromTheCredit() {
+        let content = AboutContent(
+            appName: "X", versionString: "v1", copyright: "©",
+            websiteURL: URL(string: "https://www.dragonapp.com/x-2/")!,
+            supportURL: URL(string: "https://github.com/teddychan/x-2/issues")!,
+            licensesURL: URL(string: "https://www.dragonapp.com/x-2/licenses/")!,
+            license: "MIT", appIcon: nil,
+            originalWork: OriginalWork(
+                name: "Spectacle",
+                author: "Eric Czarny",
+                url: URL(string: "https://github.com/eczarny/spectacle")!
+            )
+        )
+        #expect(content.originalProjectURL?.absoluteString == "https://github.com/eczarny/spectacle")
     }
 
     @Test func versionStringPrefixesVAndAppendsUTCCommitDate() {
@@ -113,13 +133,14 @@ import Foundation
 
     /// ice-2 spelled out `Copyright © …` where the others used the symbol alone, and
     /// yahoo-keykey-2 put a description in the slot instead of a copyright.
-    @Test func copyrightFormat() {
-        #expect(DragonAbout.copyright(years: "2026", holder: "Teddy Chan")
-            == "© 2026 Teddy Chan")
-        #expect(DragonAbout.copyright(
-            original: (years: "2008–2014", holder: "Naotaka Morimoto"),
-            years: "2026",
-            holder: "Teddy Chan"
-        ) == "© 2008–2014 Naotaka Morimoto · © 2026 Teddy Chan")
+    ///
+    /// One holder, and exactly one `©`. The dual-holder form clipmenu-2 and ice-2 used —
+    /// `© 2008–2014 Naotaka Morimoto · © 2026 Teddy Chan` — is gone: the upstream author is
+    /// credited by ``OriginalWork`` and their licence text by the licences page, and a Dragon app
+    /// reimplements rather than reuses upstream source, so it has no upstream copyright to assert.
+    @Test func copyrightNamesOneHolder() {
+        let line = DragonAbout.copyright(years: "2026", holder: "Teddy Chan")
+        #expect(line == "© 2026 Teddy Chan")
+        #expect(line.filter { $0 == "©" }.count == 1)
     }
 }

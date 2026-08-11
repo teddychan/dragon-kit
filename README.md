@@ -39,13 +39,17 @@ Modules:
   preserved under `<key>.unreadable` instead of being dropped.
 - **About** — `AboutContent` + `AboutPane` / `AboutSettingsPane`. **Fixed slots**: an app supplies
   URLs and proper nouns, and the kit assembles every row title, SF Symbol and ordering —
-  `Website` / `Support on GitHub` / `Original project`\* / `Open-source licenses`\*, then a
+  `Website` / `Support on GitHub` / `Original project`\* / `Open-source licenses`, then a
   **Credits** section of `Created by` / `Based on`\* / `Built with · DragonKit vX.Y.Z` /
   `License` / app attributions\* (`*` = optional). Attributions are `name → licence`
   (`Sparkle → MIT`), never a role label. Link detail text is derived from the URL
   rather than typed beside it, and `websiteMatchesSupportRepo` checks the website addresses the
   canonical `dragonapp.com/{app-name}-{major}` page. `AboutContent` took free-form
-  `links`/`credits` arrays until five apps used them to ship five different panes.
+  `links`/`credits` arrays until five apps used them to ship five different panes. Two slots
+  closed again in 4.0.0, after the same drift reappeared in the gaps between them: `licensesURL`
+  is **required**, and the upstream repository lives **inside** `OriginalWork`, so the
+  `Original project` link and the `Based on` credit are one value. The copyright names **one
+  holder** — the app's own (CONFORMANCE §R13).
 - **What's New** — release-notes pane: `WhatsNewContent` / `ChangeSection` (Added /
   Changed / Fixed …) + `WhatsNewPane` / `WhatsNewSettingsPane`. `version` is not public; the
   pane renders `displayVersion`, so every version in the UI carries exactly one `v`.
