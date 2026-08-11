@@ -130,13 +130,22 @@ public enum DragonAbout {
     /// **One holder — the app's own.** This took an `original:` pair until 4.0.0 and rendered
     /// `© 2008–2014 Naotaka Morimoto · © 2026 Teddy Chan`, which clipmenu-2 and ice-2 used and the
     /// other three apps did not, so two of five About panes carried a second copyright the rest
-    /// lacked. Dropping it is not only about consistency: a Dragon app is an independent
-    /// reimplementation that uses none of the upstream source, so asserting the upstream author's
-    /// copyright over *this* binary states something the app's own notices contradict —
-    /// yahoo-keykey-2 had already reasoned its way to the single-holder form for exactly that
-    /// reason. The lineage is carried, twice, by ``OriginalWork``: the `Original project` link and
-    /// the `Based on` credit. Upstream licence text that must travel with copies belongs on the
-    /// licences page, which is now a required row.
+    /// lacked.
+    ///
+    /// **This is a presentation rule, and deliberately not a claim about who holds the
+    /// copyright.** The first version of this comment argued that a Dragon app reimplements its
+    /// upstream rather than reusing its source and so has no upstream copyright to assert. That is
+    /// true of yahoo-keykey-2 — which reached the single-holder form on those grounds before the
+    /// kit did — and false of both apps the change actually touched: ice-2 is a GPL-3.0 *fork* of
+    /// Jordan Baird's Ice, whose §4 requires the upstream notice to travel with a derivative work,
+    /// and clipmenu-2's `LICENSE` names two holders outright. Do not restore that reasoning.
+    ///
+    /// What survives is narrower and lineage-independent: this string fills a header row in a
+    /// settings pane, and it read one way in three apps and another in two. Nothing here displaces
+    /// a legal notice — `LICENSE`, `NSHumanReadableCopyright` and the licences page are untouched,
+    /// and ice-2 correctly keeps both holders in its `Info.plist` while rendering one here.
+    /// Lineage inside the pane is ``OriginalWork``'s job, twice over: the `Original project` link
+    /// and the `Based on` credit.
     public static func copyright(years: String, holder: String) -> String {
         "© \(years) \(holder)"
     }

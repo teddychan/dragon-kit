@@ -171,9 +171,11 @@ Five rules the type carries, each because an app got it wrong:
   Dragon app links Sparkle or bundles third-party data, so the row belongs on all of them —
   publish `dragonapp.com/{app-name}-{major}/licenses/` as part of shipping the app.
 - **The copyright names one holder** — the app's own, via `DragonAbout.copyright(years:holder:)`.
-  A Dragon app reimplements its upstream rather than reusing its source, so it has no upstream
-  copyright to assert; lineage is `OriginalWork`'s job and upstream licence text the licences
-  page's. CONFORMANCE §R14 rejects a hand-typed string here.
+  This is a presentation rule about a settings-pane header, **not** a claim that your app has no
+  upstream copyright to carry: keep the upstream notice in `LICENSE`, `NSHumanReadableCopyright`
+  and on the licences page exactly as your licence requires (ice-2, a GPL-3.0 fork, keeps both
+  holders in its `Info.plist` and renders one in About). Inside the pane, lineage is
+  `OriginalWork`'s job. CONFORMANCE §R14 rejects a hand-typed string here.
 - **An attribution is `name → licence`**, never a role label: `Attribution(name: "Sparkle",
   license: "MIT")`, not `Attribution(name: "Update framework", license: "Sparkle (MIT)")`.
   Use the SPDX identifier when the component declares one, otherwise the upstream wording
