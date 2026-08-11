@@ -16,18 +16,31 @@ public struct AboutCreditRow: Sendable, Equatable {
     public let value: String
 }
 
-/// The upstream project a Dragon app reimplements, rendered as `<name> by <author>`.
+/// The upstream project a Dragon app reimplements: its repository, and the `<name> by <author>`
+/// credit built from it.
 ///
 /// A struct rather than a tuple so it is `Equatable` for the canon tests. The "by" is kit-owned
 /// too: ice-2 wrote "Original Ice → Jordan Baird", spectacle-2 wrote "Based on → Spectacle by
 /// Eric Czarny", and clipmenu-2 a third way. One label, one joining word, one shape.
+///
+/// **``url`` lives here, and is required, because the upstream project fills two slots at once**
+/// — the `Original project` link row and the `Based on` credit row. They were separate optional
+/// parameters (`originalProjectURL` and `originalWork`) until 4.0.0, and nothing tied them
+/// together: clipmenu-2 and ice-2 both passed the credit and omitted the URL, so both shipped a
+/// "Based on ClipMenu by Naotaka Morimoto" row with no link to ClipMenu anywhere in the pane —
+/// two of five apps, found by comparing screenshots. Same class of drift the fixed slots removed
+/// from the rest of the pane, so it gets the same answer: one value, both rows, no way to supply
+/// half of it.
 public struct OriginalWork: Sendable, Equatable {
     public let name: String
     public let author: String
+    /// The upstream repository, e.g. `https://github.com/eczarny/spectacle`.
+    public let url: URL
 
-    public init(name: String, author: String) {
+    public init(name: String, author: String, url: URL) {
         self.name = name
         self.author = author
+        self.url = url
     }
 }
 
@@ -102,7 +115,7 @@ public struct AboutContent {
     /// Always ``DragonAbout/versionString(bundle:)``. spectacle-2 hand-rolled
     /// `"\(short) (\(build))"` and lost both the `v` prefix and the build timestamp.
     public let versionString: String
-    /// Always ``DragonAbout/copyright(original:years:holder:)``.
+    /// Always ``DragonAbout/copyright(years:holder:)`` — one holder, the app's own.
     public let copyright: String
     public let appIcon: NSImage?
 
@@ -119,15 +132,25 @@ public struct AboutContent {
     /// The GitHub issues page. ice-2, clipmenu-2 and yahoo-keykey-2 pointed here; spectacle-2
     /// and the sample app pointed at the repo root and titled the row "Source" instead.
     public let supportURL: URL
-    /// The upstream project's repository, when the app reimplements one.
-    public let originalProjectURL: URL?
-    /// Third-party licence notices, hosted at `dragonapp.com/{app}/licenses`.
+    /// Third-party licence notices, hosted at `dragonapp.com/{app-name}-{major}/licenses/`.
     ///
     /// Replaces the bundled Acknowledgements document ice-2 shipped: a hand-maintained RTF/PDF
     /// carrying full MIT text for six libraries. Hosting them on the site rather than in the
     /// bundle is a weaker reading of MIT's "included in all copies" and was chosen knowingly —
     /// see the design spec.
-    public let licensesURL: URL?
+    ///
+    /// **Required, as of 4.0.0.** It was optional, and spectacle-2 and the sample app both left
+    /// it nil while listing `Sparkle → MIT` in Credits — naming a bundled component and linking
+    /// its notices nowhere, which is the half of MIT compliance the site page exists to carry.
+    /// Every Dragon app links Sparkle or bundles third-party data, so no app has a reason to omit
+    /// the row; making it non-optional is what stops the next one shipping without a page. An app
+    /// with genuinely nothing to attribute is a decision to revisit deliberately, not a default
+    /// to fall into.
+    public let licensesURL: URL
+    /// The upstream project's repository, when the app reimplements one — the `Original project`
+    /// link row. Derived from ``originalWork`` so it cannot disagree with the `Based on` credit or
+    /// go missing while that row ships; see ``OriginalWork``.
+    public var originalProjectURL: URL? { originalWork?.url }
 
     // MARK: Credits — fixed slots
 
@@ -144,10 +167,9 @@ public struct AboutContent {
         copyright: String,
         websiteURL: URL,
         supportURL: URL,
+        licensesURL: URL,
         license: String,
         appIcon: NSImage? = NSImage(named: NSImage.applicationIconName),
-        originalProjectURL: URL? = nil,
-        licensesURL: URL? = nil,
         createdBy: String = "Teddy Chan",
         originalWork: OriginalWork? = nil,
         attributions: [Attribution] = []
@@ -157,10 +179,9 @@ public struct AboutContent {
         self.copyright = copyright
         self.websiteURL = websiteURL
         self.supportURL = supportURL
+        self.licensesURL = licensesURL
         self.license = license
         self.appIcon = appIcon
-        self.originalProjectURL = originalProjectURL
-        self.licensesURL = licensesURL
         self.createdBy = createdBy
         self.originalWork = originalWork
         self.attributions = attributions
@@ -168,8 +189,8 @@ public struct AboutContent {
 
     // MARK: Assembled rows
 
-    /// The links section, in canonical order. Optional slots collapse without reordering the
-    /// rest.
+    /// The links section, in canonical order. `Original project` — the one remaining optional slot
+    /// — collapses without reordering or retitling the rest.
     ///
     /// Detail text is *derived* from the URL, never typed: yahoo-keykey-2 wrote
     /// `www.dragonapp.com/keykey` where every other app omitted the `www.`, and a typed string
@@ -190,22 +211,20 @@ public struct AboutContent {
                 url: supportURL
             ),
         ]
-        if let originalProjectURL {
+        if let originalWork {
             rows.append(AboutLinkRow(
                 title: L("DragonKit.about.original"),
-                detail: AboutLinkDetail.detail(for: originalProjectURL),
+                detail: AboutLinkDetail.detail(for: originalWork.url),
                 systemImage: "heart",
-                url: originalProjectURL
+                url: originalWork.url
             ))
         }
-        if let licensesURL {
-            rows.append(AboutLinkRow(
-                title: L("DragonKit.about.licenses"),
-                detail: AboutLinkDetail.detail(for: licensesURL),
-                systemImage: "doc.text",
-                url: licensesURL
-            ))
-        }
+        rows.append(AboutLinkRow(
+            title: L("DragonKit.about.licenses"),
+            detail: AboutLinkDetail.detail(for: licensesURL),
+            systemImage: "doc.text",
+            url: licensesURL
+        ))
         return rows
     }
 

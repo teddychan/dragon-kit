@@ -13,9 +13,13 @@ import Foundation
 /// hardcoding English here would fail on a machine whose system language isn't English.
 @MainActor
 @Suite struct AboutCanonTests {
+    static let spectacle = OriginalWork(
+        name: "Spectacle",
+        author: "Eric Czarny",
+        url: URL(string: "https://github.com/eczarny/spectacle")!
+    )
+
     static func content(
-        originalProjectURL: URL? = nil,
-        licensesURL: URL? = nil,
         originalWork: OriginalWork? = nil,
         attributions: [Attribution] = []
     ) -> AboutContent {
@@ -25,20 +29,16 @@ import Foundation
             copyright: "© 2026 Teddy Chan",
             websiteURL: URL(string: "https://www.dragonapp.com/spectacle-2/")!,
             supportURL: URL(string: "https://github.com/teddychan/spectacle-2/issues")!,
+            licensesURL: URL(string: "https://www.dragonapp.com/spectacle-2/licenses/")!,
             license: "MIT",
             appIcon: nil,
-            originalProjectURL: originalProjectURL,
-            licensesURL: licensesURL,
             originalWork: originalWork,
             attributions: attributions
         )
     }
 
     @Test func linkRowsAreCanonical() {
-        let rows = Self.content(
-            originalProjectURL: URL(string: "https://github.com/eczarny/spectacle")!,
-            licensesURL: URL(string: "https://www.dragonapp.com/spectacle-2/licenses")!
-        ).linkRows
+        let rows = Self.content(originalWork: Self.spectacle).linkRows
 
         #expect(rows.map(\.systemImage) == ["globe", "lifepreserver", "heart", "doc.text"])
         #expect(rows.map(\.title) == [
@@ -49,22 +49,38 @@ import Foundation
         ])
     }
 
-    /// Omitting an optional slot must shorten the list, never reorder or retitle what remains —
-    /// the sample app has no upstream project and no bundled third-party code.
-    @Test func optionalLinkSlotsCollapseInOrder() {
+    /// `Original project` is the only optional link slot left, and omitting it must shorten the
+    /// list without reordering or retitling what remains — the sample app reimplements nothing.
+    ///
+    /// The licences row is *not* optional as of 4.0.0. It was, and spectacle-2 and the sample app
+    /// both omitted it while listing bundled components in Credits.
+    @Test func onlyTheOriginalProjectSlotCollapses() {
         let rows = Self.content().linkRows
-        #expect(rows.map(\.systemImage) == ["globe", "lifepreserver"])
+        #expect(rows.map(\.systemImage) == ["globe", "lifepreserver", "doc.text"])
+        #expect(rows.map(\.title) == [
+            L("DragonKit.about.website"),
+            L("DragonKit.about.support"),
+            L("DragonKit.about.licenses"),
+        ])
+    }
 
-        let withLicensesOnly = Self.content(
-            licensesURL: URL(string: "https://www.dragonapp.com/spectacle-2/licenses")!
-        ).linkRows
-        #expect(withLicensesOnly.map(\.systemImage) == ["globe", "lifepreserver", "doc.text"])
+    /// The upstream project fills two rows from one value, so a pane can never credit it in
+    /// Credits and fail to link it in Links — the exact state clipmenu-2 and ice-2 shipped.
+    @Test func theOriginalProjectRowAndCreditTravelTogether() {
+        let content = Self.content(originalWork: Self.spectacle)
+        let link = content.linkRows.first { $0.systemImage == "heart" }
+        let credit = content.creditRows.first { $0.label == L("DragonKit.about.basedOn") }
+        #expect(link?.url == Self.spectacle.url)
+        #expect(link?.detail == "eczarny/spectacle")
+        #expect(credit?.value == "Spectacle by Eric Czarny")
+
+        let without = Self.content()
+        #expect(!without.linkRows.contains { $0.systemImage == "heart" })
+        #expect(!without.creditRows.contains { $0.label == L("DragonKit.about.basedOn") })
     }
 
     @Test func creditRowsAreCanonical() {
-        let rows = Self.content(
-            originalWork: OriginalWork(name: "Spectacle", author: "Eric Czarny")
-        ).creditRows
+        let rows = Self.content(originalWork: Self.spectacle).creditRows
 
         #expect(rows.map(\.label) == [
             L("DragonKit.about.createdBy"),
@@ -186,6 +202,7 @@ import Foundation
                 appName: "X", versionString: "v1", copyright: "©",
                 websiteURL: URL(string: website)!,
                 supportURL: URL(string: support)!,
+                licensesURL: URL(string: "https://www.dragonapp.com/clipmenu-2/licenses/")!,
                 license: "MIT", appIcon: nil
             ).websiteMatchesSupportRepo
         }

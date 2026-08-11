@@ -49,6 +49,11 @@ import DragonKit
         URL(fileURLWithPath: "/Users/host/Library", isDirectory: true)
     }
 
+    /// Every About slot a host can fill, on purpose: this fixture is the only place the kit builds
+    /// a real ``AboutContent``, so a slot it skips is a slot whose initializer can change
+    /// unnoticed. `originalWork` carries the upstream URL, and `licensesURL` is required — the two
+    /// invariants 4.0.0 added after clipmenu-2 and ice-2 shipped a `Based on` credit with no link,
+    /// and spectacle-2 and the sample app listed bundled components with no notices page.
     private var aboutContent: AboutContent {
         AboutContent(
             appName: appName,
@@ -56,7 +61,13 @@ import DragonKit
             copyright: DragonAbout.copyright(years: "2026", holder: "Teddy Chan"),
             websiteURL: URL(string: "https://www.dragonapp.com/host-app-1/")!,
             supportURL: URL(string: "https://github.com/teddychan/host-app-1/issues")!,
+            licensesURL: URL(string: "https://www.dragonapp.com/host-app-1/licenses/")!,
             license: "MIT",
+            originalWork: OriginalWork(
+                name: "Host App",
+                author: "Some Author",
+                url: URL(string: "https://github.com/someauthor/host-app")!
+            ),
             attributions: [Attribution(name: "Sparkle", license: "MIT")]
         )
     }

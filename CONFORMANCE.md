@@ -236,6 +236,29 @@ the line fingerprints one commit. It shows no date at all when the key is absent
 fallback to the old meaning is exactly the drift this replaced — which is why *not* stamping it
 has to be a violation rather than a quietly shorter version line.
 
+## R13 — The About copyright is kit-assembled and names one holder
+
+`copyright:` must come from `DragonAbout.copyright(years:holder:)` and name the app's own
+copyright holder only. The checker rejects a string literal in the slot, two `©` on one line, and
+the `original:` argument removed in DragonKit 4.0.0.
+
+**Rationale:** the rest of the About pane's slots are closed by the kit's own signature, and need
+no rule here. `licensesURL` is a required parameter; the upstream project's repository lives
+*inside* `OriginalWork`, so the `Original project` link and the `Based on` credit are one value.
+Both were separate optionals, and all four combinations shipped: clipmenu-2 and ice-2 credited an
+upstream project the pane never linked, while spectacle-2 and the sample app listed `Sparkle → MIT`
+in Credits with no notices page anywhere — found by putting five screenshots side by side, which
+is how About drift has been found every time. Under 4.0.0 each of those is a compile error, caught
+by the app's own build.
+
+`copyright` is a plain `String`, so no signature can close it — which is exactly why it gets the
+rule. The dual-holder line (`© 2008–2014 Naotaka Morimoto · © 2026 Teddy Chan`) was in two of five
+apps, and dropping it is not only about consistency: a Dragon app reimplements its upstream rather
+than reusing its source, so asserting the upstream author's copyright over *this* binary
+contradicts the app's own notices — yahoo-keykey-2 had already reasoned its way to the
+single-holder form on those grounds. Lineage is carried by `OriginalWork`, twice; upstream licence
+text that must travel with copies belongs on the licences page.
+
 ## Out of scope, deliberately
 
 - **Shipping localizations.** Not having `.strings` isn't re-implementing a kit module. The
