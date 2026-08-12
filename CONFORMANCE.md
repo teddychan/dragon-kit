@@ -79,12 +79,11 @@ deleting the file would be the easiest way to "pass").
     "pattern": "dragon-kit\", from: \"([0-9.]+)\""
   },
   "paneOrder": { "file": "app/Sources/ClipMenu/SettingsWindowController.swift" },
-  "traits": ["sparkle", "mac-app-store"],   // see §R6, §R9
-  "exceptions": [                        // §R11 — each needs a reason and an owner
-    { "rule": "R3", "path": "app/Sources/ClipMenu/SyncBackupPane.swift",
-      "reason": "iCloud sync + versioned folder backup; DragonBackup is UserDefaults-suite only",
-      "sanctionedBy": "README: backup generalization deferred until a 2nd app needs it" }
-  ]
+  "traits": ["sparkle", "mac-app-store"],   // see §R5, §R6
+  // §R11, and this is the real value in all five apps: empty. The schema is shown there,
+  // not here, because an example exception reads as a live sanction — this one named a
+  // rule R3 never fired and a path (`SyncBackupPane.swift`) clipmenu-2 does not have.
+  "exceptions": []
 }
 ```
 
@@ -212,23 +211,68 @@ itself an R10 violation, the same way §R0 makes deleting `.dragon-conformance.j
 
 ## R11 — Exceptions are explicit, reasoned, and few
 
-A sanctioned divergence goes in `exceptions` with a `reason` and a `sanctionedBy`. The
-checker prints every exception on each run, so they stay visible instead of becoming
-permanent. Currently sanctioned:
+A sanctioned divergence goes in the app's own `.dragon-conformance.json` — which is the only
+place the checker reads them from — with a `reason` and a `sanctionedBy`:
 
-| App | Rule | Divergence | Why |
+```jsonc
+"exceptions": [
+  { "rule": "R15", "path": "Sources/DragonAppTemplate/AboutConfig.swift",
+    "reason": "no public app page exists; the site hosts only /dragon-sample-app/licenses/",
+    "sanctionedBy": "CONFORMANCE.md §R11" }
+]
+```
+
+The checker prints every exception on each run, so they stay visible instead of becoming
+permanent. **The target is none at all, and as of 2026-08-12 that is the live state: zero
+exceptions are declared across all five apps.** Keep it that way — an exception is the last
+resort, after a trait, a slot spelling, and changing the app.
+
+### What this table used to say
+
+It listed five "currently sanctioned" exceptions, for months, while **not one of them was
+declared in any app** — the checker printed nothing on every run of all five. None was ever
+needed:
+
+| Was listed | Why it needed no exception |
+|---|---|
+| clipmenu-2, ice-2 — R3/R4, own folder backup pane | `SyncBackupPane` and `IceBackupSettingsPane` shadow no kit type and hand-roll no grouped `Form`, so R3 and R4 never fired on them. The deferral is real — `DragonBackup` snapshots a UserDefaults suite only — but §R9 carries it, by listing the app's spelling in the Backup slot. |
+| clipmenu-2 — R6, MAS links `DragonKit` only | R6 fires on `import Sparkle` in Swift sources. A *target* that omits a product gives it nothing to see. Declared as the `mac-app-store` trait. |
+| yahoo-keykey-2 — R1, `includeQuit: false` | A parameter of `DragonAppMenu.Config`. Using the kit's own knob is compliance, not divergence. |
+| yahoo-keykey-2 — R5, no Permissions pane | Carried by the `no-permissions` **trait**, which R5 reads directly. |
+
+A row naming a rule the checker never fires is worse than no row: it reads as a live sanction,
+nothing contradicts it, and the next app copies the shape. Traits and slot spellings are how a
+*structural* difference gets declared; `exceptions` is only for a rule that genuinely fires and is
+genuinely allowed to. If a row cannot be traced to a violation the checker would otherwise print,
+it does not belong here.
+
+### Sanctioned in advance
+
+Neither of these is declared today — one has no rule to attach to yet, the other has nothing to
+fire on. They are written down first so the sanction is already agreed when that changes.
+
+| App | Rule | Divergence | Lifts when |
 |---|---|---|---|
-| clipmenu-2, ice-2 | R3/R4 | own versioned folder backup pane | `DragonBackup` snapshots a UserDefaults suite only; generalizing it is deferred until a second app needs the folder shape |
-| clipmenu-2 | R6 | MAS target links `DragonKit` only | Sparkle is forbidden in a sandboxed App Store build |
-| yahoo-keykey-2 | R1 | `includeQuit: false` | an IME is quit by the system; quitting only makes typing unresponsive |
-| yahoo-keykey-2 | R5 | no Permissions pane | an IME receives keystrokes via the IMK server and needs no TCC grant |
-| ice-2 | R13 | no `.lproj` to check the picker against | English-only, and it localizes with String Catalogs, so nothing on disk states its coverage |
+| dragon-sample-app | R15 *(reserved, not yet implemented)* | About's Website row is `dragonapp.com`, not `dragonapp.com/dragon-sample-app/` | the app gets a public page, if it ever does |
+| ice-2 | R13 | no `.lproj` for the picker to be compared against | its seven locales land |
 
-The ice-2 row has an owner and an expiry: its maintainer is adding the seven locales, and the
-exception lifts when they land. It also isn't load-bearing yet — ice-2 constructs no
-`LanguagePicker` at all, so R13 is silent for it today. The row is here so the sanction is already
-agreed when it adopts one, and the matching `exceptions` entry then goes in **ice-2's own**
-`.dragon-conformance.json`, which is where the checker reads exceptions from.
+**dragon-sample-app has no public-facing page, on purpose.** The site hosts
+`/dragon-sample-app/licenses/` and the app's appcast and nothing else: there is no
+`docs/dragon-sample-app/index.html` and no card for it on the hub. The app exists to exercise
+DragonKit's modules — it ships no feature of its own — so it is a released, updatable, licence-
+carrying app without a product page. Pointing its Website row at the canonical path would ship a
+404, so it addresses the studio hub, and `AboutContent.websiteMatchesSupportRepo` is `false` for
+it and `true` for the other four. Every other rule applies to it unchanged.
+
+R15 — *About's Website row addresses the app's canonical page* — is reserved for that property,
+which nothing checks today. The row lands before the rule on purpose: a rule merged here is live
+in five apps' CI the same day, and the exception that keeps dragon-sample-app green lives in
+**its** repo, so its config PR has to merge first.
+
+**ice-2** ships no localization at all — no `.lproj`, no String Catalog, and no `L()` call site —
+so nothing on disk states its coverage. It is not load-bearing either: ice-2 constructs no
+`LanguagePicker`, so R13 is silent for it today. Both facts end together, in the rewrite that
+brings it to the seven locales every other app ships.
 
 ## R12 — The build stamps `DragonCommitDate`
 
