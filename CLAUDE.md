@@ -87,10 +87,12 @@ distinction was learned the hard way: the first draft justified it by claiming a
 reimplements its upstream rather than reusing its source and so has no upstream copyright to
 assert. True of yahoo-keykey-2, false of both apps it touched — ice-2 is a GPL-3.0 *fork* whose §4
 requires the upstream notice to travel, and clipmenu-2's `LICENSE` names two holders. Don't
-reinstate that reasoning, and don't let this rule near a legal notice: `LICENSE`,
-`NSHumanReadableCopyright` and the licences page are all out of scope, and ice-2 rightly keeps both
-holders in its `Info.plist` while rendering one in About. Lineage inside the pane is
-`OriginalWork`'s job, twice.
+reinstate that reasoning, and don't let this rule near a legal notice: `LICENSE` and the licences
+page are out of scope, and they are where the upstream holder is named — ice-2's `LICENSE` carries
+Jordan Baird in the GPL's own notice template. Lineage inside the pane is `OriginalWork`'s job,
+twice. `NSHumanReadableCopyright` is **not** where §4 is satisfied: it's an optional Apple key no
+licence names, three apps shipped without it, and all five now set it to `© 2026 Teddy Chan` to
+match About — ice-2 last, in 2.14.7. The kit neither reads nor requires it.
 
 `<channel>` is `DragonBuildChannel` from the bundle — `Debug` for a local
 build, absent for a release one, so a release renders exactly as it did before the key existed.

@@ -35,8 +35,9 @@ KIT_OWNED_LITERAL_KEYS = [
 CANONICAL_PANE_SLOTS = [
     ("General", ("GeneralPane", "general")),
     ("Permissions", ("PermissionsSettingsPane", "PermissionsPane", "permissions")),
-    # `SyncBackupPane`/`syncBackup` is clipmenu-2's own backup pane, sanctioned under §R11
-    # (iCloud sync + versioned folder backup, because DragonBackup is UserDefaults-suite only).
+    # `SyncBackupPane`/`syncBackup` is clipmenu-2's own backup pane — a sanctioned deferral
+    # (iCloud sync + versioned folder backup, because DragonBackup is UserDefaults-suite only),
+    # carried by this slot rather than by an §R11 exception, which it never needed.
     # Without those spellings the slot was never *seen* for the one app that diverges — and R9
     # compares only the slots it saw, so clipmenu-2's backup pane could sit anywhere in the
     # order and the rule still printed PASS. Verified: `\bbackup\b` does not match
