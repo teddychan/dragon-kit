@@ -16,6 +16,7 @@ import os
 import re
 import subprocess
 import sys
+import urllib.parse
 from dataclasses import dataclass, field
 
 # Lifecycle item titles the kit owns (R1). Matched against Swift string literals and L() keys.
@@ -160,6 +161,69 @@ def strip_literals(line: str) -> str:
     for is not a rule anyone will keep.
     """
     return re.sub(r'"[^"\n]*"', '""', line)
+
+
+def mask_noncode(text: str) -> str:
+    """A copy of `text` with comment text and string-literal *contents* blanked to spaces.
+
+    Length-preserving, which is the point: R15 needs both halves of one file at once — the masked
+    copy says which `AboutContent(` occurrences are real code, and the original holds the URLs
+    written inside the literals. One index space serves both.
+
+    Neither existing helper can do it. ``strip_comment`` cuts `URL(string: "https://…")` at the
+    slashes in `https://`, and clipmenu-2 and ice-2 both name their website constant on exactly
+    such a line; ``strip_literals`` collapses `"…"` to `""` and moves every offset after it.
+
+    Scanned in one pass over the whole file rather than line by line, because both states outlive a
+    line: a Swift multi-line string spans them, and a line inside one that contains a URL would
+    otherwise have its `//` read as a comment. Its triple-quote delimiter is matched as a unit for
+    the same reason — read as three single quotes it goes open-close-open, so any odd number of `"`
+    inside the block leaves the scanner stuck in a literal, blanks the app's real `AboutContent(`
+    and reports a conforming app for having none. Twenty-seven files across the five apps use
+    multi-line strings, none of them yet in the file that builds About.
+
+    `/* … */` is deliberately not handled, matching every other rule here: no Dragon app writes one
+    in its About wiring, and singling this rule out for it would be a lone deviation.
+    """
+    out = list(text)
+    inside: str | None = None  # the delimiter that opened the literal we are in
+    index = 0
+    while index < len(text):
+        if inside is None:
+            if text.startswith('"""', index):
+                inside, index = '"""', index + 3
+            elif text[index] == '"':
+                inside, index = '"', index + 1
+            elif text.startswith("//", index):
+                while index < len(text) and text[index] != "\n":
+                    out[index] = " "
+                    index += 1
+            else:
+                index += 1
+            continue
+        if text[index] == "\\":  # an escape, so the next character closes nothing
+            out[index] = " "
+            if index + 1 < len(text):
+                out[index + 1] = " "
+            index += 2
+        elif text.startswith(inside, index):
+            index += len(inside)
+            inside = None
+        else:
+            if text[index] != "\n":
+                out[index] = " "
+            index += 1
+    return "".join(out)
+
+
+def literal_at(body: str, masked: str, quote: int) -> str | None:
+    """The contents of the string literal whose opening quote sits at `quote`.
+
+    Masking blanks a literal's contents but keeps both of its quotes, so the closing one is still
+    findable in `masked` at the index it occupies in `body`.
+    """
+    end = masked.find('"', quote + 1)
+    return body[quote + 1:end] if end >= 0 else None
 
 
 def balanced(text: str, start: int) -> str | None:
@@ -592,6 +656,119 @@ def rule_r14_about_copyright(root: str, cfg: Config, files: list[str]) -> list[V
     return out
 
 
+# `URL(string: "…")`, the only spelling any of the five apps uses for an About row. Matched up to
+# the opening quote only: these run against the *masked* copy, where the contents are blanked, and
+# ``literal_at`` reads them back out of the original.
+URL_LITERAL = re.compile(r'URL\s*\(\s*string:\s*"')
+# `private static let websiteURL = URL(string: "…")!` — clipmenu-2 and ice-2 both name their two
+# URLs before passing them, so R15 has to follow one hop of indirection or it reads nothing at all
+# for two of the five apps. One hop only: a constant assigned from another constant is reported as
+# unreadable rather than chased, because a rule that quietly gives up is the failure mode here.
+URL_CONSTANT = re.compile(r'\blet\s+([A-Za-z_][A-Za-z0-9_]*)\s*(?::[^=\n]+)?=\s*'
+                          r'URL\s*\(\s*string:\s*"')
+
+
+def github_repository(url: str) -> str | None:
+    """The repo name in a `github.com/owner/repo/...` URL — `AboutLinkDetail.repository(of:)`."""
+    parts = urllib.parse.urlsplit(url)
+    if not (parts.hostname or "").endswith("github.com"):
+        return None
+    segments = [segment for segment in parts.path.split("/") if segment]
+    return segments[1] if len(segments) >= 2 else None
+
+
+def about_argument(masked: str, start: int, end: int, label: str) -> tuple[int, int] | None:
+    """Where a labelled `AboutContent(` argument's value sits, or None if it isn't passed.
+
+    Located in the masked copy — so a comment or a literal mentioning the label cannot win — and
+    returned as absolute indices, because the value itself has to be read from the original.
+    """
+    match = re.compile(rf"\b{label}\s*:\s*([^,]+)").search(masked, start, end)
+    return match.span(1) if match else None
+
+
+def rule_r15_website_page(root: str, cfg: Config, files: list[str]) -> list[Violation]:
+    """About's Website row must address the app's canonical page.
+
+    This is the per-app assertion of `AboutContent.websiteMatchesSupportRepo`, a kit property that
+    has existed since the About slots were fixed and that *nothing checked per app*: it is only
+    reachable from a constructed `AboutContent`, so only clipmenu-2 and yahoo-keykey-2 asserted it,
+    in their own test suites. The other three shipped the row on trust. Giving those three the
+    signal is the whole point of the rule.
+
+    The site convention is `dragonapp.com/{app-name}-{major}`, which is also the GitHub repo name
+    for every Dragon app — so the Website row and the Support row check each other and there is no
+    table to maintain. The checker reads the written literals out of the app's sources, the way
+    §R13 reads the `languages:` argument, because the property cannot be evaluated without building
+    the app.
+
+    Anything it cannot read is a violation, never a skip: an unreadable argument, a support row
+    that names no repository, no `AboutContent(` construction at all. A rule that goes quiet when
+    an app restructures its About wiring would pass every app that stopped conforming, which is the
+    silent-checker failure this spec exists to prevent (§R0, §R10 and §R13 all take the same line).
+
+    dragon-sample-app is the one sanctioned divergence, declared in *its* repo under §R11: the site
+    hosts `/dragon-sample-app/licenses/` and its appcast and nothing else, so the canonical path
+    would be a 404 and the row addresses the studio hub instead.
+    """
+    out: list[Violation] = []
+    constructed = False
+    for path in files:
+        body = "".join(read(path))
+        masked = mask_noncode(body)
+        constants = {match.group(1): literal_at(body, masked, match.end() - 1)
+                     for match in URL_CONSTANT.finditer(masked)}
+        for call in re.finditer(r"\bAboutContent\s*\(", masked):
+            span = balanced(masked, call.end() - 1)
+            if span is None:
+                continue
+            args_end = call.end() + len(span)
+            constructed = True
+            if cfg.excuses("R15", path):
+                continue
+            number = body.count("\n", 0, call.start()) + 1
+
+            def resolve(label: str) -> str | None:
+                where = about_argument(masked, call.end(), args_end, label)
+                if where is None:
+                    return None
+                literal = URL_LITERAL.match(masked, *where)
+                if literal:
+                    return literal_at(body, masked, literal.end() - 1)
+                return constants.get(masked[where[0]:where[1]].strip().rstrip("!").strip())
+
+            website, support = resolve("websiteURL"), resolve("supportURL")
+            if website is None or support is None:
+                unreadable = " and ".join(
+                    f"'{label}:'" for label, value in (("websiteURL", website),
+                                                       ("supportURL", support)) if value is None)
+                out.append(Violation("R15", f"cannot read {unreadable} — R15 compares the written "
+                                     "literals, so each must be a URL(string: \"…\") at the call "
+                                     "site or a 'let' assigned one in the same file", path, number))
+                continue
+            repo = github_repository(support)
+            if repo is None:
+                out.append(Violation("R15", f"supportURL is {support}, which names no "
+                                     "github.com/owner/repo — the Website row is checked against "
+                                     "the support row's repository, so there is nothing to compare "
+                                     "it with", path, number))
+                continue
+            page = urllib.parse.urlsplit(website).path.strip("/")
+            if page != repo:
+                out.append(Violation("R15", f"About's Website row addresses "
+                                     f"'{page or '(the site root)'}' but the support row's "
+                                     f"repository is '{repo}' — the canonical page is "
+                                     f"https://www.dragonapp.com/{repo}/. If this app genuinely "
+                                     f"has no page, sanction R15 in 'exceptions' with a reason and "
+                                     f"an owner (§R11)", path, number))
+    if not constructed and not cfg.excuses("R15", ""):
+        out.append(Violation("R15", "no AboutContent(…) construction is reachable through "
+                             f"'sources' ({cfg.sources}) — R15 reads the Website and Support rows "
+                             "from the call site, and cannot report a pass on an About pane it "
+                             "never found"))
+    return out
+
+
 # --------------------------------------------------------------------------- driver
 
 def load_config(root: str, override: str | None = None) -> Config:
@@ -646,6 +823,7 @@ def main() -> int:
     violations += rule_r12_commit_date(root, cfg)
     violations += rule_r13_language_picker(root, cfg, files, languages)
     violations += rule_r14_about_copyright(root, cfg, files)
+    violations += rule_r15_website_page(root, cfg, files)
 
     print(f"DragonKit conformance — {cfg.app} ({len(files)} Swift files, "
           f"{len(kit_types)} kit types, {len(languages)} kit languages)")

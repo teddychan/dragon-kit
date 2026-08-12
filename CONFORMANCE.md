@@ -223,9 +223,10 @@ place the checker reads them from — with a `reason` and a `sanctionedBy`:
 ```
 
 The checker prints every exception on each run, so they stay visible instead of becoming
-permanent. **The target is none at all, and as of 2026-08-12 that is the live state: zero
-exceptions are declared across all five apps.** Keep it that way — an exception is the last
-resort, after a trait, a slot spelling, and changing the app.
+permanent. **The target is none at all, and as of 2026-08-12 exactly one is declared across all
+five apps** — the one above, dragon-sample-app's, which §R15 landed and which is reasoned below.
+Keep it there — an exception is the last resort, after a trait, a slot spelling, and changing the
+app.
 
 ### What this table used to say
 
@@ -246,15 +247,17 @@ nothing contradicts it, and the next app copies the shape. Traits and slot spell
 genuinely allowed to. If a row cannot be traced to a violation the checker would otherwise print,
 it does not belong here.
 
-### Sanctioned in advance
+### The live one, and one sanctioned in advance
 
-Neither of these is declared today — one has no rule to attach to yet, the other has nothing to
-fire on. They are written down first so the sanction is already agreed when that changes.
+| App | Rule | Divergence | Declared | Lifts when |
+|---|---|---|---|---|
+| dragon-sample-app | R15 | About's Website row is `dragonapp.com`, not `dragonapp.com/dragon-sample-app/` | yes — `.dragon-conformance.json`, at `Sources/DragonAppTemplate/AboutConfig.swift` | the app gets a public page, if it ever does |
+| ice-2 | R13 | no `.lproj` for the picker to be compared against | no — nothing fires yet | its seven locales land |
 
-| App | Rule | Divergence | Lifts when |
-|---|---|---|---|
-| dragon-sample-app | R15 *(reserved, not yet implemented)* | About's Website row is `dragonapp.com`, not `dragonapp.com/dragon-sample-app/` | the app gets a public page, if it ever does |
-| ice-2 | R13 | no `.lproj` for the picker to be compared against | its seven locales land |
+Only the first is live. ice-2's is written down so the sanction is already agreed when it becomes
+needed — and it is *not* declared, because R13 is silent for an app that constructs no
+`LanguagePicker`. Declaring it early would put back exactly the row the table above records as the
+mistake: a sanction for a violation the checker never prints.
 
 **dragon-sample-app has no public-facing page, on purpose.** The site hosts
 `/dragon-sample-app/licenses/` and the app's appcast and nothing else: there is no
@@ -264,10 +267,11 @@ carrying app without a product page. Pointing its Website row at the canonical p
 404, so it addresses the studio hub, and `AboutContent.websiteMatchesSupportRepo` is `false` for
 it and `true` for the other four. Every other rule applies to it unchanged.
 
-R15 — *About's Website row addresses the app's canonical page* — is reserved for that property,
-which nothing checks today. The row lands before the rule on purpose: a rule merged here is live
-in five apps' CI the same day, and the exception that keeps dragon-sample-app green lives in
-**its** repo, so its config PR has to merge first.
+§R15 is that property, and the exception landed in **dragon-sample-app's** repo before the rule
+landed here: a rule merged here is live in five apps' CI the same day, so merging in the other
+order would have red-X'd the app for a divergence already agreed. In between it was inert — the
+checker matches exceptions by rule name, so it only added a printed line — which is what made
+landing it first safe.
 
 **ice-2** ships no localization at all — no `.lproj`, no String Catalog, and no `L()` call site —
 so nothing on disk states its coverage. It is not load-bearing either: ice-2 constructs no
@@ -378,6 +382,38 @@ obligation, and having it disagree with About made the app state two different t
 depending on where you looked. It is still out of scope for this rule; it simply is not where §4
 is satisfied. Nothing here requires an app to set it, or to set it any particular way — but if the
 five ever diverge there, that is a second presentation slot drifting, not a licence question.
+
+## R15 — About's Website row addresses the app's canonical page
+
+`websiteURL`'s path must equal the repository name in `supportURL` — `dragonapp.com/ice-2/`
+against `github.com/teddychan/ice-2/issues`. The site convention is
+`dragonapp.com/{app-name}-{major}`, which is also the GitHub repo name for every Dragon app, so
+the Website row and the Support row check each other and there is no table of URLs to maintain.
+
+This is the per-app assertion of `AboutContent.websiteMatchesSupportRepo`, which the kit has had
+since the About slots were fixed. The checker reads the written literals out of the app's
+sources — the way §R13 reads the `languages:` argument — because the property is only reachable
+from a *constructed* `AboutContent`, and constructing one means building the app. It follows one
+hop of indirection: clipmenu-2 and ice-2 both name their URLs in a `let` before passing them, and
+a rule that only understood a literal at the call site would read nothing at all for two of the
+five apps.
+
+**Rationale:** nothing checked this per app. clipmenu-2 and yahoo-keykey-2 assert it in their own
+test suites; spectacle-2, ice-2 and dragon-sample-app shipped the row on trust, and giving those
+three the signal is the point of the rule. The failure it catches is silent by construction — a
+wrong Website row still resolves in a browser. `dragonapp.com/clipmenu/` is a `<meta refresh>`
+stub whose `rel=canonical` points at `/clipmenu-2/`; it opens fine, and only this comparison
+distinguishes it from the page the app actually has.
+
+**Anything the rule cannot read is a violation, never a skip** — an argument that resolves to no
+literal, a support row that names no `github.com/owner/repo`, or no `AboutContent(…)` construction
+under `sources` at all. §R0, §R10 and §R13 all take the same line, for the same reason: a checker
+that goes quiet when an app restructures reports a pass on every app that stopped conforming.
+
+**dragon-sample-app is the one sanctioned divergence** (§R11) and it is declared in its own
+repository. It has no public page on purpose: the site hosts `/dragon-sample-app/licenses/` and
+its appcast and nothing else, so the canonical path would be a 404 and the row addresses the studio
+hub. `websiteMatchesSupportRepo` is `false` for it and `true` for the other four.
 
 ## Out of scope, deliberately
 

@@ -102,6 +102,9 @@ It is the only sanctioned way to show `Debug`: per
 asserted against. Link detail text is *derived* from the URL, never typed beside it, and the
 website must address the canonical `dragonapp.com/{app-name}-{major}` page — the same string as
 the support row's repo, which is how `websiteMatchesSupportRepo` checks one against the other.
+That property is only reachable from a constructed `AboutContent`, so only two apps asserted it;
+**CONFORMANCE §R15** now reads both literals per app, and dragon-sample-app — which has no public
+page — holds the one live §R11 exception.
 
 **Attributions are `name → licence`** — `Sparkle → MIT`, `OpenCC → Apache-2.0`. Never a role
 label: clipmenu-2 wrote `Sparkle → MIT` while the sample app wrote `Update framework → Sparkle
