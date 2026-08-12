@@ -247,17 +247,13 @@ nothing contradicts it, and the next app copies the shape. Traits and slot spell
 genuinely allowed to. If a row cannot be traced to a violation the checker would otherwise print,
 it does not belong here.
 
-### The live one, and one sanctioned in advance
+### The live one
 
 | App | Rule | Divergence | Declared | Lifts when |
 |---|---|---|---|---|
 | dragon-sample-app | R15 | About's Website row is `dragonapp.com`, not `dragonapp.com/dragon-sample-app/` | yes — `.dragon-conformance.json`, at `Sources/DragonAppTemplate/AboutConfig.swift` | the app gets a public page, if it ever does |
-| ice-2 | R13 | no `.lproj` for the picker to be compared against | no — nothing fires yet | its seven locales land |
 
-Only the first is live. ice-2's is written down so the sanction is already agreed when it becomes
-needed — and it is *not* declared, because R13 is silent for an app that constructs no
-`LanguagePicker`. Declaring it early would put back exactly the row the table above records as the
-mistake: a sanction for a violation the checker never prints.
+One row, one app, one rule. It is the only exception declared anywhere across the five.
 
 **dragon-sample-app has no public-facing page, on purpose.** The site hosts
 `/dragon-sample-app/licenses/` and the app's appcast and nothing else: there is no
@@ -273,10 +269,20 @@ order would have red-X'd the app for a divergence already agreed. In between it 
 checker matches exceptions by rule name, so it only added a printed line — which is what made
 landing it first safe.
 
-**ice-2** ships no localization at all — no `.lproj`, no String Catalog, and no `L()` call site —
-so nothing on disk states its coverage. It is not load-bearing either: ice-2 constructs no
-`LanguagePicker`, so R13 is silent for it today. Both facts end together, in the rewrite that
-brings it to the seven locales every other app ships.
+**ice-2's R13 row is gone, unused.** It sat here reserved from the day R13 landed: ice-2 shipped no
+localization at all — no `.lproj`, no String Catalog, no `L()` call site — so nothing on disk
+stated its coverage, and the sanction was written down in advance so it would already be agreed
+when the app adopted a picker. It never was declared, and now never will be. ice-2 PR #102 ships
+all seven locales and calls `LanguagePicker()` bare, which is what R13 asks of an app whose
+coverage matches the kit's; **all five apps now satisfy R13 outright.**
+
+Worth recording, because it is the second time this section has made the same point: the row was
+never load-bearing. R13 is silent for an app that constructs no `LanguagePicker`, so for the whole
+time it was listed there was no violation for it to sanction — and ice-2's `strings` glob matched
+no files either, which meant R8 had nothing to read as well. Both rules passed that app by doing
+no work. The fix was in the app (point the glob at real locale files; ship them), not here. A
+reserved row is still a row that reads as a live sanction to the next person, which is exactly
+what the table above records as the mistake.
 
 ## R12 — The build stamps `DragonCommitDate`
 
@@ -419,8 +425,9 @@ hub. `websiteMatchesSupportRepo` is `false` for it and `true` for the other four
 
 - **Shipping localizations.** Not having `.strings` isn't re-implementing a kit module. The
   rule is that localization *goes through* `L()`/`LocalizationManager` — not that every app
-  must ship 7 languages. ice-2 is English-only and compliant. §R13 doesn't change this: it
-  constrains what a picker *claims*, so an app with no `LanguagePicker` is outside it entirely,
-  and an app with one is only ever asked to agree with whatever it does ship.
+  must ship 7 languages. As of ice-2 PR #102 all five happen to, but an English-only app would
+  still be compliant, and no rule here should be read as requiring otherwise. §R13 doesn't change
+  this: it constrains what a picker *claims*, so an app with no `LanguagePicker` is outside it
+  entirely, and an app with one is only ever asked to agree with whatever it does ship.
 - **App-domain code.** Hot-key recorders, window-management engines, clipboard capture,
   input-method engines: the kit has no such modules, so there is nothing to duplicate.
