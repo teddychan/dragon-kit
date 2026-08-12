@@ -44,7 +44,7 @@ Modules:
   `License` / app attributions\* (`*` = optional). Attributions are `name → licence`
   (`Sparkle → MIT`), never a role label. Link detail text is derived from the URL
   rather than typed beside it, and `websiteMatchesSupportRepo` checks the website addresses the
-  canonical `dragonapp.com/{app-name}-{major}` page. `AboutContent` took free-form
+  canonical `dragonapp.com/{app-name}-{major}` page (CONFORMANCE §R15). `AboutContent` took free-form
   `links`/`credits` arrays until five apps used them to ship five different panes. Two slots
   closed again in 4.0.0, after the same drift reappeared in the gaps between them: `licensesURL`
   is **required**, and the upstream repository lives **inside** `OriginalWork`, so the

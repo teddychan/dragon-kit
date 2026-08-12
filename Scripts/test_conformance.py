@@ -66,6 +66,28 @@ struct GeneralPane: SettingsPane {
 }
 """
 COMPLIANT_STRINGS = '"app.pane.general" = "General";\n'
+# Every fixture app gets this, because every real app has one: `COMPLIANT_PANES` above wires
+# `AboutSettingsPane(content: AboutConfig.content)` and R15 refuses to report a pass on an About
+# pane it never found. Written before `extra`, so a test can still replace it wholesale.
+# The Website row is `/fixture-2/` and the Support row is `teddychan/fixture-2` — the
+# `dragonapp.com/{app-name}-{major}` convention R15 checks one against the other.
+COMPLIANT_ABOUT = """import Foundation
+import DragonKit
+
+enum AboutConfig {
+    static var content: AboutContent {
+        AboutContent(
+            appName: "Fixture App",
+            versionString: DragonAbout.versionString(),
+            copyright: DragonAbout.copyright(years: "2026", holder: "Teddy Chan"),
+            websiteURL: URL(string: "https://www.dragonapp.com/fixture-2/")!,
+            supportURL: URL(string: "https://github.com/teddychan/fixture-2/issues")!,
+            licensesURL: URL(string: "https://www.dragonapp.com/fixture-2/licenses/")!,
+            license: "MIT"
+        )
+    }
+}
+"""
 # The seven locales DragonKit ships, which is what clipmenu-2, spectacle-2 and dragon-sample-app
 # each ship too — so for them the picker's default is the correct list (R13).
 ALL_LOCALES = ("en", "es", "fr", "ja", "ko", "zh-Hans", "zh-Hant")
@@ -115,6 +137,7 @@ def make_app(tmp: str, *, menu: str = COMPLIANT_MENU, panes: str = COMPLIANT_PAN
                           "Localizable.strings"), "w").write(strings)
     open(os.path.join(root, "Package.swift"), "w").write(package)
     open(os.path.join(root, "scripts", "build.sh"), "w").write(build)
+    open(os.path.join(root, "Sources", "AboutConfig.swift"), "w").write(COMPLIANT_ABOUT)
     for name, body in (extra or {}).items():
         path = os.path.join(root, name)
         os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -511,23 +534,10 @@ final class PickerTests: XCTestCase {
 """}), "R13")
 
         print("R14 — the About copyright is kit-assembled and names one holder")
-        compliant_about = """import Foundation
-import DragonKit
-
-enum AboutConfig {
-    static var content: AboutContent {
-        AboutContent(
-            appName: "Fixture App",
-            versionString: DragonAbout.versionString(),
-            copyright: DragonAbout.copyright(years: "2026", holder: "Teddy Chan"),
-            websiteURL: URL(string: "https://www.dragonapp.com/fixture-2/")!,
-            supportURL: URL(string: "https://github.com/teddychan/fixture-2/issues")!,
-            licensesURL: URL(string: "https://www.dragonapp.com/fixture-2/licenses/")!,
-            license: "MIT"
-        )
-    }
-}
-"""
+        # `make_app` already writes this file; these tests replace it with a mutated copy. Shared
+        # with R15 rather than duplicated, so the two rules cannot end up testing different About
+        # panes after someone edits one of them.
+        compliant_about = COMPLIANT_ABOUT
         expect_pass("copyright assembled by the kit helper", make_app(
             tmp, extra={"Sources/AboutConfig.swift": compliant_about}))
         expect_violation("copyright hand-typed as a literal", make_app(
@@ -566,6 +576,119 @@ final class ConfigContentTests: XCTestCase {
                 "enum AboutConfig {",
                 "// Was © 2008–2014 Naotaka Morimoto · © 2026 Teddy Chan before DragonKit 4.0.0.\n"
                 "enum AboutConfig {")}))
+
+        print("R15 — About's Website row addresses the app's canonical page")
+        about = "Sources/AboutConfig.swift"
+        # dragon-sample-app's real shape: the Website row on the studio hub while the Support row
+        # names a repository. It is the sanctioned divergence, and it has to be a violation first —
+        # an exception for a rule that never fires is the §R11 table's own recorded mistake.
+        expect_violation("website on the site root", make_app(
+            tmp, extra={about: COMPLIANT_ABOUT.replace(
+                "https://www.dragonapp.com/fixture-2/\")!,\n            supportURL",
+                "https://www.dragonapp.com\")!,\n            supportURL")}), "R15")
+        expect_pass("...and that is what §R11 is for", make_app(
+            tmp, extra={about: COMPLIANT_ABOUT.replace(
+                "https://www.dragonapp.com/fixture-2/\")!,\n            supportURL",
+                "https://www.dragonapp.com\")!,\n            supportURL")},
+            config_over={"exceptions": [{
+                "rule": "R15", "path": about,
+                "reason": "no public app page exists; the site hosts only the licences page",
+                "sanctionedBy": "CONFORMANCE.md §R11"}]}))
+        # The trap clipmenu-2's own AboutConfig comment records: `/clipmenu/` is a <meta refresh>
+        # stub whose rel=canonical points at `/clipmenu-2/`. It resolves in a browser, so nothing
+        # but this comparison distinguishes it from the canonical page.
+        expect_violation("website on the redirect stub, not the canonical page", make_app(
+            tmp, extra={about: COMPLIANT_ABOUT.replace("/fixture-2/\")!,\n            supportURL",
+                                                       "/fixture/\")!,\n            supportURL")}),
+            "R15")
+        # clipmenu-2 and ice-2 both name their URLs before passing them, so R15 reads nothing at
+        # all for two of the five apps unless it follows one hop. Both directions are tested: the
+        # indirection must resolve *and* must still bite, or "resolved" would just mean "skipped".
+        # The trailing comments matter too — `strip_comment` would cut these lines at the `//` in
+        # `https://` and leave no URL to read.
+        indirect = """import Foundation
+import DragonKit
+
+enum AboutConfig {
+    private static let websiteURL = URL(string: "https://www.dragonapp.com/fixture-2/")!  // canon
+    private static let issuesURL = URL(string: "https://github.com/teddychan/fixture-2/issues")!
+
+    static var content: AboutContent {
+        AboutContent(
+            appName: "Fixture App",
+            versionString: DragonAbout.versionString(),
+            copyright: DragonAbout.copyright(years: "2026", holder: "Teddy Chan"),
+            websiteURL: websiteURL,
+            supportURL: issuesURL,
+            licensesURL: URL(string: "https://www.dragonapp.com/fixture-2/licenses/")!,
+            license: "MIT"
+        )
+    }
+}
+"""
+        expect_pass("URLs named by a constant, as clipmenu-2 and ice-2 write them", make_app(
+            tmp, extra={about: indirect}))
+        expect_violation("a constant holding the wrong page still bites", make_app(
+            tmp, extra={about: indirect.replace('dragonapp.com/fixture-2/")!  // canon',
+                                                'dragonapp.com")!  // canon')}), "R15")
+        # An argument the checker cannot read must fail, not pass. R15 compares written literals,
+        # so anything it can't resolve is a rule that would otherwise go quiet.
+        expect_violation("a websiteURL R15 cannot resolve", make_app(
+            tmp, extra={about: COMPLIANT_ABOUT.replace(
+                'URL(string: "https://www.dragonapp.com/fixture-2/")!',
+                "Self.site")}), "R15")
+        expect_violation("a support row that names no repository", make_app(
+            tmp, extra={about: COMPLIANT_ABOUT.replace(
+                "https://github.com/teddychan/fixture-2/issues",
+                "https://www.dragonapp.com/fixture-2/support/")}), "R15")
+        # The silent-checker arm. An app that restructures its About wiring out of the checker's
+        # sight must fail rather than drop out of the rule — §R0, §R10 and §R13 all take this line.
+        expect_violation("no AboutContent construction anywhere", make_app(
+            tmp, extra={about: "import Foundation\n\nenum AboutConfig { }\n"}), "R15")
+        expect_pass("an app-wide exception silences that arm too", make_app(
+            tmp, extra={about: "import Foundation\n\nenum AboutConfig { }\n"},
+            config_over={"exceptions": [{
+                "rule": "R15",
+                "reason": "About is assembled by a helper the checker cannot read",
+                "sanctionedBy": "CONFORMANCE.md §R11"}]}))
+        # The keykey trap, which R13 hit for real: yahoo-keykey-2's `sources` cover its own test
+        # suite, and a test that asserts this rule names the call in a STRING LITERAL. Read as a
+        # construction, its "arguments" are unparseable and the app fails for having a test.
+        expect_pass("a string literal naming the construction is not one", make_app(
+            tmp, extra={"Sources/AboutTests.swift": '''import XCTest
+
+final class AboutTests: XCTestCase {
+    func testAboutIsConfigured() throws {
+        let code = try String(contentsOfFile: "AboutConfig.swift", encoding: .utf8)
+        XCTAssertNotNil(code.range(of: "AboutContent("))
+        XCTAssertNotNil(code.range(of: "https://www.dragonapp.com/fixture-2/"))
+    }
+}
+'''}))
+        # Found in review, not in an app — but the shape is everywhere: 27 files across the five
+        # apps use a Swift multi-line string, none of them yet the one that builds About. Scanned
+        # as three single quotes the delimiter reads open-close-open, so an odd number of `"` in
+        # the block leaves the scanner stuck inside a literal for the rest of the FILE, blanks the
+        # real construction below it, and reports a conforming app for having no About pane at all.
+        multiline = COMPLIANT_ABOUT.replace("enum AboutConfig {", '''enum AboutConfig {
+    static let blurb = """
+    A sample app, 12" wide, for DragonKit.
+    """
+''')
+        expect_pass("a multi-line string above the construction", make_app(
+            tmp, extra={about: multiline}))
+        expect_violation("...and the construction below it is still read", make_app(
+            tmp, extra={about: multiline.replace("/fixture-2/\")!,\n            supportURL",
+                                                 "\")!,\n            supportURL")}), "R15")
+        # ...and the other direction, the one R13 also pins: prose cannot satisfy the rule either.
+        expect_violation("a commented-out construction does not count as one", make_app(
+            tmp, extra={about: """import Foundation
+import DragonKit
+
+// AboutContent(websiteURL: URL(string: "https://www.dragonapp.com/fixture-2/")!,
+//              supportURL: URL(string: "https://github.com/teddychan/fixture-2/issues")!)
+enum AboutConfig { }
+"""}), "R15")
 
         print("no-false-positive checks")
         expect_pass("app builds its own non-lifecycle menu items", make_app(

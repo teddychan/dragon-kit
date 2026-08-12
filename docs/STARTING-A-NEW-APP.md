@@ -159,7 +159,8 @@ Five rules the type carries, each because an app got it wrong:
 
 - **`websiteURL` must address `dragonapp.com/{app-name}-{major}`, the same string as
   `supportURL`'s repo name** — `content.websiteMatchesSupportRepo` checks one against the other,
-  so pick a repo name that carries the major (`my-app-1`) and reuse it in both.
+  so pick a repo name that carries the major (`my-app-1`) and reuse it in both. CONFORMANCE §R15
+  fails a PR that gets it wrong, reading both literals out of this file.
 - **Never type the detail text beside a link.** `AboutLinkDetail` derives it from the URL, so a
   typed string can't disagree with where the row goes.
 - **The upstream project is one value, not two.** `OriginalWork` carries the repository URL, so
@@ -488,7 +489,7 @@ enum AboutConfig {
             versionString: DragonAbout.versionString(), // v<short> (<build>) · <commit date> UTC
             copyright: DragonAbout.copyright(years: "2026", holder: "Teddy Chan"),
             // Same repo name on all three rows — `websiteMatchesSupportRepo` compares the first
-            // two, and the licences page lives under the same canonical path.
+            // two (§R15), and the licences page lives under the same canonical path.
             websiteURL: URL(string: "https://www.dragonapp.com/<APP_DIR>/")!,
             supportURL: URL(string: "https://github.com/teddychan/<APP_DIR>/issues")!,
             licensesURL: URL(string: "https://www.dragonapp.com/<APP_DIR>/licenses/")!,
