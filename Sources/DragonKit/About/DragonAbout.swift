@@ -142,10 +142,17 @@ public enum DragonAbout {
     ///
     /// What survives is narrower and lineage-independent: this string fills a header row in a
     /// settings pane, and it read one way in three apps and another in two. Nothing here displaces
-    /// a legal notice — `LICENSE`, `NSHumanReadableCopyright` and the licences page are untouched,
-    /// and ice-2 correctly keeps both holders in its `Info.plist` while rendering one here.
-    /// Lineage inside the pane is ``OriginalWork``'s job, twice over: the `Original project` link
-    /// and the `Based on` credit.
+    /// a legal notice — `LICENSE` and the licences page are untouched, and that is where the
+    /// upstream holder is named: ice-2's `LICENSE` carries Jordan Baird in the GPL's own notice
+    /// template, clipmenu-2's names two holders outright. Lineage inside the pane is
+    /// ``OriginalWork``'s job, twice over: the `Original project` link and the `Based on` credit.
+    ///
+    /// `NSHumanReadableCopyright` used to be cited here too, on ice-2's dual-holder value. All
+    /// five apps now set it to `© 2026 Teddy Chan`, matching what this returns: it is an optional
+    /// Apple key that no licence names — three of the five shipped without it — so it draws a line
+    /// in Get Info rather than discharging §4, and a bundle whose notice disagreed with its own
+    /// About pane was one app making two claims about itself. The kit neither reads nor requires
+    /// the key; it is named here only so the next reader does not restore the old example.
     public static func copyright(years: String, holder: String) -> String {
         "© \(years) \(holder)"
     }

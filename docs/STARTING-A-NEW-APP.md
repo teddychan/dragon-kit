@@ -172,10 +172,13 @@ Five rules the type carries, each because an app got it wrong:
   publish `dragonapp.com/{app-name}-{major}/licenses/` as part of shipping the app.
 - **The copyright names one holder** — the app's own, via `DragonAbout.copyright(years:holder:)`.
   This is a presentation rule about a settings-pane header, **not** a claim that your app has no
-  upstream copyright to carry: keep the upstream notice in `LICENSE`, `NSHumanReadableCopyright`
-  and on the licences page exactly as your licence requires (ice-2, a GPL-3.0 fork, keeps both
-  holders in its `Info.plist` and renders one in About). Inside the pane, lineage is
-  `OriginalWork`'s job. CONFORMANCE §R14 rejects a hand-typed string here.
+  upstream copyright to carry: keep the upstream notice in `LICENSE` and on the licences page
+  exactly as your licence requires (ice-2, a GPL-3.0 fork, names Jordan Baird in `LICENSE` using
+  the GPL's own notice template). Inside the pane, lineage is `OriginalWork`'s job.
+  `NSHumanReadableCopyright` is an optional Apple key that no licence names — it draws a line in
+  Finder's Get Info panel, so set it to the same single-holder string About renders, `© <year>
+  <holder>`, and don't treat it as the place a licence obligation is met. CONFORMANCE §R14 rejects
+  a hand-typed string here.
 - **An attribution is `name → licence`**, never a role label: `Attribution(name: "Sparkle",
   license: "MIT")`, not `Attribution(name: "Update framework", license: "Sparkle (MIT)")`.
   Use the SPDX identifier when the component declares one, otherwise the upstream wording

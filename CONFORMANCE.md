@@ -363,11 +363,21 @@ read the licences.
 
 So the reason is narrower and holds regardless of lineage: **the About header is a presentation
 slot in a settings pane, and it read one way in three apps and another in two.** The upstream
-copyright is carried where it legally belongs — the `LICENSE` file, `NSHumanReadableCopyright`, and
-the licences page — none of which this rule touches. ice-2 keeps `Copyright © 2025 Jordan Baird ·
-© 2026 Teddy Chan` in its `Info.plist` while rendering one holder in About, and that is correct,
-not an exception. Lineage in the pane is `OriginalWork`'s job, twice over: the `Original project`
-link and the `Based on` credit.
+copyright is carried where it legally belongs — the `LICENSE` file and the licences page — neither
+of which this rule touches. ice-2's `LICENSE` fills in the GPL's own notice template with Jordan
+Baird's name and year, and its `Acknowledgements.rtf` states the fork inherits GPL-3.0; clipmenu-2's
+`LICENSE` names Naotaka Morimoto and Teddy Chan. Lineage in the pane is `OriginalWork`'s job, twice
+over: the `Original project` link and the `Based on` credit.
+
+**`NSHumanReadableCopyright` is not on that list, and all five apps set it to `© 2026 Teddy
+Chan`.** This document used to cite ice-2's dual-holder value as the example of an upstream notice
+travelling correctly outside the pane. ice-2 changed it in 2.14.7 and the reasoning is worth
+keeping: the key is an *optional* Apple one that no licence names — three of the five apps shipped
+without it at all — so it draws a line in Finder's Get Info panel rather than discharging an
+obligation, and having it disagree with About made the app state two different things about itself
+depending on where you looked. It is still out of scope for this rule; it simply is not where §4
+is satisfied. Nothing here requires an app to set it, or to set it any particular way — but if the
+five ever diverge there, that is a second presentation slot drifting, not a licence question.
 
 ## Out of scope, deliberately
 
