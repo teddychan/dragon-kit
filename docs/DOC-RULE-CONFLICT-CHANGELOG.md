@@ -4,10 +4,10 @@
 
 **Scope:** documentation only; no source-code or API-support claim
 
-This records the first five owner-approved resolutions from the documentation conflict audit. It
-is intentionally separate from the normative rules so a pull-request reviewer can evaluate what
-changed, why it changed, and whether the ownership boundary is correct before later findings are
-handled.
+This records owner-approved resolutions from the documentation conflict audit. Entries 1–4 cover
+shared UI ownership, entry 5 fixes Debug identity, and entry 6 records the app-repository and
+release-ownership boundary. It is intentionally separate from the normative rules so a reviewer
+can evaluate what changed, why it changed, and whether the ownership boundary is correct.
 
 ## Decision summary
 
@@ -18,6 +18,7 @@ handled.
 | 3 | Liquid Glass required a separate uninstall sheet/window and `NSAlert` button rules while DragonKit presents confirmation inline. | DragonKit owns inline presentation. Apps supply cleanup paths, optional-data configuration, and truthful app-specific explanation. | One confirmation UI serves every app without pretending that every app performs the same cleanup. |
 | 4 | The adoption prompt treated every Dragon app as an `NSStatusItem` menu-bar app and described Yahoo! KeyKey differences as exceptions. | Distinguish `NSStatusItem` and Input Method Kit hosts while retaining the same DragonKit Settings UI. KeyKey uses no Quit, launch-at-login, or Permissions pane; its input settings and uninstall backend remain app-specific. | Host lifecycle and backend behavior differ, but that does not require a different Settings design system. |
 | 5 | The new-app guide required an isolated Debug identity while its executable scaffold still packaged and addressed the release identity. | Package `<App> Debug.app` with executable `<App> Debug`, bundle id `<release-id>.debug`, Debug channel metadata, bundle-derived UI/state paths, and Debug-only cleanup. | A developer following the guide can run Debug beside Release without sharing TCC, preferences, login/status state, updating, or destructive targets. |
+| 6 | The lifecycle implementation prompt allowed an in-tree Sample App fixture even though the accepted lifecycle requires a separate app repository. | Prohibit any in-tree consuming app or app-release infrastructure; make each app repository the sole owner of its complete release surface. | One app copy and one release owner prevent source drift, competing tag namespaces, and split ownership of builds, releases, artifacts, appcasts, downloads, and operations. |
 
 ## 1. Liquid Glass appearance vs DragonKit structure
 
@@ -83,10 +84,30 @@ and uninstall/reset paths no longer address Release. Identifiers introduced late
 iCloud, Keychain, helpers, XPC/Mach services, locks, sockets, notifications, or custom updater
 feeds remain explicit audit points rather than receiving guessed suffixes.
 
+## 6. Lifecycle repository and release ownership
+
+The previous README path could send an agent from the accepted separate-repository lifecycle to a
+prompt that still permitted retaining an in-tree app fixture:
+
+![Previous conflicting lifecycle reader path and ownership](images/doc-rule-conflicts/release-lifecycle-before.png)
+
+The corrected path makes the accepted lifecycle the canonical entry point, requires separate
+repository checkouts, and gives each app repository sole ownership of its source, packaging,
+workflows, signing/notarization configuration, releases, artifacts, production appcast,
+app-side website/download integration, and operational state:
+
+![Current lifecycle reader path and repository ownership](images/doc-rule-conflicts/release-lifecycle-after.png)
+
+DragonKit owns shared package code, lifecycle and conformance contracts, guidance, and reusable
+release conventions. Shared automation may execute steps without becoming a release owner, while
+the marketing-site repository consumes successful releases without owning or gating them. This
+documentation decision does not claim that any external app repository has completed the
+migration.
+
 ## Independent-review corrections
 
-Before publication, an independent documentation-only review returned **REVISE BEFORE
-CONTINUING**. This pull request also includes the resulting corrections:
+Before publication of entries 1–4, an independent documentation-only review returned **REVISE
+BEFORE CONTINUING**. That review included the resulting corrections:
 
 - replaced remaining blanket “menu-bar app” language with explicit `NSStatusItem` and IMK hosts;
 - made `DragonAppMenu` responsible for applicable lifecycle items rather than asserting every host
@@ -102,7 +123,7 @@ CONTINUING**. This pull request also includes the resulting corrections:
 
 ## Files in this review
 
-Tracked in this pull-request change:
+Tracked across these documentation-conflict changes:
 
 - `docs/ADOPT-DRAGONKIT-PROMPT.md`
 - `docs/DOC-RULE-CONFLICT-CHANGELOG.md`
@@ -110,6 +131,9 @@ Tracked in this pull-request change:
 - `docs/images/doc-rule-conflicts/*.png`
 - `README.md`
 - `CONFORMANCE.md`
+- `docs/MAC-APP-RELEASE-LIFECYCLE.md`
+- `docs/IMPLEMENT-MAC-APP-RELEASE-LIFECYCLE-PROMPT.md`
+- historical `docs/superpowers/` plans and specifications that require archival banners
 
 The matching Liquid Glass wording was updated locally in these external skill files, which are not
 part of the `dragon-kit` Git repository:
@@ -126,4 +150,4 @@ part of the `dragon-kit` Git repository:
   documentation boundary is stated.
 - In particular, verify that IMK menu hosting remains separate from Settings UI ownership and that
   KeyKey-specific uninstall behavior is not being generalized into menu-bar app behavior.
-- Later audit findings are deliberately out of scope until these four decisions are accepted.
+- Other audit findings remain out of scope unless they are added as an explicit decision here.

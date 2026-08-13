@@ -1,5 +1,11 @@
 # About pane canon — design
 
+> **Archived implementation-era design:** The About-pane decisions shipped, but paths and
+> release notes below that refer to an in-tree `sample-app/` are historical only. The accepted
+> [`../../MAC-APP-RELEASE-LIFECYCLE.md`](../../MAC-APP-RELEASE-LIFECYCLE.md) requires every app,
+> including Dragon Sample App, to live and release from its own repository. Do not recreate or
+> maintain the historical in-tree app.
+
 **Date:** 2026-08-08
 **Status:** approved, pending implementation plan
 **Ships as:** DragonKit `v3.0.0` (breaking)
