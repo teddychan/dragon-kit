@@ -165,12 +165,16 @@ in the file (it matched Sparkle's version in ice-2's `.pbxproj`), and deleting
   it. Match that. A new piece of canon with no stated rationale will drift back out.
 - Conventional-commit subjects, with the PR number appended: `feat(updates): … (#26)`.
 
-## Deliberate deferrals — leave these alone
+## Deliberate deferrals and migration debt — keep these scoped
 
-These look like gaps and are not. Don't "fix" them; do flag a PR that quietly undoes one.
+These are intentional constraints or sequenced work. Don't quietly generalize one while fixing
+something else; do flag a PR that contradicts the recorded decision or skips its migration plan.
 
-- **Folder-based versioned backup stays app-side.** `DragonBackup` snapshots a UserDefaults
-  suite only. Generalizing the folder shape waits until a second app needs it.
+- **Backup unification is approved migration debt.** Every app's target is DragonKit's
+  `BackupSettingsPane` + `DragonBackup`. ClipMenu 2's `SyncBackupPane` and Ice 2's
+  `IceBackupSettingsPane` remain temporarily while their data and workflows are mapped safely;
+  keep the current conformance compatibility until both migrations land, then enforce the shared
+  pane through the conformance triad. See [TechDebt.md](TechDebt.md).
 - **Uninstall stays out of the menu** and in `UninstallSettingsPane`, last in the sidebar.
 - **The reusable conformance workflow is pinned `@main` on purpose.** It reads the kit's default
   branch anyway, so a tag pin would freeze the interface while the rules moved.
