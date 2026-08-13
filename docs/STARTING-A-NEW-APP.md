@@ -48,11 +48,20 @@ Your job = **scaffold a runnable shell first** (this doc gives you the complete 
   a new local repo needs `git config user.name teddychan` + `git config user.email teddychan@gmail.com`).
 - **Do not push / create the GitHub repo until the owner confirms** (outward-facing). Build locally first.
 - **Debug/test builds:** when building a local hands-on test build (not a release), give it its own
-  identity — bundle id `<release-bundle-id>.debug`, display name `"<App> Debug"` — so it runs beside
-  any installed copy without TCC/UserDefaults/menu-bar clashes. This is local packaging only:
-  do not create a Debug tag, GitHub Release, appcast, or separate marketing version, and do not
-  put `Debug` inside `CFBundleShortVersionString`. Render it only as the Debug bundle's name and
-  build-channel label; the local bundle remains runtime-independent through its `.debug` identity.
+  identity — bundle id `<release-bundle-id>.debug`, app/product/executable name `"<App> Debug"` —
+  so it runs beside any installed copy without TCC/UserDefaults/menu-bar clashes. Runtime names
+  and paths must come from that built bundle rather than release literals; explicit helpers,
+  services, groups and containers need their own audit. This is local packaging only: do not
+  create a Debug tag, GitHub Release, appcast, or separate marketing version, and do not put
+  `Debug` inside `CFBundleShortVersionString`. Render it only as the Debug bundle's name and
+  build-channel label.
+
+![Unsafe release-identity Debug scaffold compared with the isolated Debug scaffold](images/doc-rule-conflicts/debug-scaffold-before-after.png)
+
+The left side is the defect this scaffold must not recreate: Debug looks like Release and points
+at the release identity. The corrected scaffold on the right visibly names the local build and
+derives preferences, state, updating, uninstall, reset, and process cleanup from its `.debug`
+bundle identity.
 
 ---
 
@@ -289,6 +298,7 @@ Structure:
 <APP_DIR>/
   Package.swift
   Sources/<TARGET>/App.swift
+  Sources/<TARGET>/AppIdentity.swift
   Sources/<TARGET>/AppDelegate.swift
   Sources/<TARGET>/GeneralPane.swift
   Sources/<TARGET>/AboutConfig.swift
@@ -346,6 +356,55 @@ struct <TARGET> {
 }
 ```
 
+### `Sources/<TARGET>/AppIdentity.swift`
+```swift
+import Foundation
+
+/// Runtime identity and identity-derived state. Never fall back to the release identity: a
+/// malformed bundle should stop rather than read, reset, or uninstall the installed app's state.
+enum AppIdentity {
+    static let displayName = requiredString("CFBundleDisplayName")
+    static let bundleID = requiredString("CFBundleIdentifier")
+    static let settingsSuite = "\(bundleID).settings"
+    static let buildChannel = Bundle.main.object(forInfoDictionaryKey: "DragonBuildChannel") as? String
+    static let isDebug = buildChannel == "Debug"
+
+    private static let library = FileManager.default.homeDirectoryForCurrentUser
+        .appending(path: "Library", directoryHint: .isDirectory)
+    static let applicationSupportDirectory = library
+        .appending(path: "Application Support/\(bundleID)", directoryHint: .isDirectory)
+    static let cachesDirectory = library
+        .appending(path: "Caches/\(bundleID)", directoryHint: .isDirectory)
+    static let logsDirectory = library
+        .appending(path: "Logs/\(bundleID)", directoryHint: .isDirectory)
+    static let httpStoragesDirectory = library
+        .appending(path: "HTTPStorages/\(bundleID)", directoryHint: .isDirectory)
+
+    private static func requiredString(_ key: String) -> String {
+        guard let value = Bundle.main.object(forInfoDictionaryKey: key) as? String,
+              !value.isEmpty else {
+            preconditionFailure("Missing required bundle identity: \(key)")
+        }
+        return value
+    }
+}
+```
+
+Use these URLs for app-owned state added later. Put user data under
+`AppIdentity.applicationSupportDirectory` and add it to `optionalDataToggle`, not unconditional
+cleanup. `UserDefaults.standard`, TCC, saved application state, `LoginItem`/
+`SMAppService.mainApp`, and Sparkle's normal state follow the running bundle identifier; the
+explicit settings suite, status-item name, caches, logs, HTTP storage, and uninstall paths below
+use the same identity directly.
+
+Do not guess a suffix for an identifier imposed by an entitlement or another process. When the
+app adds an App Group, iCloud/Keychain group, launch agent, login helper, XPC/Mach service, lock,
+socket, port, distributed notification, database, backup folder, or custom updater feed, audit
+that identifier at the integration point: namespace it for Debug when allowed, otherwise disable
+the feature in Debug and document why it must be shared. Before constructing `DragonUpdater` in
+an app that links updates, require `!AppIdentity.isDebug`; `scripts/run.sh` also removes
+`SUFeedURL` and disables automatic updating in the Debug plist as defense in depth.
+
 ### `Sources/<TARGET>/AppDelegate.swift`
 ```swift
 import AppKit
@@ -362,9 +421,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let selection = SettingsSelection()
 
     private lazy var settingsController = DragonSettingsWindowController(
-        title: "<APP_DISPLAY> Settings",
+        title: "\(AppIdentity.displayName) Settings",
         rootView: SettingsRoot(
-            appName: "<APP_DISPLAY>",
+            appName: AppIdentity.displayName,
             // Canonical sidebar order. Permissions and Uninstall are NOT optional extras:
             // §R5 requires both (Permissions only if you don't declare the `no-permissions`
             // trait), so a scaffold without them fails conformance on its first PR.
@@ -374,9 +433,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 AnySettingsPane(WhatsNewSettingsPane(content: WhatsNewConfig.content)),
                 AnySettingsPane(AboutSettingsPane(content: AboutConfig.content)),
                 AnySettingsPane(UninstallSettingsPane(config: UninstallConfig(
-                    appName: "<APP_DISPLAY>",
-                    suiteNames: ["<BUNDLE_ID>.settings"],
-                    checklistItems: ["The app and its login item", "All settings"]
+                    appName: AppIdentity.displayName,
+                    suiteNames: [AppIdentity.settingsSuite],
+                    checklistItems: ["The app and its login item", "All settings"],
+                    extraCleanupPaths: [
+                        AppIdentity.cachesDirectory,
+                        AppIdentity.logsDirectory,
+                        AppIdentity.httpStoragesDirectory,
+                    ]
                 ))),
             ],
             selection: selection
@@ -385,10 +449,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        item.button?.image = NSImage(systemSymbolName: "sparkles", accessibilityDescription: "<APP_DISPLAY>")
+        item.button?.image = NSImage(
+            systemSymbolName: "sparkles",
+            accessibilityDescription: AppIdentity.displayName
+        )
         // Without an autosave name the item persists anonymously as "Item-0" in whatever
         // defaults domain launched it, so debug and release builds fight over visibility.
-        item.autosaveName = "<TARGET>StatusItem-<BUNDLE_ID>"
+        item.autosaveName = "StatusItem-\(AppIdentity.bundleID)"
 
         item.menu = buildMenu()
         self.statusItem = item
@@ -405,7 +472,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Dragon app's menu matches. Uninstall is deliberately absent (§R2).
     private func buildMenu() -> NSMenu {
         DragonAppMenu.menu(DragonAppMenu.Config(
-            appName: "<APP_DISPLAY>",
+            appName: AppIdentity.displayName,
             onAbout: { [weak self] in self?.openAbout() },
             onSettings: { [weak self] in self?.openSettings() }
             // Add `onCheckForUpdates:` once you wire DragonKitUpdates; leaving it nil omits
@@ -485,7 +552,7 @@ import DragonKit
 enum AboutConfig {
     static var content: AboutContent {
         AboutContent(
-            appName: "<APP_DISPLAY>",
+            appName: AppIdentity.displayName,
             versionString: DragonAbout.versionString(), // v<short> (<build>) · <commit date> UTC
             copyright: DragonAbout.copyright(years: "2026", holder: "Teddy Chan"),
             // Same repo name on all three rows — `websiteMatchesSupportRepo` compares the first
@@ -551,12 +618,15 @@ enum WhatsNewConfig {
 </dict>
 </plist>
 ```
+This is the release identity template. Release packaging preserves these identity fields.
 `CFBundleShortVersionString` stays the bare numeric candidate `X.Y.Z` — no `v`, no `Debug`, no
 prerelease suffix; the release tag is asserted against this exact string. `CFBundleVersion` is a
 placeholder that `scripts/run.sh` overwrites with the commit count, and the script also adds
-`DragonCommitDate`; between them About's `v0.1.0 (123) · … UTC` line is a fingerprint of one
-commit. Whatever else packages this app — a release workflow, an Xcode target — has to stamp both
-the same way.
+`DragonCommitDate`; between them About's `v0.1.0 Debug (123) · … UTC` line is a fingerprint of one
+Debug commit. The script copies the plist into a separately named Debug bundle, then stamps only
+that copy with the Debug name, executable, `.debug` identifier, and build channel. Whatever else
+packages a release — a release workflow, an Xcode target — must stamp the build number and commit
+date without adding those Debug overrides.
 
 ### `scripts/run.sh` (then `chmod +x scripts/run.sh`)
 ```bash
@@ -564,16 +634,28 @@ the same way.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-APP_NAME="<APP_DISPLAY>"
-BIN_NAME="<TARGET>"
+RELEASE_APP_NAME="<APP_DISPLAY>"
+RELEASE_BUNDLE_ID="<BUNDLE_ID>"
+SOURCE_BIN_NAME="<TARGET>"
+DEBUG_APP_NAME="$RELEASE_APP_NAME Debug"
+DEBUG_BUNDLE_ID="$RELEASE_BUNDLE_ID.debug"
+DEBUG_BIN_NAME="$DEBUG_APP_NAME"
 
 swift build -c debug
 BIN_DIR="$(swift build -c debug --show-bin-path)"
 
-APP="$BIN_DIR/$APP_NAME.app"
+APP="$BIN_DIR/$DEBUG_APP_NAME.app"
+if [[ -z "$RELEASE_APP_NAME" || -z "$RELEASE_BUNDLE_ID" \
+      || "$DEBUG_APP_NAME" != *" Debug" \
+      || "$DEBUG_BUNDLE_ID" != "$RELEASE_BUNDLE_ID.debug" \
+      || "$BIN_DIR" != /* || ! -d "$BIN_DIR" \
+      || ! -x "$BIN_DIR/$SOURCE_BIN_NAME" ]]; then
+  echo "error: refusing to package or clean a non-Debug identity" >&2
+  exit 1
+fi
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp "$BIN_DIR/$BIN_NAME" "$APP/Contents/MacOS/$BIN_NAME"
+cp "$BIN_DIR/$SOURCE_BIN_NAME" "$APP/Contents/MacOS/$DEBUG_BIN_NAME"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
 
 PLIST="$APP/Contents/Info.plist"
@@ -581,7 +663,17 @@ stamp() {  # Add-or-Set, because the key may or may not already be in the source
   /usr/libexec/PlistBuddy -c "Add :$1 string $2" "$PLIST" 2>/dev/null \
     || /usr/libexec/PlistBuddy -c "Set :$1 $2" "$PLIST"
 }
-stamp CFBundleExecutable "$BIN_NAME"
+stamp_bool() {
+  /usr/libexec/PlistBuddy -c "Add :$1 bool $2" "$PLIST" 2>/dev/null \
+    || /usr/libexec/PlistBuddy -c "Set :$1 $2" "$PLIST"
+}
+delete_key() { /usr/libexec/PlistBuddy -c "Delete :$1" "$PLIST" 2>/dev/null || true; }
+
+stamp CFBundleName "$DEBUG_APP_NAME"
+stamp CFBundleDisplayName "$DEBUG_APP_NAME"
+stamp CFBundleIdentifier "$DEBUG_BUNDLE_ID"
+stamp CFBundleExecutable "$DEBUG_BIN_NAME"
+stamp DragonBuildChannel "Debug"
 # Both halves of About's version line must describe the SAME commit. The build number is the
 # commit count, never a hardcoded "1"; DragonCommitDate is that commit's own timestamp, and
 # CONFORMANCE §R12 fails a repo where no build step stamps it — About then silently renders no
@@ -589,14 +681,36 @@ stamp CFBundleExecutable "$BIN_NAME"
 stamp CFBundleVersion "$(git rev-list --count HEAD)"
 stamp DragonCommitDate "$(git log -1 --format=%cI)"
 
-cp -R "$BIN_DIR"/*.bundle "$APP/Contents/MacOS/" 2>/dev/null || true
-codesign --force --deep --sign - "$APP" >/dev/null 2>&1 || true
+SHORT_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$PLIST")"
+if [[ ! "$SHORT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  echo "error: Debug candidate version must be numeric X.Y.Z, got '$SHORT_VERSION'" >&2
+  exit 1
+fi
 
-pkill -f "$APP/Contents/MacOS/$BIN_NAME" 2>/dev/null || true
+# Debug must not initialize against or mutate production update infrastructure. The app also
+# guards DragonUpdater construction with !AppIdentity.isDebug; these plist edits are defense in
+# depth for a future Sparkle-enabled scaffold.
+stamp_bool SUEnableAutomaticChecks false
+stamp_bool SUAutomaticallyUpdate false
+delete_key SUFeedURL
+
+cp -R "$BIN_DIR"/*.bundle "$APP/Contents/MacOS/" 2>/dev/null || true
+codesign --force --deep --sign - "$APP" >/dev/null 2>&1
+
+pkill -f "$APP/Contents/MacOS/$DEBUG_BIN_NAME" 2>/dev/null || true
 sleep 1
-open "$APP"
-echo "Launched $APP"
+open -n "$APP"
+echo "Launched $DEBUG_APP_NAME v$SHORT_VERSION Debug"
+echo "  id:   $DEBUG_BUNDLE_ID"
+echo "  path: $APP"
 ```
+
+The only recursive delete and process match above contain the validated ` Debug.app` path, and
+uninstall recycles `Bundle.main.bundleURL`; none names `/Applications/<APP_DISPLAY>.app` or the
+release executable. If the app is later distributed by Homebrew, never pass a cask token flat:
+use `UninstallConfig.caskToken("<APP_DIR>", ifBundleIs: "<BUNDLE_ID>")`, which returns `nil` in
+the `.debug` bundle. Any new reset command follows the same rule as uninstall: use
+`AppIdentity.bundleID`, `settingsSuite`, and the identity-derived URLs, never release literals.
 
 ### `.gitignore`
 ```gitignore
@@ -661,9 +775,20 @@ git init && git add -A && git commit -m "chore: scaffold <APP_DISPLAY> on Dragon
 swift build            # expect: Build complete!
 ```
 ```bash
-./scripts/run.sh       # ✦ menu-bar icon appears → About / Settings… / Quit; Settings shows
+./scripts/run.sh       # ✦ "<APP_DISPLAY> Debug" menu-bar app appears → About / Settings… / Quit;
+                       #   Settings shows
                        #   General / Permissions / What's New / About / Uninstall,
-                       #   and About reads "v0.1.0 (1) · <commit date> UTC"
+                       #   and About reads "v0.1.0 Debug (1) · <commit date> UTC"
+```
+```bash
+DEBUG_APP="$(swift build -c debug --show-bin-path)/<APP_DISPLAY> Debug.app"
+/usr/libexec/PlistBuddy \
+  -c 'Print :CFBundleIdentifier' -c 'Print :CFBundleName' \
+  -c 'Print :CFBundleDisplayName' -c 'Print :CFBundleExecutable' \
+  -c 'Print :CFBundleShortVersionString' -c 'Print :DragonBuildChannel' \
+  "$DEBUG_APP/Contents/Info.plist"
+# expect: <BUNDLE_ID>.debug; <APP_DISPLAY> Debug for both names and the executable;
+#         numeric 0.1.0; Debug. The source Resources/Info.plist still contains the release values.
 ```
 ```bash
 python3 ~/git/dragon-kit/Scripts/dragon-conformance.py --app . --kit ~/git/dragon-kit
