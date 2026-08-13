@@ -1,5 +1,11 @@
 # dragon-kit v0 Implementation Plan
 
+> **Archived and superseded (2026-08-10)—do not execute:** This completed historical plan
+> creates an in-tree `Example/` app. The current repository boundary is defined by
+> [`../../MAC-APP-RELEASE-LIFECYCLE.md`](../../MAC-APP-RELEASE-LIFECYCLE.md): every consuming app
+> lives in its own repository, and DragonKit must not create, restore, or maintain an app or
+> app-release pipeline. The steps below remain unchanged as historical implementation evidence.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Stand up the open-source `dragon-kit` Swift package (DragonKit library: design primitives, settings shell + window controller, localization helper, About module) plus a runnable minimal menu-bar **Example** app that uses it.

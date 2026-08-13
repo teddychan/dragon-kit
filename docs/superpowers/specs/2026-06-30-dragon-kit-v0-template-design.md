@@ -1,5 +1,11 @@
 # dragon-kit v0 — shared kit + basic app template (design)
 
+> **Archived and superseded (2026-08-10):** This historical design predates the repository
+> boundary in [`../../MAC-APP-RELEASE-LIFECYCLE.md`](../../MAC-APP-RELEASE-LIFECYCLE.md). Its
+> in-tree `Example/` app is not a current instruction: every consuming app lives in its own
+> repository, and DragonKit must not create, restore, or maintain an app or app-release pipeline.
+> Retain the text below only as design history; do not execute it.
+
 - **Date:** 2026-06-30
 - **Status:** Approved in brainstorm; pending spec review
 - **Owner:** Teddy Chan

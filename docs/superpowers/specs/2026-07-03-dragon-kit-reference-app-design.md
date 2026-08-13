@@ -1,5 +1,11 @@
 # DragonKit v1 — complete reference app (design)
 
+> **Archived and superseded (2026-08-10):** This historical design predates the repository
+> boundary in [`../../MAC-APP-RELEASE-LIFECYCLE.md`](../../MAC-APP-RELEASE-LIFECYCLE.md). Its
+> in-tree `Example/` reference app is not a current instruction: the reference app lives in its
+> own repository, and DragonKit must not create, restore, or maintain an app or app-release
+> pipeline. Retain the text below only as design history; do not execute it.
+
 - **Date:** 2026-07-03
 - **Status:** Approved in brainstorm; building
 - **Owner:** Teddy Chan
