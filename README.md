@@ -204,7 +204,14 @@ historical migration data.
 See [`docs/STARTING-A-NEW-APP.md`](docs/STARTING-A-NEW-APP.md) — a self-contained guide
 (API cheat-sheet + complete starter files) for scaffolding a new menu-bar app on this kit.
 
-## For AI agents: how to use this template
+## For AI agents: current documentation authority
+
+Start here. [`CONFORMANCE.md`](CONFORMANCE.md) is normative for adoption and UI ownership, and
+[`docs/MAC-APP-RELEASE-LIFECYCLE.md`](docs/MAC-APP-RELEASE-LIFECYCLE.md) is normative for Debug,
+release, and repository ownership. [`docs/STARTING-A-NEW-APP.md`](docs/STARTING-A-NEW-APP.md) and
+[`docs/ADOPT-DRAGONKIT-PROMPT.md`](docs/ADOPT-DRAGONKIT-PROMPT.md) are the current operational
+guides. Everything under `docs/superpowers/plans/` and `docs/superpowers/specs/` is historical
+rationale only; never implement from those dated files.
 
 DragonKit is a **published SwiftPM package** — the one place the shared parts of every
 Dragon macOS app live. **Depend on it; never copy its code into your app.**

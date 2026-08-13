@@ -1,7 +1,26 @@
 # DragonKit v1 — complete reference app (design)
 
+> [!WARNING]
+> **Status: FULLY SUPERSEDED — HISTORICAL DESIGN RECORD**
+>
+> **Implementation from this file is prohibited.** Do not recreate its `Example/` app, menu,
+> pane order, uninstall presentation, backup preference, dependency versions, or build sequence.
+>
+> Current authority:
+>
+> - [`README.md`](../../../README.md) — current modules, settings/menu order, and external Sample App
+> - [`CONFORMANCE.md`](../../../CONFORMANCE.md) — normative lifecycle-menu, shared-pane, and pane-order rules
+> - [`STARTING-A-NEW-APP.md`](../../STARTING-A-NEW-APP.md) — current public API and host wiring
+> - [`MAC-APP-RELEASE-LIFECYCLE.md`](../../MAC-APP-RELEASE-LIFECYCLE.md) — canonical repository and release ownership
+> - [Dragon Sample App](https://github.com/teddychan/dragon-sample-app) — current reference implementation
+>
+> Known obsolete assumptions include an in-tree reference app, a hand-built
+> `Settings… / Check for Updates… / Quit` menu, the pre-canonical sidebar order, popup/window
+> uninstall UI, and auto-backup-on-quit. The module-generalization rationale remains historical
+> context only.
+
 - **Date:** 2026-07-03
-- **Status:** Approved in brainstorm; building
+- **Original status (2026-07-03):** Approved in brainstorm; building
 - **Owner:** Teddy Chan
 - **Related apps:** `ice-2`, `clipmenu-2`, `yahoo-keykey-2`
 - **Source material:** ported from `ice-2`, branch `claude/ice-2-rewrite-from-scratch`

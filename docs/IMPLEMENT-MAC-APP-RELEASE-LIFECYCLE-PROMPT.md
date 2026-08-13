@@ -25,8 +25,9 @@ Non-negotiable version and identity rules:
 - Multiple distribution channels for one app consume the same exact tag; a Mac App Store build
   does not create a second tag family.
 - DragonKit's repository keeps vX.Y.Z for the Swift package. Move Dragon Sample App's release
-  ownership to a separate normal app repository; the in-tree app may remain the integration
-  fixture. Historical sample-v tags and appcast entries are migration data only.
+  ownership to a separate normal app repository. DragonKit keeps no in-tree app copy; its
+  host-wiring tests provide integration coverage. Historical sample-v tags and appcast entries
+  are migration data only.
 - Debug has no tag, GitHub Release, appcast, Homebrew release, or marketing-site event.
 - Debug is never part of CFBundleShortVersionString. Keep the candidate numeric X.Y.Z and render
   the word Debug only from build-channel metadata and the Debug app's name.
