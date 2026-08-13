@@ -1,7 +1,8 @@
 # DragonKit
 
 Shared SwiftUI foundations for [Dragon App](https://www.dragonapp.com) macOS
-menu-bar apps (ice-2, clipmenu-2, spectacle-2, KeyKey) — built and updated once.
+apps (ice-2, clipmenu-2, spectacle-2, and the Yahoo! KeyKey input method) — built and
+updated once.
 
 ## Status — the About pane is canon, settings survive an upgrade, and the rules are machine-checked
 
@@ -19,9 +20,10 @@ Modules:
 
 - **Design primitives** — `DragonForm`, `DragonSection`, `.dragonAnnotation`
   (source-compatible ports of ice-2's grouped-`Form` look).
-- **Menu** — `DragonAppMenu` builds the canonical status-item dropdown (About, Check for
-  Updates, Settings, Quit) so every app's menu order, naming, and icons match. Uninstall is
-  deliberately excluded — it lives in Settings.
+- **Menu** — `DragonAppMenu` builds the applicable lifecycle-menu items (About, Check for
+  Updates, Settings, and Quit where the host supports it) so every app's order, naming, and
+  icons match. An `NSStatusItem` app hosts them in its status-item menu; an IME app appends them
+  to its IMK menu. Uninstall is deliberately excluded — it lives in Settings.
 - **Settings** — `SettingsShell` (host-owned selection) + `ManagedSettingsShell`;
   `DragonSettingsWindowController` opens it reliably for accessory apps; modules
   conform to `SettingsPane`. It also installs a minimal menu bar while the window is open —
@@ -143,10 +145,12 @@ General → (the app's own panes) → Permissions → Backup & Restore → What'
 [Dragon Sample App](https://github.com/teddychan/dragon-sample-app) wires its panes up in this
 order — mirror it in new apps.
 
-## Menu-bar dropdown order
+## Lifecycle-menu order
 
-Every Dragon app builds its status-item dropdown from **`DragonAppMenu`** — one source of
-truth for order, naming, and icon, so the menus can't drift the way hand-rolled `NSMenu`s did.
+Every Dragon app sources its applicable lifecycle-menu items from **`DragonAppMenu`** — one
+source of truth for order, naming, and icon, so the menus can't drift the way hand-rolled
+`NSMenu`s did. An `NSStatusItem` app hosts them in its status-item menu, while an IME appends
+them to its IMK menu.
 The canonical form (macOS title-case, leading SF Symbol on every item, ellipsis on items that
 open a window/dialog, app name appended to About / Quit):
 
@@ -203,7 +207,7 @@ See [`docs/STARTING-A-NEW-APP.md`](docs/STARTING-A-NEW-APP.md) — a self-contai
 ## For AI agents: how to use this template
 
 DragonKit is a **published SwiftPM package** — the one place the shared parts of every
-Dragon menu-bar app live. **Depend on it; never copy its code into your app.**
+Dragon macOS app live. **Depend on it; never copy its code into your app.**
 
 1. Read [`docs/STARTING-A-NEW-APP.md`](docs/STARTING-A-NEW-APP.md) (self-contained) and
    [dragon-sample-app](https://github.com/teddychan/dragon-sample-app) — the reference wiring for

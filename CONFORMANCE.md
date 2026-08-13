@@ -183,10 +183,10 @@ The checker extracts kit pane identifiers in declaration order from the file nam
 between General and Permissions are fine.
 
 Each slot is matched on the **pane identifier**, never on its display title — so a slot is
-satisfied by `BackupSettingsPane` (which the kit titles "Backup & Restore") *or* by an app's
-sanctioned equivalent in the same position: clipmenu-2 ships `SyncBackupPane` ("Sync & Backup")
-there under §R11. The canon line names what the kit itself ships; a sanctioned divergence sits
-in the same slot and is listed in §R11, not renamed in the canon.
+satisfied by `BackupSettingsPane` (which the kit titles "Backup & Restore") or by a recognized
+app-specific spelling in the same position. For example, clipmenu-2 ships `SyncBackupPane`
+("Sync & Backup") in the Backup slot. This is an R9 slot spelling, not an R11 exception. The
+canon line names what the kit itself ships rather than every recognized identifier.
 
 **Rationale:** the canon line used to read "Sync & Backup" — clipmenu-2's name for it — while
 the kit's own pane is titled "Backup & Restore" and the checker's slot spellings recognized
