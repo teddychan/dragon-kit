@@ -64,6 +64,23 @@ TIS/input-source deregistration and IME-specific cleanup while retaining the sha
 presentation, but the supported integration point must be verified before implementation; this
 ownership decision does not establish a custom-operation hook.
 
+## Independent-review corrections
+
+Before publication, an independent documentation-only review returned **REVISE BEFORE
+CONTINUING**. This pull request also includes the resulting corrections:
+
+- replaced remaining blanket “menu-bar app” language with explicit `NSStatusItem` and IMK hosts;
+- made `DragonAppMenu` responsible for applicable lifecycle items rather than asserting every host
+  has the same menu;
+- limited shared uninstall guidance to presentation invariants and left cleanup targets/order to
+  each app;
+- marked KeyKey's TIS cleanup integration point as requiring verification instead of promising an
+  undocumented custom-operation hook;
+- limited the KeyKey screenshot to evidence of Settings information architecture;
+- corrected the About timestamp to UTC commit time with seconds and labeled obsolete visual
+  guidance as previous guidance; and
+- described `SyncBackupPane` as an R9 slot spelling rather than an R11 exception.
+
 ## Files in this review
 
 Tracked in this pull-request change:
@@ -71,6 +88,8 @@ Tracked in this pull-request change:
 - `docs/ADOPT-DRAGONKIT-PROMPT.md`
 - `docs/DOC-RULE-CONFLICT-CHANGELOG.md`
 - `docs/images/doc-rule-conflicts/*.png`
+- `README.md`
+- `CONFORMANCE.md`
 
 The matching Liquid Glass wording was updated locally in these external skill files, which are not
 part of the `dragon-kit` Git repository:
