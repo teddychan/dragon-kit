@@ -35,12 +35,16 @@ macOS app, so each app builds them once and updates them centrally. First identi
 This topology changes menu hosting and app-specific backend operations, not the shared Settings
 window. Both host types use DragonKit's shell, design primitives, pane UI, and canonical ordering.
 - Repo: https://github.com/teddychan/dragon-kit  (local clone: ~/git/dragon-kit)
-- Depend on it at a version tag — DO NOT copy its source into this app. Use the NEWEST
-  vX.Y.Z tag (check `git tag --sort=-v:refname` in ~/git/dragon-kit); a pin behind the
-  newest tag fails conformance §R10:
+- Depend on it at a version tag — DO NOT copy its source into this app. First identify the
+  product build's dependency mechanism. Use the NEWEST vX.Y.Z tag (check
+  `git tag --sort=-v:refname` in ~/git/dragon-kit); a pin behind the newest tag fails
+  conformance §R10. For a product whose top-level build graph is SwiftPM, use:
       // X.Y.Z = the newest tag:
       //   gh release view --repo teddychan/dragon-kit --json tagName -q '.tagName | ltrimstr("v")'
       .package(url: "https://github.com/teddychan/dragon-kit", from: "X.Y.Z")
+  KeyKey is different: its product build pins `DRAGONKIT_TAG` in `tools/build-app.sh`, resolves
+  DragonKit under gitignored `vendor/dragon-kit`, builds the kit with SwiftPM, and links the
+  resulting static libraries from its direct-`swiftc` app build. Preserve that verified path.
 - Two products:
     • DragonKit         — core, no external deps
     • DragonKitUpdates  — adds Sparkle; link ONLY in a direct-download build,
@@ -96,8 +100,8 @@ Dragon app's Settings sidebar matches (the order is host-owned; the shell just r
 what you give it):
   General → (this app's own panes) → Permissions → Backup & Restore → What's New → Updates → About → Uninstall
 If the app declares `no-permissions`, omit only Permissions and preserve the relative order of
-every remaining pane. For Yahoo KeyKey this means General → (KeyKey's own panes, if any) →
-Backup & Restore → What's New → Updates → About → Uninstall.
+every remaining pane. Yahoo KeyKey's current sidebar is General → Backup & Restore → What's New
+→ Updates → About → Uninstall.
 
 Host wiring:
   • For an NSStatusItem app, copy dragon-sample-app's AppDelegate pattern and build the menu with
@@ -105,8 +109,11 @@ Host wiring:
     .dragonLanguageChanged so the titles switch language live.
   • For an IME, retain the system-owned IMK menu host and verify its documented integration point.
     Build the app's own input-method items, add a separator, then append
-    DragonAppMenu.items(DragonAppMenu.Config(…, includeQuit: false)). This is a menu-host difference
-    only; do not create a different Settings shell or shared-pane UI.
+    DragonAppMenu.items(DragonAppMenu.Config(…, includeQuit: false)). Verify how that IMK host
+    dispatches top-level selections before relying on the items' original targets. KeyKey retargets
+    the kit-created items to @objc selectors on InputController and forwards from there to its
+    host-owned controller. This is a menu-host difference only; do not create a different Settings
+    shell or shared-pane UI.
   • Host-owned selection so a menu item can open Settings directly on a specific pane
     (e.g. About).
   • Apply .dragonLocalized() at the settings root so the window switches language live;
@@ -171,11 +178,16 @@ output in that plan — it is the machine-readable version of this app's adoptio
 
 ## Input-method (IMK) and build topology
 
-**yahoo-keykey-2** is an Input Method Kit app. Verify its current build topology before choosing
-SwiftPM/Xcode or direct `swiftc` integration; the documentation corpus contains historical notes
-for both. Its menu host and backend operations differ, but its Settings window does not get a
-separate design system. Apply these points; none is a licence to skip an applicable rule or
-reimplement a shared pane.
+**yahoo-keykey-2** is an Input Method Kit app with a verified script/SwiftPM hybrid build. Detect
+this from the repository rather than from historical guidance: there is no top-level
+`Package.swift`, `.xcodeproj`, or `.xcworkspace`; `tools/build-app.sh` is the product-build entry
+point; `.github/workflows/release.yml` selects the reusable release workflow's `script` front end;
+and the manifests under `Packages/KeyKeyEngine` and `Packages/KeyKeyApp` are test packages. The
+script compiles KeyKey with direct `swiftc`, builds the pinned checkout under `vendor/dragon-kit`
+with SwiftPM, archives the DragonKit objects into static libraries, links both kit products, and
+copies `DragonKit_DragonKit.bundle` into `YahooKeyKey2.app`. Its menu host and backend operations
+differ, but its Settings window does not get a separate design system. Apply these points; none is
+a licence to skip an applicable rule or reimplement a shared pane.
 
 The existing Settings window demonstrates the intended UI topology: the same sidebar-based app
 Settings UI, with KeyKey-specific input panes and no Permissions pane. Its IME lifecycle separately
@@ -189,14 +201,20 @@ hosting, Quit behavior, launch behavior, or uninstall implementation.
 - **Settings UI stays shared** — use the same `DragonSettingsWindowController`, `SettingsShell`,
   `DragonForm`/`DragonSection`, `AboutSettingsPane`, `BackupSettingsPane`,
   `WhatsNewSettingsPane`, `UpdatesSettingsPane`, and inline `UninstallSettingsPane` as an
-  `NSStatusItem` app. KeyKey owns its input-method settings content and backend logic, not a
-  parallel shell or parallel shared-pane presentation. Omit Permissions through the declared
+  `NSStatusItem` app. KeyKey owns its input-method settings content and supplies its verified
+  configuration inputs, not a parallel shell, parallel shared-pane presentation, or inferred
+  backend hook. Omit Permissions through the declared
   `no-permissions` trait; preserve the relative order of every remaining shared pane.
 
 - **Menu** — an IMK app has no `NSStatusItem`; it retains its system-owned IMK menu host. Verify
   the host's documented integration point, build the app's own input-method items, add a separator,
   then append `DragonAppMenu.items(DragonAppMenu.Config(…, includeQuit: false))`. §R1 applies to
   an IMK menu exactly as it does to a status-item one — the lifecycle items still come from the kit.
+  In current KeyKey, do not remove the dispatch adapter after appending them: it matches each
+  kit-created item by its kit-created localized title, retargets it to an `@objc` selector on
+  `InputController`, and forwards About, Updates, and Settings to `AppMenuController`. The adapter
+  is required because the IMK host routes top-level selections back to the input controller; the
+  item set and canonical presentation still come from DragonKit.
   `includeQuit: false` because an IME is quit by the system; quitting it only makes typing
   unresponsive. This is the supported IME topology, not an exception. **Do not route an Uninstall
   item into this menu** — §R2 forbids it everywhere,
@@ -204,20 +222,23 @@ hosting, Quit behavior, launch behavior, or uninstall implementation.
   `UninstallSettingsPane`, last in the Settings sidebar, for an IME too.
 
 - **Backend behavior is app-specific** — shared pane UI does not imply identical operations.
-  KeyKey must perform TIS/input-source deregistration and IME-specific cleanup while retaining
-  DragonKit's shared inline presentation; an `NSStatusItem` app instead needs its own login-item,
-  helper, data, and bundle cleanup. Verify the documented integration point before implementation;
-  do not infer a custom-operation hook from this ownership decision.
+  Current KeyKey supplies `UninstallConfig` for its defaults, learning-data directory, cache,
+  bundle, and conditional Homebrew receipt; DragonKit clears those targets, moves the running
+  bundle to Trash, and terminates after success. There is no `TISDisableInputSource`, input-source
+  unregister operation, active-source switch, or custom uninstall-operation hook in the current
+  implementation. Removing KeyKey from Input Sources in System Settings and logging out when
+  needed are separate user steps. Do not document automatic TIS cleanup unless a future runtime
+  implementation adds and verifies it.
 
-- **Build integration (when there is no SPM graph)** — if the current app is built with `swiftc`
-  rather than SPM/Xcode, a remote `.package(url:…, from:…)` line has nothing to resolve it. **Vendor-build
-  DragonKit at a tag**: check out `dragon-kit` at that tag (pinned clone or submodule under a
-  build dir — *not* copied into the app's own sources), compile `DragonKit` / `DragonKitUpdates`
-  to static libs + `.swiftmodule`s the way the app already builds its local packages, and link
-  with `-I` / `-L` / `-l`. Still pinned to a version, still no source copied — which is what
-  §"never fork or re-implement" actually asks for.
+- **Build integration (verified KeyKey path)** — a remote `.package(url:…, from:…)` line in either
+  nested test manifest does not build the app. Retain `tools/build-app.sh` as the product entry
+  point: resolve its `DRAGONKIT_TAG` into `vendor/dragon-kit`, run `swift build -c release` there,
+  archive the emitted `DragonKit` and `DragonKitUpdates` objects, link those archives/modules into
+  the app's direct `swiftc` invocation, and copy the SwiftPM resource bundle into
+  `Contents/Resources`. Local clean builds first generate `Resources/data.txt` with
+  `tools/build-lm.sh`; the release workflow does the same before invoking `tools/build-app.sh`.
 
-- **Declaring a non-SPM pin (§R10)** — when there is no `Package.swift`, the checker
+- **Declaring a script-build pin (§R10)** — when there is no top-level product `Package.swift`, the checker
   reads whatever file states the version. Point `pin.file` at the build script and anchor
   `pin.pattern` on the variable that holds the tag, e.g. `DRAGONKIT_TAG="([0-9.]+)"`. Anchor it
   on something dragon-kit-specific: the pattern is one search over the whole file, so a bare
