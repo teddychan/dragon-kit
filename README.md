@@ -176,6 +176,13 @@ content above (clipboard history, input-method toggles, …) build that and appe
 [Dragon Sample App](https://github.com/teddychan/dragon-sample-app) uses `DragonAppMenu.menu(_:)`
 — mirror it in new apps.
 
+KeyKey's IMK host has one extra adapter at this boundary. `InputController.menu()` obtains the
+canonical items from `DragonAppMenu.items(_:)`, then retargets each top-level item to an `@objc`
+selector on `InputController`. IMK routes top-level menu selections back to that controller, so
+the app must not rely on the closure-backed item's original target. Those selectors forward to
+the host-owned Settings/Updater controller. This preserves DragonKit's titles, icons, order, and
+omissions without pretending an IMK menu dispatches like an ordinary AppKit menu.
+
 ## Try it: the Dragon Sample App
 
 **Dragon Sample App** is a real, installable reference app that wires up every module (Settings,
@@ -204,7 +211,14 @@ historical migration data.
 See [`docs/STARTING-A-NEW-APP.md`](docs/STARTING-A-NEW-APP.md) — a self-contained guide
 (API cheat-sheet + complete starter files) for scaffolding a new menu-bar app on this kit.
 
-## For AI agents: how to use this template
+## For AI agents: current documentation authority
+
+Start here. [`CONFORMANCE.md`](CONFORMANCE.md) is normative for adoption and UI ownership, and
+[`docs/MAC-APP-RELEASE-LIFECYCLE.md`](docs/MAC-APP-RELEASE-LIFECYCLE.md) is normative for Debug,
+release, and repository ownership. [`docs/STARTING-A-NEW-APP.md`](docs/STARTING-A-NEW-APP.md) and
+[`docs/ADOPT-DRAGONKIT-PROMPT.md`](docs/ADOPT-DRAGONKIT-PROMPT.md) are the current operational
+guides. Everything under `docs/superpowers/plans/` and `docs/superpowers/specs/` is historical
+rationale only; never implement from those dated files.
 
 DragonKit is a **published SwiftPM package** — the one place the shared parts of every
 Dragon macOS app live. **Depend on it; never copy its code into your app.**
@@ -212,9 +226,13 @@ Dragon macOS app live. **Depend on it; never copy its code into your app.**
 1. Read [`docs/STARTING-A-NEW-APP.md`](docs/STARTING-A-NEW-APP.md) (self-contained) and
    [dragon-sample-app](https://github.com/teddychan/dragon-sample-app) — the reference wiring for
    every module.
-2. Create an SPM executable app that depends on `dragon-kit` at a version tag
-   (pin the **newest** tag; §R10 fails a stale pin). Link `DragonKit`; add
-   `DragonKitUpdates` **only** for direct-download (non-Mac-App-Store) apps.
+2. Detect the product-build entry point before prescribing a dependency form: inspect the repo
+   root for `Package.swift`, Xcode project/workspace files, build scripts, and the release workflow.
+   For an ordinary SPM app, create an executable that depends on `dragon-kit` at the newest version
+   tag (§R10 fails a stale pin). Link `DragonKit`; add `DragonKitUpdates` only for direct-download
+   builds. For the existing KeyKey repo, retain its verified script build: `tools/build-app.sh`
+   compiles the product with `swiftc` and vendor-builds the pinned kit with SwiftPM; the nested
+   `Packages/*/Package.swift` files are test harnesses, not the product build.
 3. Build settings screens as `SettingsPane` conformers using `DragonForm` /
    `DragonSection` / `.dragonAnnotation`.
 4. Supply your app's **content/config** — `AboutContent`, `WhatsNewContent`, a settings
@@ -245,14 +263,19 @@ it from the app's `Info.plist` (`CFBundleShortVersionString`) — never hardcode
 [dragon-sample-app's `AboutConfig.swift`](https://github.com/teddychan/dragon-sample-app/blob/main/Sources/DragonAppTemplate/AboutConfig.swift))
 — so About, backups, and update checks all report the same value.
 
-The development-to-release boundary is specified in
+Start with the accepted, canonical development-to-release boundary in
 [`docs/MAC-APP-RELEASE-LIFECYCLE.md`](docs/MAC-APP-RELEASE-LIFECYCLE.md). In particular, Debug
 is only a local build-and-test configuration; it is not another version or release channel.
 Every public tag gates current What's New content, and marketing-site refreshes are asynchronous
-and non-blocking.
+and non-blocking. DragonKit owns shared package code, contracts, conformance guidance, and
+reusable release conventions; every app lives in its own repository and owns all of its build,
+release, artifact, appcast, download, and operational infrastructure.
 
-For the cross-repository rollout, use the ready-to-paste
+For an authorized rollout across separate repository checkouts, use the ready-to-paste
 [`docs/IMPLEMENT-MAC-APP-RELEASE-LIFECYCLE-PROMPT.md`](docs/IMPLEMENT-MAC-APP-RELEASE-LIFECYCLE-PROMPT.md).
+It is a cross-repository coordination prompt, not a new-app scaffold, and it does not authorize
+creating an app or app-release infrastructure inside DragonKit. To create a new app in its own
+repository, use [`docs/STARTING-A-NEW-APP.md`](docs/STARTING-A-NEW-APP.md) instead.
 
 ## Roadmap
 Done: App Settings, Permissions, Backup & Restore, Check for Update, Uninstall, What's New,

@@ -10,6 +10,37 @@ This is the canonical release process for Dragon macOS apps. It defines the boun
 local development, a public app release, and the marketing site so those three concerns cannot
 silently acquire competing version numbers or block one another.
 
+## Repository boundary
+
+DragonKit owns the shared Swift package code, lifecycle and conformance contracts, conformance
+guidance, and reusable release conventions. Its repository contains no consuming app and owns no
+app build, app release, downloadable app artifact, or production appcast.
+
+Each consuming app, including Dragon Sample App, lives in its own repository. That app repository
+owns the app source and tests; build and packaging scripts; workflows, including
+reusable-workflow callers; signing and notarization configuration; version and What's New
+content; public tags and releases; downloadable artifacts; production appcast; website and
+download notification integration on the app side; and app-specific operational
+configuration and state. It may call shared reusable automation, but that does not transfer
+release ownership away from the app repository.
+
+The marketing-site repository owns only the site source, build, tests, deployment, changelog
+cache, and recovery process. It consumes successful app releases asynchronously; it does not own
+or gate them.
+
+### Reader path and ownership: before and after
+
+The superseded reader path linked an accepted separate-repository rule to an implementation
+prompt that still allowed an in-tree app fixture. That could recreate two copies of one app and
+split release ownership:
+
+![Previous conflicting lifecycle reader path and ownership](images/doc-rule-conflicts/release-lifecycle-before.png)
+
+The current path makes the repository boundary a prerequisite and assigns every release concern
+to exactly one repository owner:
+
+![Current lifecycle reader path and repository ownership](images/doc-rule-conflicts/release-lifecycle-after.png)
+
 ## The model
 
 There is one public release channel. During development, the local Debug build uses the version
@@ -242,10 +273,13 @@ mirroring the old and new locations until installed versions have moved to the a
 
 | Owner | Responsibilities |
 |---|---|
-| App repository | Source, tests, bundle version, What's New content, public tag |
-| Shared release workflow | Tag gate, build, signing, notarization, publication |
-| App-owned update feed | Production Sparkle appcast |
-| Marketing-site repository | Fetch releases, generate changelog pages, test and deploy site |
+| DragonKit repository | Shared package code, lifecycle and conformance contracts, conformance guidance, reusable release conventions |
+| App repository | Source, tests, bundle version, What's New content, build and packaging scripts, workflows (including reusable-workflow callers), signing/notarization configuration, tag gate, public tags and releases, publication, downloadable artifacts, production appcast, app-side website/download notification integration, app-specific operational configuration and state |
+| Marketing-site repository | Receive notifications, fetch published releases, generate changelog pages, test and deploy the site |
+
+A centrally maintained reusable workflow may perform build, signing, notarization, or publication
+steps, but it is an implementation dependency, not a separate release owner. The app repository
+invokes and configures it and remains the sole owner of that app's release.
 
 Dragon Sample App follows the same ownership table as every other app. Its lack of product
 features does not make it a special release type; its purpose is to exercise DragonKit end to end.

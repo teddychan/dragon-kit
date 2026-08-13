@@ -1,7 +1,28 @@
 # About pane canon — design
 
+> [!WARNING]
+> **Status: PARTIALLY SUPERSEDED — HISTORICAL ABOUT-DESIGN RECORD**
+>
+> **Implementation from this file is prohibited.** Its problem statement, measured evidence,
+> fixed-slot principle, and rejected alternatives remain useful historical rationale, but its API,
+> migration, release, and one-release exception instructions are not current.
+>
+> Current authority:
+>
+> - [`README.md`](../../../README.md) — current About structure and ownership summary
+> - [`STARTING-A-NEW-APP.md`](../../STARTING-A-NEW-APP.md) — current `AboutContent` API and fixed-slot order
+> - [`CONFORMANCE.md`](../../../CONFORMANCE.md) §R12, §R14, and §R15 — normative timestamp, copyright, and Website rules
+> - [`MAC-APP-RELEASE-LIFECYCLE.md`](../../MAC-APP-RELEASE-LIFECYCLE.md) — current version and release rules
+>
+> Known superseded details include optional `licensesURL`, separate `originalProjectURL` and
+> `originalWork`, dual-holder About copyright, `Attribution(component:source:)` as the canonical
+> spelling, DragonKit v3 migration/release steps, and an explicit current What's New version.
+> Current DragonKit requires `licensesURL`, derives both upstream rows from
+> `OriginalWork(name:author:url:)`, uses one app-holder copyright, and defines attributions as
+> `name → license`.
+
 **Date:** 2026-08-08
-**Status:** approved, pending implementation plan
+**Original status (2026-08-08):** approved, pending implementation plan
 **Ships as:** DragonKit `v3.0.0` (breaking)
 
 ## Problem

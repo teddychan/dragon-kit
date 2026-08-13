@@ -1,5 +1,25 @@
 # dragon-kit v0 Implementation Plan
 
+> [!WARNING]
+> **Status: FULLY SUPERSEDED — HISTORICAL IMPLEMENTATION PLAN**
+>
+> **Implementation from this file is prohibited.** Do not execute its agent directive,
+> checkboxes, shell commands, file-creation steps, API examples, commits, or publishing steps.
+>
+> Current authority:
+>
+> - [`README.md`](../../../README.md) — current package architecture, ownership, and entry points
+> - [`CONFORMANCE.md`](../../../CONFORMANCE.md) — normative adoption and UI rules
+> - [`STARTING-A-NEW-APP.md`](../../STARTING-A-NEW-APP.md) — current scaffolding and public API
+> - [`MAC-APP-RELEASE-LIFECYCLE.md`](../../MAC-APP-RELEASE-LIFECYCLE.md) — canonical release and repository ownership
+> - [Dragon Sample App](https://github.com/teddychan/dragon-sample-app) — current reference app in its own repository
+>
+> Known obsolete assumptions include the in-tree `Example/` app, hand-built lifecycle
+> `NSMenuItem`s, free-form About links and credits, acknowledgements and typed link details,
+> hardcoded version metadata, the v0 roadmap, and the original publishing workflow. The body is
+> retained unchanged as historical evidence; any original status or imperative wording below
+> describes the 2026-06-30 plan, not present-day instructions.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Stand up the open-source `dragon-kit` Swift package (DragonKit library: design primitives, settings shell + window controller, localization helper, About module) plus a runnable minimal menu-bar **Example** app that uses it.

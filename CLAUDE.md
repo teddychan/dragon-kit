@@ -1,8 +1,9 @@
 # DragonKit — working notes for Claude
 
 DragonKit is a **published SwiftPM package**: the one place the shared parts of every Dragon
-menu-bar app live. Five downstream apps depend on it, one repository each — `clipmenu-2`, `ice-2`,
-`spectacle-2`, `yahoo-keykey-2` and `dragon-sample-app`. A change here ships to all of them.
+macOS app live. Five downstream apps depend on it, one repository each — `clipmenu-2`, `ice-2`,
+`spectacle-2`, `yahoo-keykey-2` and `dragon-sample-app`. Four are ordinary app/menu-bar hosts;
+`yahoo-keykey-2` is a system-managed Input Method Kit host. A change here ships to all of them.
 
 There is no app inside this repository. Dragon Sample App lived here as `sample-app/` until
 release ownership moved to `teddychan/dragon-sample-app`, because
@@ -31,6 +32,24 @@ depending on, and keep it from breaking five apps at once.
 | `.github/workflows/conformance.yml` | Reusable workflow all five apps call from their own CI. |
 
 `Example/` is not tracked; it is leftover build output from an earlier sample-app layout. Ignore it.
+
+### The KeyKey host and build boundary
+
+Do not infer KeyKey's topology from the other four apps. In the current `yahoo-keykey-2`
+repository there is no top-level `Package.swift` and no Xcode project. `tools/build-app.sh` is the
+product-build entry point: it compiles KeyKey with direct `swiftc`, builds the pinned DragonKit
+checkout under `vendor/dragon-kit` with SwiftPM, archives the kit's objects into static libraries,
+links `DragonKit` and `DragonKitUpdates`, and copies `DragonKit_DragonKit.bundle` into the produced
+IMK app. The two manifests under `Packages/` are test harnesses, not product-build entry points.
+
+At runtime, macOS hosts the input-source menu and KeyKey supplies it from
+`InputController.menu()`. KeyKey gets the applicable lifecycle items from `DragonAppMenu.items`,
+then retargets them to `@objc` selectors on `InputController` because IMK dispatches top-level
+selections back to the controller. Settings uses the shared DragonKit window and panes. Quit and
+Uninstall are absent from the IMK menu; Uninstall is the last Settings pane. The implemented
+uninstaller clears configured defaults/files, moves the running bundle to Trash, and terminates,
+but has no TIS deregistration hook. Removing the input source in System Settings and logging out
+when needed remain separate user steps.
 
 ## Non-negotiables
 
