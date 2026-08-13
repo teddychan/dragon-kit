@@ -80,9 +80,9 @@ deleting the file would be the easiest way to "pass").
   },
   "paneOrder": { "file": "app/Sources/ClipMenu/SettingsWindowController.swift" },
   "traits": ["sparkle", "mac-app-store"],   // see §R5, §R6
-  // §R11, and this is the real value in all five apps: empty. The schema is shown there,
-  // not here, because an example exception reads as a live sanction — this one named a
-  // rule R3 never fired and a path (`SyncBackupPane.swift`) clipmenu-2 does not have.
+  // §R11. This is the empty-registry schema for a new app, not a statement about the five-app
+  // fleet. The current registry lives in §R11. An empty registry says only that no divergence is
+  // sanctioned; it does not prove that the app's implementation was checked or conforms.
   "exceptions": []
 }
 ```
@@ -222,11 +222,20 @@ place the checker reads them from — with a `reason` and a `sanctionedBy`:
 ]
 ```
 
+The **current exception registry** is the union of those app-declared entries. No prose example,
+historical note or memory can add an entry to it. An empty registry means only "no sanctioned
+divergence is declared"; it does **not** mean the implementation was verified or conforms. Use
+**not currently verified** when current source or current conformance evidence has not established
+the result. A sample/reference-app deviation follows the same rule as a production-app deviation:
+it is an exception only when an applicable rule genuinely fires and the app declares it here.
+
 The checker prints every exception on each run, so they stay visible instead of becoming
-permanent. **The target is none at all, and as of 2026-08-12 exactly one is declared across all
-five apps** — the one above, dragon-sample-app's, which §R15 landed and which is reasoned below.
-Keep it there — an exception is the last resort, after a trait, a slot spelling, and changing the
-app.
+permanent. It prints `reason` but does not validate either `reason` or `sanctionedBy`, so review
+must verify both and reproduce the unsuppressed violation before treating an entry as a
+**verified exception**. **The target is none at all, and as of 2026-08-13 exactly one is
+declared across all five apps** — the one above, dragon-sample-app's, which §R15 landed and which is
+reasoned below. Keep it there — an exception is the last resort, after a trait, a slot spelling,
+and changing the app.
 
 ### What this table used to say
 
@@ -269,12 +278,14 @@ order would have red-X'd the app for a divergence already agreed. In between it 
 checker matches exceptions by rule name, so it only added a printed line — which is what made
 landing it first safe.
 
-**ice-2's R13 row is gone, unused.** It sat here reserved from the day R13 landed: ice-2 shipped no
-localization at all — no `.lproj`, no String Catalog, no `L()` call site — so nothing on disk
-stated its coverage, and the sanction was written down in advance so it would already be agreed
-when the app adopted a picker. It never was declared, and now never will be. ice-2 PR #102 ships
-all seven locales and calls `LanguagePicker()` bare, which is what R13 asks of an app whose
-coverage matches the kit's; **all five apps now satisfy R13 outright.**
+**Retired documented reservation — ice-2 R13, never an active exception.** It sat here reserved
+from the day R13 landed: ice-2 shipped no localization at all — no `.lproj`, no String Catalog, no
+`L()` call site — so nothing on disk stated its coverage, and the reservation was written down in
+advance so it would already be agreed when the app adopted a picker. It never appeared in ice-2's
+`.dragon-conformance.json`, never suppressed a violation, and therefore is not a resolved
+historical exception. ice-2 PR #102 ships all seven locales and calls `LanguagePicker()` bare,
+which is what R13 asks of an app whose coverage matches the kit's; verified against the v2.15.0
+source and the current checker on 2026-08-13, **all five apps now satisfy R13 outright.**
 
 Worth recording, because it is the second time this section has made the same point: the row was
 never load-bearing. R13 is silent for an app that constructs no `LanguagePicker`, so for the whole

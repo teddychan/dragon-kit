@@ -155,7 +155,10 @@ These look like gaps and are not. Don't "fix" them; do flag a PR that quietly un
 - **Uninstall stays out of the menu** and in `UninstallSettingsPane`, last in the sidebar.
 - **The reusable conformance workflow is pinned `@main` on purpose.** It reads the kit's default
   branch anyway, so a tag pin would freeze the interface while the rules moved.
-- **The `exceptions` in CONFORMANCE §R11 are sanctioned**, each with a reason and an owner.
+- **The current exception registry is app-declared, not inferred from prose.** As of 2026-08-13 it
+  contains one entry, dragon-sample-app's R15 deviation. Before preserving or resolving any entry,
+  verify current source, reproduce the unsuppressed rule result, and check its reason and owner;
+  an absent declaration is not proof of conformance.
 - **`Tests/*/HostWiringTests.swift` import the kit plainly, not `@testable`.** They stand in for a
   host app, and an app sees only the public surface — `@testable` would let a public-API break
   pass there while breaking five apps.

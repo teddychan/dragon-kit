@@ -75,6 +75,14 @@ new regex anchored on `dragon-kit` (an unanchored one matches whichever dependen
 in the file — it matched Sparkle's version in ice-2's `.pbxproj`)? Does the rule stay
 enforceable if the app deletes its `.dragon-conformance.json`?
 
+**Exception status.** Never infer conformance from an empty `exceptions` list or from the absence
+of a documented exception. Inspect current app source and current rule inputs, then run the current
+checker. For a declared entry, reproduce the violation without its suppression and verify its
+`reason` and `sanctionedBy`; the checker prints the reason but validates neither field. Resolve an
+entry only after the implementation verifies conforming, then remove it from the app registry
+and label any retained prose as resolved history. A prose-only reservation that was never
+app-declared is historical context, not a current or resolved exception.
+
 **Host wiring.** A new public pane, config or initializer that `Tests/*/HostWiringTests.swift`
 doesn't construct is API nothing here compiles as a client. Those two suites replaced the in-tree
 sample app's build, and they import the kit plainly — a diff that switches either to `@testable`,
@@ -91,7 +99,8 @@ drift happened.
 
 **Deferrals undone.** Flag a PR that quietly generalizes `DragonBackup` to folder-based backup,
 re-adds Uninstall to the menu, pins the reusable conformance workflow to a tag, or removes a
-sanctioned §R11 exception. Each of those is a deliberate decision with a written reason.
+currently declared §R11 exception without the verification above. Each of those is a deliberate
+decision with a written reason.
 
 Beyond this, apply ordinary judgment — real bugs, broken invariants, dead code the change
 created.
