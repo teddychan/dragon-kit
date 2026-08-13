@@ -1,13 +1,26 @@
 # dragon-kit v0 — shared kit + basic app template (design)
 
-> **Archived and superseded (2026-08-10):** This historical design predates the repository
-> boundary in [`../../MAC-APP-RELEASE-LIFECYCLE.md`](../../MAC-APP-RELEASE-LIFECYCLE.md). Its
-> in-tree `Example/` app is not a current instruction: every consuming app lives in its own
-> repository, and DragonKit must not create, restore, or maintain an app or app-release pipeline.
-> Retain the text below only as design history; do not execute it.
+> [!WARNING]
+> **Status: FULLY SUPERSEDED — HISTORICAL DESIGN RECORD**
+>
+> **Implementation from this file is prohibited.** Do not use its repository structure, API
+> shapes, template-copying instructions, roadmap, or success criteria to build or modify an app.
+>
+> Current authority:
+>
+> - [`README.md`](../../../README.md) — current package architecture, ownership, and entry points
+> - [`CONFORMANCE.md`](../../../CONFORMANCE.md) — normative adoption and UI rules
+> - [`STARTING-A-NEW-APP.md`](../../STARTING-A-NEW-APP.md) — current scaffolding and public API
+> - [`MAC-APP-RELEASE-LIFECYCLE.md`](../../MAC-APP-RELEASE-LIFECYCLE.md) — canonical release and repository ownership
+> - [Dragon Sample App](https://github.com/teddychan/dragon-sample-app) — current reference app in its own repository
+>
+> Known obsolete assumptions include an in-tree `Example/` template, copying that template to
+> create apps, hand-built lifecycle menus, free-form `AboutLink` and credits arrays, optional
+> acknowledgements, a public/raw What's New version, and the original future-module roadmap. The
+> body remains useful only as the historical rationale for DragonKit v0.
 
 - **Date:** 2026-06-30
-- **Status:** Approved in brainstorm; pending spec review
+- **Original status (2026-06-30):** Approved in brainstorm; pending spec review
 - **Owner:** Teddy Chan
 - **Related apps:** `ice-2`, `clipmenu-2`, `yahoo-keykey-2`
 

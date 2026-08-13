@@ -32,7 +32,9 @@ accessory apps, and a localization helper.
   site refreshes independently afterward. Every app—including Dragon Sample App—uses an exact
   `vX.Y.Z` public tag. One repository owns one public version series; never invent a Debug,
   Sample, App Store, or other channel-specific tag prefix.
-- The kit's own design spec + plan live in that repo under `docs/superpowers/` if you want the rationale.
+- The dated records under `docs/superpowers/` are historical rationale only. Do not use them as
+  implementation instructions; use this guide, `CONFORMANCE.md`, the release-lifecycle document,
+  and the external Dragon Sample App instead.
 
 Your job = **scaffold a runnable shell first** (this doc gives you the complete starter files),
 **then** brainstorm → spec → plan → TDD the app's actual features.
