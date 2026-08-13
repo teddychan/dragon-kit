@@ -1,18 +1,39 @@
 # Adopt-DragonKit prompt
 
 A ready-to-paste prompt for a **new chat session inside one of the app repos** (ClipMenu,
-KeyKey, Ice, …). It tells the agent to depend on DragonKit and move the app's common
-menu-bar features and UI onto the shared modules — without copying kit code.
+KeyKey, Ice, …). It tells the agent to depend on DragonKit and move the app's common macOS
+features and UI onto the shared modules — without copying kit code. Most Dragon apps
+use an `NSStatusItem`; Yahoo KeyKey is a system-managed Input Method Kit app. Both use the same
+DragonKit Settings UI, with host-specific lifecycle and backend behavior.
 
 Paste the block below, then apply the per-app tweaks noted underneath.
+
+## Visual ownership guide
+
+Liquid Glass defines the appearance. DragonKit owns the shared Settings structure and leaves
+app-specific labels, values, and domain behavior to the app:
+
+![Liquid Glass appearance guidance compared with DragonKit structural ownership](images/doc-rule-conflicts/liquid-glass-vs-dragonkit.png)
+
+The same boundary applies inside shared panes. For example, DragonKit fixes the About grammar
+and presents uninstall confirmation inline; the app supplies typed content and cleanup behavior:
+
+![Free-form About assembly compared with DragonKit fixed slots](images/doc-rule-conflicts/about-freeform-vs-canon.png)
+
+![A separate uninstall sheet compared with DragonKit inline confirmation](images/doc-rule-conflicts/uninstall-inline-vs-sheet.png)
 
 ---
 
 ```
-Adopt the shared DragonKit template for this app's common menu-bar features and UI.
+Adopt the shared DragonKit template for this app's common macOS features and UI.
 
 DragonKit is our published SwiftPM package that owns the shared parts of every Dragon
-menu-bar app, so each app builds them once and updates them centrally.
+macOS app, so each app builds them once and updates them centrally. First identify the host:
+- An `NSStatusItem` menu-bar app owns a status-item menu and normally includes Quit.
+- An Input Method Kit app owns an IMK input menu, is launched and quit by macOS, and has no
+  `NSStatusItem` or Quit command.
+This topology changes menu hosting and app-specific backend operations, not the shared Settings
+window. Both host types use DragonKit's shell, design primitives, pane UI, and canonical ordering.
 - Repo: https://github.com/teddychan/dragon-kit  (local clone: ~/git/dragon-kit)
 - Depend on it at a version tag — DO NOT copy its source into this app. Use the NEWEST
   vX.Y.Z tag (check `git tag --sort=-v:refname` in ~/git/dragon-kit); a pin behind the
@@ -26,7 +47,7 @@ menu-bar app, so each app builds them once and updates them centrally.
                           NOT in a Mac App Store build.
 
 FIRST, before writing code, read these (they are the source of truth):
-  1. ~/git/dragon-kit/CONFORMANCE.md  — NORMATIVE. Rules R0-R12 are machine-checked by
+  1. ~/git/dragon-kit/CONFORMANCE.md  — NORMATIVE. All current rules are machine-checked by
      ~/git/dragon-kit/Scripts/dragon-conformance.py, which runs in this app's CI, so a
      violation fails the PR. Read it first: it defines what "adopted" actually means.
   2. ~/git/dragon-kit/docs/MAC-APP-RELEASE-LIFECYCLE.md — canonical Debug/test/tag/release/site
@@ -47,18 +68,20 @@ modules, supplying only this app's own content/config. Use:
                         each screen conforms to SettingsPane.
                         NOTE: SettingsPane.title is a localization KEY (String), rendered via L().
   • App Settings      — DragonSettingsStore<Value> (Codable persistence in a UserDefaults
-                        suite) + LoginItem (launch at login)
+                        suite) + LoginItem where launch at login applies (not an IME)
   • About             — AboutContent + AboutSettingsPane
   • What's New        — WhatsNewContent / ChangeSection + WhatsNewSettingsPane
   • Permissions       — DragonPermission (.accessibility() / .screenRecording()) +
-                        PermissionsSettingsPane
+                        PermissionsSettingsPane when the app needs a TCC grant. An IME that
+                        needs none declares the `no-permissions` trait and omits the pane.
   • Backup & Restore  — DragonBackup + BackupSettingsPane (BackupConfig)
-  • Menu-bar dropdown — DragonAppMenu.menu(Config) / .items(Config). REQUIRED (§R1): the
+  • Lifecycle menu    — DragonAppMenu.menu(Config) / .items(Config). REQUIRED (§R1): the
                         About / Check for Updates / Settings / Quit items MUST come from the
                         kit — never a hand-built NSMenuItem. Order, titles, casing, ellipses
-                        and SF Symbols are canon. onCheckForUpdates: nil omits the update item
-                        (Mac App Store); includeQuit: false omits Quit (IME). Uninstall is
-                        deliberately NOT in the menu (§R2) and there is no way to add it.
+                        and SF Symbols are canon. The host may be an `NSStatusItem` menu or an
+                        IMK input menu. `onCheckForUpdates: nil` omits the update item (Mac App
+                        Store); `includeQuit: false` is required for an IME because Quit does not
+                        apply. Uninstall is deliberately NOT in the menu (§R2).
   • Uninstall         — DragonUninstaller + UninstallSettingsPane (UninstallConfig);
                         it confirms INLINE in the pane (no popup window)
   • Updates           — (DragonKitUpdates) DragonUpdater + UpdatesSettingsPane
@@ -71,12 +94,18 @@ Settings pane (sidebar) order — list panes in settingsPanes in this order, so 
 Dragon app's Settings sidebar matches (the order is host-owned; the shell just renders
 what you give it):
   General → (this app's own panes) → Permissions → Backup & Restore → What's New → Updates → About → Uninstall
+If the app declares `no-permissions`, omit only Permissions and preserve the relative order of
+every remaining pane. For Yahoo KeyKey this means General → (KeyKey's own panes, if any) →
+Backup & Restore → What's New → Updates → About → Uninstall.
 
-Menu-bar wiring to copy from dragon-sample-app's AppDelegate.swift:
-  • NSStatusItem whose menu is built by DragonAppMenu.menu(...) — NOT a hand-rolled NSMenu.
-    Rebuild it on .dragonLanguageChanged so the titles switch language live.
-    If this app has its own menu content (clipboard history, IME toggles, an Accessibility
-    warning row), build that, add your own separator, then append DragonAppMenu.items(...).
+Host wiring:
+  • For an NSStatusItem app, copy dragon-sample-app's AppDelegate pattern and build the menu with
+    DragonAppMenu.menu(...) — NOT a hand-rolled lifecycle menu. Rebuild it on
+    .dragonLanguageChanged so the titles switch language live.
+  • For an IME, keep the system-owned `override func menu()` host. Build the app's own input-method
+    items, add a separator, then append
+    DragonAppMenu.items(DragonAppMenu.Config(…, includeQuit: false)). This is a menu-host difference
+    only; do not create a different Settings shell or shared-pane UI.
   • Host-owned selection so a menu item can open Settings directly on a specific pane
     (e.g. About).
   • Apply .dragonLocalized() at the settings root so the window switches language live;
@@ -92,9 +121,9 @@ Menu-bar wiring to copy from dragon-sample-app's AppDelegate.swift:
 CONSTRAINTS:
   • Depend on DragonKit; never fork or re-implement its shared behavior. If a shared
     layout/behavior needs changing, that change belongs in dragon-kit (new tag), not here.
-  • Only this app's content/config lives here: About text, What's New entries, settings
-    model, permission list, BackupConfig, UninstallConfig, DragonUpdater, and the app's
-    own Localizable.strings.
+  • Only this app's content/config lives here: About text, What's New entries, settings model,
+    permission list when applicable, BackupConfig, UninstallConfig, DragonUpdater, app-specific
+    settings panes, backend operations, and the app's own Localizable.strings.
   • Keep this app's existing feature logic intact — only swap the settings/About/What's New/
     Permissions/Backup/Uninstall/Updates/Localization UI over to DragonKit.
   • No app type may shadow a public DragonKit type name (§R3) — e.g. a local
@@ -111,7 +140,8 @@ DONE means the conformance checker passes, not that it compiles:
   • Run it locally until clean:
       python3 ~/git/dragon-kit/Scripts/dragon-conformance.py --app . --kit ~/git/dragon-kit
   • A genuine, sanctioned divergence goes in `exceptions` with a `reason` and a `sanctionedBy`
-    — do not silence a rule any other way, and do not invent an exception to avoid work.
+    — only when an applicable rule genuinely fires after supported parameters, traits and slot
+    spellings have been used. A different host topology is not itself an exception.
 
 Start by reading the docs + sample-app, then propose a short migration plan (which screens map
 to which modules, what config each needs) before changing code. Include the current checker
@@ -125,24 +155,38 @@ output in that plan — it is the machine-readable version of this app's adoptio
 - **Sparkle / `DragonKitUpdates`** — for an app with both a Mac App Store build and a free
   build (e.g. ClipMenu), link `DragonKitUpdates` **only** in the direct-download target; the
   MAS target links `DragonKit` only. For a direct-download-only app, link both everywhere.
-- **Permission type** — name the permission the app actually needs (e.g. `.accessibility()`
-  for KeyKey/Ice) instead of the generic placeholder.
+- **Permission type** — name the permission the app actually needs instead of the generic
+  placeholder. Yahoo KeyKey receives keystrokes through IMK and needs no Permissions pane; use
+  the `no-permissions` trait. Do not add a grant merely to match an `NSStatusItem` app.
 - **Version pin** — set `from:` to the newest DragonKit tag
   (`gh release view --repo teddychan/dragon-kit --json tagName -q '.tagName | ltrimstr("v")'`)
   (`git tag --sort=-v:refname` in `~/git/dragon-kit`); §R10 fails anything older.
 - **Menu omissions** — pass `onCheckForUpdates: nil` for a Mac App Store target and
   `includeQuit: false` for an IME. These are first-class `DragonAppMenu.Config` parameters —
-  the canon's own omission rules, not a reason to hand-roll the menu. (yahoo-keykey-2
-  additionally records its Quit omission as a sanctioned §R11 exception.)
+  the canon's supported host/channel rules, not R11 exceptions and not reasons to hand-roll the
+  lifecycle items.
 
 ---
 
 ## Input-method (IMK) & non-SwiftPM apps
 
-The prompt above assumes a SwiftPM/Xcode app with an `NSStatusItem` menu bar. Some Dragon apps
-aren't shaped that way — **yahoo-keykey-2** is an Input Method Kit app built by a hand-rolled
-`swiftc` script, with no `.xcodeproj` and no top-level `Package.swift`. Adapt these four points
-before pasting; none of them is a licence to skip a rule.
+**yahoo-keykey-2** is an Input Method Kit app built by a hand-rolled `swiftc` script, with no
+`.xcodeproj` and no top-level `Package.swift`. Its menu host and backend operations differ, but its
+Settings window does not get a separate design system. Apply these points; none is a licence to
+skip an applicable rule or reimplement a shared pane.
+
+The existing Settings window demonstrates the intended UI topology: the same sidebar-based app
+Settings UI, with KeyKey-specific input panes and no Permissions pane. Its IME lifecycle separately
+means there is no Quit command.
+
+![Yahoo! KeyKey 2 Settings window](images/doc-rule-conflicts/yahoo-keykey-settings.png)
+
+- **Settings UI stays shared** — use the same `DragonSettingsWindowController`, `SettingsShell`,
+  `DragonForm`/`DragonSection`, `AboutSettingsPane`, `BackupSettingsPane`,
+  `WhatsNewSettingsPane`, `UpdatesSettingsPane`, and inline `UninstallSettingsPane` as an
+  `NSStatusItem` app. KeyKey owns its input-method settings content and backend logic, not a
+  parallel shell or parallel shared-pane presentation. Omit Permissions through the declared
+  `no-permissions` trait; preserve the relative order of every remaining shared pane.
 
 - **Menu** — an IMK app has no `NSStatusItem`; its menu comes from `override func menu()` on
   the `InputMethodServerControllerClass`. That changes where the menu is *hosted*, not what is
@@ -150,9 +194,16 @@ before pasting; none of them is a licence to skip a rule.
   `DragonAppMenu.items(DragonAppMenu.Config(…, includeQuit: false))`. §R1 applies to an IMK
   menu exactly as it does to a status-item one — the lifecycle items still come from the kit.
   `includeQuit: false` because an IME is quit by the system; quitting it only makes typing
-  unresponsive. **Do not route an Uninstall item into this menu** — §R2 forbids it everywhere,
+  unresponsive. This is the supported IME topology, not an exception. **Do not route an Uninstall
+  item into this menu** — §R2 forbids it everywhere,
   and `DragonAppMenu.Config` has had no such parameter since v2.0.0. Uninstall is
   `UninstallSettingsPane`, last in the Settings sidebar, for an IME too.
+
+- **Backend behavior is app-specific** — shared pane UI does not imply identical operations.
+  KeyKey's Uninstall configuration must disable/deregister its input sources and remove its
+  IME-specific files before removing the bundle; a menu-bar app instead supplies its own login-item,
+  helper, data and bundle cleanup. Both feed those operations/configuration into the same inline
+  DragonKit uninstall presentation.
 
 - **Build integration (no SPM graph)** — if the app is built with `swiftc` rather than
   SPM/Xcode, a remote `.package(url:…, from:…)` line has nothing to resolve it. **Vendor-build
@@ -172,8 +223,8 @@ before pasting; none of them is a licence to skip a rule.
 - **Permissions (§R5)** — don't add a Permissions pane an app doesn't need. An IME receives
   keystrokes through the IMK server, so it needs no Accessibility or Input-Monitoring grant.
   Omitting the pane is a *declared* omission, not a silent one: add `"no-permissions"` to
-  `traits` in `.dragon-conformance.json` and R5 stops requiring it. (yahoo-keykey-2 currently
-  records this as a sanctioned §R11 exception instead; either is fine, the trait is tidier.)
+  `traits` in `.dragon-conformance.json` and R5 stops requiring it. This is compliant capability
+  configuration, not a sanctioned §R11 exception.
 
 - **Distribution** — a third-party input method can't ship on the Mac App Store, so it stays
   direct-download + Homebrew: link **both** `DragonKit` and `DragonKitUpdates`, and keep
