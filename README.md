@@ -211,7 +211,14 @@ historical migration data.
 See [`docs/STARTING-A-NEW-APP.md`](docs/STARTING-A-NEW-APP.md) — a self-contained guide
 (API cheat-sheet + complete starter files) for scaffolding a new menu-bar app on this kit.
 
-## For AI agents: how to use this template
+## For AI agents: current documentation authority
+
+Start here. [`CONFORMANCE.md`](CONFORMANCE.md) is normative for adoption and UI ownership, and
+[`docs/MAC-APP-RELEASE-LIFECYCLE.md`](docs/MAC-APP-RELEASE-LIFECYCLE.md) is normative for Debug,
+release, and repository ownership. [`docs/STARTING-A-NEW-APP.md`](docs/STARTING-A-NEW-APP.md) and
+[`docs/ADOPT-DRAGONKIT-PROMPT.md`](docs/ADOPT-DRAGONKIT-PROMPT.md) are the current operational
+guides. Everything under `docs/superpowers/plans/` and `docs/superpowers/specs/` is historical
+rationale only; never implement from those dated files.
 
 DragonKit is a **published SwiftPM package** — the one place the shared parts of every
 Dragon macOS app live. **Depend on it; never copy its code into your app.**
@@ -256,14 +263,19 @@ it from the app's `Info.plist` (`CFBundleShortVersionString`) — never hardcode
 [dragon-sample-app's `AboutConfig.swift`](https://github.com/teddychan/dragon-sample-app/blob/main/Sources/DragonAppTemplate/AboutConfig.swift))
 — so About, backups, and update checks all report the same value.
 
-The development-to-release boundary is specified in
+Start with the accepted, canonical development-to-release boundary in
 [`docs/MAC-APP-RELEASE-LIFECYCLE.md`](docs/MAC-APP-RELEASE-LIFECYCLE.md). In particular, Debug
 is only a local build-and-test configuration; it is not another version or release channel.
 Every public tag gates current What's New content, and marketing-site refreshes are asynchronous
-and non-blocking.
+and non-blocking. DragonKit owns shared package code, contracts, conformance guidance, and
+reusable release conventions; every app lives in its own repository and owns all of its build,
+release, artifact, appcast, download, and operational infrastructure.
 
-For the cross-repository rollout, use the ready-to-paste
+For an authorized rollout across separate repository checkouts, use the ready-to-paste
 [`docs/IMPLEMENT-MAC-APP-RELEASE-LIFECYCLE-PROMPT.md`](docs/IMPLEMENT-MAC-APP-RELEASE-LIFECYCLE-PROMPT.md).
+It is a cross-repository coordination prompt, not a new-app scaffold, and it does not authorize
+creating an app or app-release infrastructure inside DragonKit. To create a new app in its own
+repository, use [`docs/STARTING-A-NEW-APP.md`](docs/STARTING-A-NEW-APP.md) instead.
 
 ## Roadmap
 Done: App Settings, Permissions, Backup & Restore, Check for Update, Uninstall, What's New,

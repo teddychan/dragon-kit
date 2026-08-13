@@ -1,14 +1,25 @@
 # Dragon Sample App — turn the DragonKit Example into a real, releasable app
 
-> **Superseded release topology (2026-08-10):** This historical design used `sample-v*` because
-> the Sample App shared DragonKit's repository. The accepted
-> [`../../MAC-APP-RELEASE-LIFECYCLE.md`](../../MAC-APP-RELEASE-LIFECYCLE.md) now treats Dragon
-> Sample App as a normal app: exact `vX.Y.Z` public tags, no Debug tag, and separate app-owned
-> release infrastructure because DragonKit's repository already owns its own `vX.Y.Z` series.
-> Keep the prefixed tags and URLs below as historical implementation evidence; do not copy them.
+> [!WARNING]
+> **Status: FULLY SUPERSEDED — HISTORICAL CROSS-REPOSITORY DESIGN**
+>
+> **Implementation from this file is prohibited.** Do not create an in-tree Sample App, a
+> `sample-v*` tag, a Sample App release in the DragonKit repository, or the appcast, artifacts,
+> cask ownership, and release workflow described below.
+>
+> Current authority:
+>
+> - [`README.md`](../../../README.md) — current Sample App placement and package ownership
+> - [`CONFORMANCE.md`](../../../CONFORMANCE.md) — one app repository per app and current adoption rules
+> - [`MAC-APP-RELEASE-LIFECYCLE.md`](../../MAC-APP-RELEASE-LIFECYCLE.md) — exact `vX.Y.Z` tags and app-owned release infrastructure
+> - [Dragon Sample App](https://github.com/teddychan/dragon-sample-app) — current app repository
+>
+> Known obsolete assumptions include `Example/`, `sample-v*`, GitHub Releases hosted by
+> `dragon-kit`, a marketing-site-hosted production appcast, and the old release-workflow version
+> and ordering. Those details are retained only as historical migration evidence.
 
 **Date:** 2026-07-04
-**Status:** Approved design → implementation planning
+**Original status (2026-07-04):** Approved design → implementation planning
 **Scope:** 5 repos (`dragon-release-ci`, `dragon-kit`, `homebrew-tap`, `www.dragonapp.com`, `clipmenu-2`)
 
 ## Motivation

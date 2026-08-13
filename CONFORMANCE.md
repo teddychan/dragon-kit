@@ -262,8 +262,8 @@ it does not belong here.
 
 One row, one app, one rule. It is the only exception declared anywhere across the five.
 
-**dragon-sample-app has no public-facing page, on purpose.** The site hosts
-`/dragon-sample-app/licenses/` and the app's appcast and nothing else: there is no
+**dragon-sample-app has no public-facing page, on purpose.** The site's only page for it is
+`/dragon-sample-app/licenses/`: there is no
 `docs/dragon-sample-app/index.html` and no card for it on the hub. The app exists to exercise
 DragonKit's modules — it ships no feature of its own — so it is a released, updatable, licence-
 carrying app without a product page. Pointing its Website row at the canonical path would ship a
@@ -424,9 +424,9 @@ under `sources` at all. §R0, §R10 and §R13 all take the same line, for the sa
 that goes quiet when an app restructures reports a pass on every app that stopped conforming.
 
 **dragon-sample-app is the one sanctioned divergence** (§R11) and it is declared in its own
-repository. It has no public page on purpose: the site hosts `/dragon-sample-app/licenses/` and
-its appcast and nothing else, so the canonical path would be a 404 and the row addresses the studio
-hub. `websiteMatchesSupportRepo` is `false` for it and `true` for the other four.
+repository. It has no public page on purpose: the site hosts `/dragon-sample-app/licenses/` but
+no product page for the app, so the canonical path would be a 404 and the row addresses the
+studio hub. `websiteMatchesSupportRepo` is `false` for it and `true` for the other four.
 
 ## Out of scope, deliberately
 
