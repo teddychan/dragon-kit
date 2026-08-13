@@ -40,22 +40,29 @@ work, and attribution values.
 
 The useful behavioral requirements remain: an explicit removal checklist, an optional user-data
 toggle off by default, safe cancellation, visible failures, and an honest explanation of what
-macOS controls. Only the competing sheet/window/`NSAlert` presentation rules were removed.
+macOS controls. Only the competing sheet/window/`NSAlert` presentation rules were removed. The
+image illustrates presentation only; it does not establish custom cleanup hooks or runtime behavior.
 
 ## 4. Yahoo! KeyKey uses the same Settings UI, not the same lifecycle
 
 ![Yahoo! KeyKey 2 Settings window](images/doc-rule-conflicts/yahoo-keykey-settings.png)
+
+This screenshot demonstrates Settings information architecture only; it does not evidence menu
+hosting, Quit behavior, launch behavior, or uninstall implementation.
 
 | Shared with other Dragon apps | Specific to Yahoo! KeyKey |
 |---|---|
 | `DragonSettingsWindowController`, `SettingsShell`, shared pane UI, design primitives, and relative sidebar order | Input-method preferences and help content |
 | About, Backup & Restore, What's New, Updates, and inline Uninstall presentation | IMK `menu()` host instead of `NSStatusItem` |
 | DragonKit lifecycle-menu labels and ordering where an item applies | `includeQuit: false`; macOS manages the IME lifecycle |
-| Trait-driven omission of inapplicable panes | `no-permissions`; no launch-at-login; TIS-aware uninstall operations |
+| Trait-driven omission of inapplicable panes | `no-permissions`; no launch-at-login; TIS-aware uninstall outcome |
 
 The resulting KeyKey order is **General → KeyKey-owned panes → Backup & Restore → What's New →
 Updates → About → Uninstall**. Omitting Permissions and Quit is supported host/capability topology,
-not an R11 exception and not permission to hand-roll the remaining shared UI.
+not an R11 exception and not permission to hand-roll the remaining shared UI. KeyKey must perform
+TIS/input-source deregistration and IME-specific cleanup while retaining the shared inline
+presentation, but the supported integration point must be verified before implementation; this
+ownership decision does not establish a custom-operation hook.
 
 ## Files in this review
 
@@ -71,6 +78,7 @@ part of the `dragon-kit` Git repository:
 - `~/.claude/skills/liquid-glass-macos/SKILL.md`
 - `~/.claude/skills/liquid-glass-macos/references/swiftui-recipes.md`
 - `~/.claude/skills/liquid-glass-macos/references/per-app-specs.md`
+- `~/.claude/skills/liquid-glass-macos/assets/doc-rule-conflicts/*.png`
 
 ## Review boundaries
 
