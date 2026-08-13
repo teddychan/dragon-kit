@@ -87,7 +87,7 @@ deleting the file would be the easiest way to "pass").
 }
 ```
 
-## R1 — The menu-bar dropdown comes from `DragonAppMenu`
+## R1 — The lifecycle menu comes from `DragonAppMenu`
 
 The app-lifecycle items (About, Check for Updates, Settings, Quit) **must** be produced by
 `DragonAppMenu.menu(_:)` or `DragonAppMenu.items(_:)`. An app must not construct an
@@ -95,6 +95,13 @@ The app-lifecycle items (About, Check for Updates, Settings, Quit) **must** be p
 
 Apps may build their own menu *content* freely — clipboard history, input-method toggles, an
 Accessibility warning row — and append the shared items after their own separator.
+
+The host still owns dispatch at a system boundary. KeyKey's IMK menu obtains the canonical
+`NSMenuItem`s from `DragonAppMenu.items(_:)`, then retargets those same items to `@objc` selectors
+on `InputController`, because IMK routes top-level selections back to the input controller rather
+than honoring the closure-backed item's private target. This adapter does not hand-build a
+lifecycle item and is not an R11 exception: DragonKit still supplies each item's title, icon,
+order, and omission behavior.
 
 **Violation:** any `NSMenuItem(title:)` whose title literal or `L()` key matches a lifecycle
 item, or an app that never references `DragonAppMenu`.

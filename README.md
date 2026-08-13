@@ -176,6 +176,13 @@ content above (clipboard history, input-method toggles, …) build that and appe
 [Dragon Sample App](https://github.com/teddychan/dragon-sample-app) uses `DragonAppMenu.menu(_:)`
 — mirror it in new apps.
 
+KeyKey's IMK host has one extra adapter at this boundary. `InputController.menu()` obtains the
+canonical items from `DragonAppMenu.items(_:)`, then retargets each top-level item to an `@objc`
+selector on `InputController`. IMK routes top-level menu selections back to that controller, so
+the app must not rely on the closure-backed item's original target. Those selectors forward to
+the host-owned Settings/Updater controller. This preserves DragonKit's titles, icons, order, and
+omissions without pretending an IMK menu dispatches like an ordinary AppKit menu.
+
 ## Try it: the Dragon Sample App
 
 **Dragon Sample App** is a real, installable reference app that wires up every module (Settings,
@@ -212,9 +219,13 @@ Dragon macOS app live. **Depend on it; never copy its code into your app.**
 1. Read [`docs/STARTING-A-NEW-APP.md`](docs/STARTING-A-NEW-APP.md) (self-contained) and
    [dragon-sample-app](https://github.com/teddychan/dragon-sample-app) — the reference wiring for
    every module.
-2. Create an SPM executable app that depends on `dragon-kit` at a version tag
-   (pin the **newest** tag; §R10 fails a stale pin). Link `DragonKit`; add
-   `DragonKitUpdates` **only** for direct-download (non-Mac-App-Store) apps.
+2. Detect the product-build entry point before prescribing a dependency form: inspect the repo
+   root for `Package.swift`, Xcode project/workspace files, build scripts, and the release workflow.
+   For an ordinary SPM app, create an executable that depends on `dragon-kit` at the newest version
+   tag (§R10 fails a stale pin). Link `DragonKit`; add `DragonKitUpdates` only for direct-download
+   builds. For the existing KeyKey repo, retain its verified script build: `tools/build-app.sh`
+   compiles the product with `swiftc` and vendor-builds the pinned kit with SwiftPM; the nested
+   `Packages/*/Package.swift` files are test harnesses, not the product build.
 3. Build settings screens as `SettingsPane` conformers using `DragonForm` /
    `DragonSection` / `.dragonAnnotation`.
 4. Supply your app's **content/config** — `AboutContent`, `WhatsNewContent`, a settings
