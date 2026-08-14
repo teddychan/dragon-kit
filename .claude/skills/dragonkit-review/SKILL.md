@@ -52,7 +52,7 @@ clipmenu-2's sandboxed Mac App Store target links it alone and cannot carry Spar
 
 **Public API compatibility.** Diff the `public` surface. A removed or renamed symbol, a changed
 signature, a new non-defaulted parameter on a public initializer, or a new protocol requirement
-without a default breaks four downstream apps and forces a major tag. Ask whether the change
+without a default breaks all five downstream apps and forces a major tag. Ask whether the change
 could have been additive with a default instead. If it genuinely must break, the PR should say
 so.
 
