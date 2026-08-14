@@ -418,7 +418,7 @@ follow the link for the case.
 2. A rule that reads text rather than code reads comments → [§R1](#r1--the-lifecycle-menu-comes-from-dragonappmenu), [§R5](#r5--shared-panes-come-from-the-kit)
 3. An unanchored pattern matches the wrong dependency, silently → [§R10](#r10--the-dragonkit-pin-is-current)
 4. An indirection the rule cannot follow must be a violation, not a skip → [§R15](#r15--abouts-website-row-addresses-the-apps-canonical-page)
-5. A documented reservation is not an exception → [§R11](#ice-2s-r13-row-the-same-mistake-a-second-time)
+5. A documented reservation is not an exception → [§R11](#ice-2s-r13-row--the-same-mistake-a-second-time)
 6. The test can defend the bug → [§R10](#r10--the-dragonkit-pin-is-current)
 7. A rule with no incident behind it should say so rather than borrow one → [§R7](#r6-and-r7--why-both-are-deny-lists)
 
