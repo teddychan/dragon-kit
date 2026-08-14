@@ -286,15 +286,17 @@ all five apps — ice-2, clipmenu-2, spectacle-2, KeyKey and Dragon Sample App �
 from their own repository and run [`conformance.yml`](.github/workflows/conformance.yml) in their
 own CI, so re-implementing a kit module now fails a PR instead of passing review.
 
-Deferred, deliberately: a generalized **folder-based versioned backup** pane
-(versioned snapshot files of arbitrary app data, retention, restore list — the shape
-clipmenu-2 ships app-side). Generalize it here only when a second app (KeyKey / ice-2)
-needs that same shape; until then `DragonBackup` stays UserDefaults-suite-only.
+Approved migration debt: **backup unification**. Every app's target is DragonKit's
+`BackupSettingsPane` backed by `DragonBackup`. clipmenu-2's `SyncBackupPane` and ice-2's
+`IceBackupSettingsPane` remain only until their data and workflows are mapped safely, and the
+conformance rule keeps recognizing those two spellings until both migrations land — then the
+shared pane is enforced through the conformance triad. See [TechDebt.md](TechDebt.md).
 
-The settings pane's *own* user-picked folder now carries a security-scoped bookmark, so the
-folder it already had survives relaunch under App Sandbox. That is not this deferral being
-reversed: `DragonBackup` still snapshots one UserDefaults suite and still knows nothing about
-folders-as-a-shape.
+`DragonBackup` snapshots one UserDefaults suite today and knows nothing about folders-as-a-shape,
+so a capability those panes need — versioned snapshot files of arbitrary app data, retention, a
+restore list — is added once here as part of the migration, never preserved as an app-local
+exception. The settings pane's *own* user-picked folder already carries a security-scoped
+bookmark, so the folder it had survives relaunch under App Sandbox.
 
 ## License
 MIT.
