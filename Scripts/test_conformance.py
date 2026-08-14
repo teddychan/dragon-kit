@@ -399,6 +399,34 @@ struct Custom: View {
             tmp, extra={"Sources/Login.swift":
                         "import ServiceManagement\nlet x = SMAppService.mainApp\n"}), "R7",
             because="direct launch-at-login wiring")
+        # Neither rule can be inverted into a positive one — an app with `mac-app-store` links no
+        # updater, and an app may have no launch-at-login feature at all — so both are deny-lists,
+        # and a deny-list only knows the routes written into it. §R7 knew exactly two, and
+        # `import LoginServiceKit` (the login-item library ClipMenu's upstream used) walked past.
+        expect_violation("import LoginServiceKit", make_app(
+            tmp, extra={"Sources/Login.swift":
+                        "import LoginServiceKit\nfinal class L {}\n"}), "R7",
+            because="direct launch-at-login wiring")
+        expect_violation("the deprecated LSSharedFileList route", make_app(
+            tmp, extra={"Sources/Login.swift":
+                        "let list = LSSharedFileListCreate(nil, kLSSharedFileListSessionLoginItems"
+                        ", nil)\n"}), "R7",
+            because="direct launch-at-login wiring")
+        expect_violation("Sparkle 1.x's SUUpdater", make_app(
+            tmp, extra={"Sources/Up.swift": "final class U { let u = SUUpdater.shared() }\n"}),
+            "R6",
+            because="direct Sparkle use")
+        # ...anchored on `import` or a member access, never the bare name: ice-2 credits
+        # LaunchAtLogin in an About comment and in its generated acknowledgements, and matching the
+        # word alone would fail it for naming a library it does not use.
+        expect_pass("crediting a login library is not using one", make_app(
+            tmp, extra={"Sources/Credits.swift": """import DragonKit
+
+let attributions = [
+    Attribution(name: "LaunchAtLogin", license: "MIT"),
+    Attribution(name: "LoginServiceKit", license: "MIT"),
+]
+"""}))
 
         print("R8 — app must not own kit string keys")
         expect_violation("DragonKit.* key in app strings", make_app(
@@ -407,6 +435,17 @@ struct Custom: View {
         expect_violation("kit menu title used as a key", make_app(
             tmp, strings=COMPLIANT_STRINGS + '"Check for updates…" = "Rechercher…";\n'), "R8",
             because="a kit-owned menu title")
+        # Omitting the glob disabled the rule outright: the loop had nothing to iterate and the app
+        # passed by giving the checker no work to do — the same shape as deleting the config, which
+        # §R0 makes a violation for exactly this reason.
+        expect_violation("no 'strings' at all disables the rule", make_app(
+            tmp, config_over={"strings": []}), "R8",
+            because="declares no 'strings'")
+        expect_pass("...and that is what §R11 is for", make_app(
+            tmp, locales=(), config_over={"strings": [], "exceptions": [{
+                "rule": "R8",
+                "reason": "String Catalogs, so there is no .strings file to read keys from",
+                "sanctionedBy": "CONFORMANCE.md §R11"}]}))
 
         print("R9 — pane order")
         bad_order = COMPLIANT_PANES.replace(
@@ -478,6 +517,12 @@ enum SettingsNavigationIdentifier: String {
             tmp, panes=panes_with_backup_named("SyncBackupPane()", ahead_of_permissions=True)), "R9",
             because="settings pane order is")
 
+        # Same hole on the other side of the config. The sidebar order is canon that changes the
+        # UI of every Dragon app at once, and an app that named no file simply wasn't checked.
+        expect_violation("no 'paneOrder' at all disables the rule", make_app(
+            tmp, config_over={"paneOrder": {}}), "R9",
+            because="declares no 'paneOrder'")
+
         print("R10 — pin must be current")
         expect_violation("stale pin", make_app(tmp, package=(
             '.package(url: "https://github.com/teddychan/dragon-kit", from: "0.0.1"),\n')), "R10",
@@ -548,6 +593,27 @@ struct MyBackupSection: View {
                 "rule": "R4", "path": "Sources/SyncBackupPane.swift",
                 "reason": "iCloud sync + versioned folder backup; DragonBackup is suite-only",
                 "sanctionedBy": "CONFORMANCE.md R11 table"}]}))
+        # §R11 has required `reason` and `sanctionedBy` since it was written and nothing checked
+        # either: an entry with neither suppressed its rule just as effectively, and the run
+        # printed `NO REASON GIVEN` beside it without failing. It now guards a live exception.
+        expect_violation("an exception with no reason", make_app(
+            tmp, config_over={"exceptions": [{
+                "rule": "R4", "path": "Sources/SyncBackupPane.swift",
+                "sanctionedBy": "CONFORMANCE.md R11 table"}]}), "R11",
+            because="declares no 'reason'")
+        expect_violation("an exception with no owner", make_app(
+            tmp, config_over={"exceptions": [{
+                "rule": "R4", "path": "Sources/SyncBackupPane.swift",
+                "reason": "iCloud sync + versioned folder backup"}]}), "R11",
+            because="declares no 'sanctionedBy'")
+        # The §R11 table's own recorded mistake, machine-checked: five sanctions sat there for
+        # months naming rules that never fired on the apps they were written for. A row naming a
+        # rule the checker cannot suppress reads as a live sanction and sanctions nothing.
+        expect_violation("an exception for a rule that cannot fire", make_app(
+            tmp, config_over={"exceptions": [{
+                "rule": "R2", "reason": "the IMK menu is assembled by macOS",
+                "sanctionedBy": "CONFORMANCE.md §R11"}]}), "R11",
+            because="not a rule this checker can suppress")
 
         print("R12 — the build stamps DragonCommitDate")
         # About shows no timestamp at all when the key is absent — deliberately, since a silent
@@ -563,6 +629,16 @@ struct MyBackupSection: View {
         expect_pass("stamped via a placeholder in Info.plist", make_app(
             tmp, build="# stamped by the release workflow\n",
             extra={"Info.plist": "<key>DragonCommitDate</key><string></string>\n"}))
+        # The rule accepted the key appearing *anywhere* in the build surface, so a note in a
+        # script's header comment satisfied it while nothing wrote the key — and two of the five
+        # apps have exactly such a comment, next to a real stamp that was doing the work.
+        expect_violation("the key named in a comment is not a stamp", make_app(
+            tmp, build="""#!/bin/bash
+# Stamps CFBundleVersion, and should stamp DragonCommitDate too.
+# TODO: DragonCommitDate once the release workflow lands.
+BUILD="$(git rev-list --count HEAD)"
+"""), "R12",
+            because="no build step stamps")
         expect_violation("declared buildFiles that don't stamp it", make_app(
             tmp, build='PlistBuddy -c "Set :DragonCommitDate $D" Info.plist\n',
             config_over={"buildFiles": ["Package.swift"]}), "R12",
