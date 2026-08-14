@@ -36,16 +36,22 @@ KIT_OWNED_LITERAL_KEYS = [
 CANONICAL_PANE_SLOTS = [
     ("General", ("GeneralPane", "general")),
     ("Permissions", ("PermissionsSettingsPane", "PermissionsPane", "permissions")),
-    # `SyncBackupPane`/`syncBackup` is clipmenu-2's own backup pane — a sanctioned deferral
-    # (iCloud sync + versioned folder backup, because DragonBackup is UserDefaults-suite only),
-    # carried by this slot rather than by an §R11 exception, which it never needed.
-    # Without those spellings the slot was never *seen* for the one app that diverges — and R9
-    # compares only the slots it saw, so clipmenu-2's backup pane could sit anywhere in the
-    # order and the rule still printed PASS. Verified: `\bbackup\b` does not match
-    # `SyncBackupPane` (no word boundary, wrong case), and clipmenu-2 passed R9 with this slot
-    # entirely unchecked. A checker that silently skips the app it exists to check is exactly
-    # the failure this spec was written to prevent.
-    ("Backup", ("BackupSettingsPane", "backup", "SyncBackupPane", "syncBackup")),
+    # `SyncBackupPane` (clipmenu-2) and `IceBackupSettingsPane` (ice-2) are the two apps' own
+    # backup panes — approved migration debt, not a design choice, tracked in TechDebt.md and
+    # carried by this slot rather than by an §R11 exception, which neither needed.
+    # Without those spellings the slot was never *seen* for an app that diverges — and R9
+    # compares only the slots it saw, so the backup pane could sit anywhere in the order and the
+    # rule still printed PASS. Verified: `\bbackup\b` does not match `SyncBackupPane` (no word
+    # boundary, wrong case), and clipmenu-2 passed R9 with this slot entirely unchecked. A
+    # checker that silently skips the app it exists to check is exactly the failure this spec
+    # was written to prevent.
+    # `IceBackupSettingsPane` was missing here while README.md and TechDebt.md both stated it was
+    # recognized. ice-2's slot happens to be seen anyway — its `paneOrder` file is an enum with
+    # `case backup` — so nothing failed, and the hole was one refactor away: naming pane types
+    # there instead would have taken ice-2's Backup slot silently unchecked, exactly as
+    # clipmenu-2's was. Both spellings go when the migrations land (TechDebt.md).
+    ("Backup", ("BackupSettingsPane", "backup", "SyncBackupPane", "syncBackup",
+                "IceBackupSettingsPane", "iceBackup")),
     ("What's New", ("WhatsNewSettingsPane", "WhatsNewPane", "whatsNew")),
     ("Updates", ("UpdatesSettingsPane", "updates")),
     ("About", ("AboutSettingsPane", "AboutPane", "about")),

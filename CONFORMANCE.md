@@ -244,9 +244,11 @@ General and Permissions are fine.
 
 Each slot is matched on the **pane identifier**, never on its display title — so a slot is
 satisfied by `BackupSettingsPane` (which the kit titles "Backup & Restore") or by a recognized
-app-specific spelling in the same position. For example, clipmenu-2 ships `SyncBackupPane`
-("Sync & Backup") in the Backup slot. This is an R9 slot spelling, not an R11 exception. The
-canon line names what the kit itself ships rather than every recognized identifier.
+app-specific spelling in the same position. The Backup slot recognizes clipmenu-2's
+`SyncBackupPane` and ice-2's `IceBackupSettingsPane`, both of which are R9 slot spellings and not
+R11 exceptions. Both go when those two apps migrate to `BackupSettingsPane` + `DragonBackup` — see
+[TechDebt.md](TechDebt.md); they are migration debt, not a supported difference. The canon line
+names what the kit itself ships rather than every recognized identifier.
 
 **Rationale:** the canon line used to read "Sync & Backup" — clipmenu-2's name for it — while
 the kit's own pane is titled "Backup & Restore" and the checker's slot spellings recognized
@@ -254,6 +256,12 @@ only `BackupSettingsPane`/`backup`. So the one app whose pane is named different
 slot **silently unchecked**: `\bbackup\b` doesn't match `SyncBackupPane`, R9 compares only the
 slots it actually saw, and clipmenu-2 passed with its backup pane free to sit anywhere in the
 order. Three names for one slot, and the gap was in the app the rule most needed to cover.
+
+`IceBackupSettingsPane` was added later, on the same reasoning: `README.md` and `TechDebt.md`
+both stated the rule recognized it and the slot did not name it. Nothing failed, because ice-2
+drives its sidebar from an enum whose `case backup` matches — but that made the hole one refactor
+away from live. A rule that happens to be satisfied by an unrelated detail of one app's spelling
+is not a rule that is checking that app.
 
 ## R10 — The DragonKit pin is current
 

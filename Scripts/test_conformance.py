@@ -612,6 +612,17 @@ enum SettingsNavigationIdentifier: String {
         expect_violation("app's own SyncBackupPane, ahead of Permissions", make_app(
             tmp, panes=panes_with_backup_named("SyncBackupPane()", ahead_of_permissions=True)), "R9",
             because="settings pane order is")
+        # ice-2's spelling, which README.md and TechDebt.md both stated was recognized and which
+        # was not in the slot at all. ice-2's own Backup slot is seen anyway — its `paneOrder` file
+        # is an enum with `case backup` — so nothing failed and nothing would have, until a
+        # refactor to naming pane types there took the slot silently unchecked, exactly as
+        # clipmenu-2's was.
+        expect_pass("app's own IceBackupSettingsPane, in the canonical slot", make_app(
+            tmp, panes=panes_with_backup_named("IceBackupSettingsPane()")))
+        expect_violation("app's own IceBackupSettingsPane, ahead of Permissions", make_app(
+            tmp, panes=panes_with_backup_named("IceBackupSettingsPane()",
+                                               ahead_of_permissions=True)), "R9",
+            because="settings pane order is")
 
         # Same hole on the other side of the config. The sidebar order is canon that changes the
         # UI of every Dragon app at once, and an app that named no file simply wasn't checked.
