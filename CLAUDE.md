@@ -29,9 +29,14 @@ depending on, and keep it from breaking five apps at once.
 | `Tests/DragonKitUpdatesTests/` | swift-testing suites for the Sparkle-backed target. Separate on purpose: keeping Sparkle out of the core test target is what keeps the two-product split honest. |
 | `Tests/*/HostWiringTests.swift` | The host-app integration fixture: assembles the shared panes and configs from a plain, non-`@testable` import, in both link shapes. Replaced `sample-app/`'s build — see [Verify before claiming done](#verify-before-claiming-done). |
 | `CONFORMANCE.md` + `Scripts/dragon-conformance.py` + `Scripts/test_conformance.py` | The rules apps are held to, their implementation, and the tests for that implementation. |
+| `docs/CONFORMANCE-INCIDENTS.md` | Why each rule is shaped the way it is — the incident behind it. Non-normative. |
 | `.github/workflows/conformance.yml` | Reusable workflow all five apps call from their own CI. |
 
-`Example/` is not tracked; it is leftover build output from an earlier sample-app layout. Ignore it.
+`sample-app/` is **not tracked** — it is leftover build output (`.build/`, `Package.resolved`) from
+when Dragon Sample App lived here, and `.gitignore` still names it. Nothing builds it and it is not
+the in-tree app that [`docs/MAC-APP-RELEASE-LIFECYCLE.md`](docs/MAC-APP-RELEASE-LIFECYCLE.md)
+prohibits. Ignore it; do not commit it, and do not mistake it for a reference — the reference app is
+[dragon-sample-app](https://github.com/teddychan/dragon-sample-app).
 
 ### The KeyKey host and build boundary
 
@@ -47,9 +52,10 @@ At runtime, macOS hosts the input-source menu and KeyKey supplies it from
 then retargets them to `@objc` selectors on `InputController` because IMK dispatches top-level
 selections back to the controller. Settings uses the shared DragonKit window and panes. Quit and
 Uninstall are absent from the IMK menu; Uninstall is the last Settings pane. The implemented
-uninstaller clears configured defaults/files, moves the running bundle to Trash, and terminates,
-but has no TIS deregistration hook. Removing the input source in System Settings and logging out
-when needed remain separate user steps.
+uninstaller clears configured defaults/files, moves the running bundle to Trash, conditionally
+clears its Homebrew receipt, and terminates — but has **no TIS deregistration hook**. Removing the
+input source in System Settings and logging out when needed remain separate user steps; do not
+document automatic TIS cleanup unless an implementation adds and verifies it.
 
 ## Non-negotiables
 
@@ -74,8 +80,12 @@ order, titles, casing, ellipses and SF Symbols. Uninstall is deliberately absent
 there is no flag to put it back. The settings sidebar order is:
 
 ```
-General → (the app's own panes) → Permissions → Backup & Restore → What's New → Updates → About → Uninstall
+General → (the app's own panes) → Permissions (when applicable) → Backup & Restore → What's New → Updates → About → Uninstall
 ```
+
+That string is canon and **`CONFORMANCE.md` §R9 owns it** — quote it, don't paraphrase it.
+`Permissions (when applicable)` is part of the canon: §R5 makes that pane conditional on the
+`no-permissions` trait, and yahoo-keykey-2 ships without it.
 
 Changing any of this changes the UI of every Dragon app simultaneously, so it moves together
 with `README.md`, `CONFORMANCE.md` and the tests — or not at all.
@@ -92,45 +102,38 @@ Credits: Created by · Based on* · Built with → DragonKit vX.Y.Z · License �
 ```
 
 `*` optional slots — and there are only two left, both of them the *pair* an app either has or
-doesn't. 4.0.0 closed the gaps *between* the slots, after a screenshot comparison found the same
-drift living there: `licensesURL` is **required** (spectacle-2 and the sample app listed
-`Sparkle → MIT` in Credits with no notices page), and the upstream repository lives **inside**
-`OriginalWork`, so the `Original project` link and the `Based on` credit are one value that cannot
-half-ship (clipmenu-2 and ice-2 both credited an upstream the pane never linked). The copyright
-names **one holder — the app's own**; the dual-holder `© 2008–2014 Naotaka Morimoto · © 2026 Teddy
-Chan` form is gone. It is a plain `String`, so the compiler can't close it — **CONFORMANCE §R14**
-does.
+doesn't. 4.0.0 closed the gaps *between* the slots after a screenshot comparison found the same
+drift living there, and **it closed them in the signature rather than with a rule**: `licensesURL`
+became required, and the upstream repository moved **inside** `OriginalWork` so the `Original
+project` link and the `Based on` credit are one value that cannot half-ship. Prefer that move every
+time — a required parameter or two fields folded into one type is caught by the app's own build,
+where a rule is caught a day later in five CIs.
 
-That last one is **a rule about a presentation slot, not about who holds a copyright**, and the
-distinction was learned the hard way: the first draft justified it by claiming a Dragon app
-reimplements its upstream rather than reusing its source and so has no upstream copyright to
-assert. True of yahoo-keykey-2, false of both apps it touched — ice-2 is a GPL-3.0 *fork* whose §4
-requires the upstream notice to travel, and clipmenu-2's `LICENSE` names two holders. Don't
-reinstate that reasoning, and don't let this rule near a legal notice: `LICENSE` and the licences
-page are out of scope, and they are where the upstream holder is named — ice-2's `LICENSE` carries
-Jordan Baird in the GPL's own notice template. Lineage inside the pane is `OriginalWork`'s job,
-twice. `NSHumanReadableCopyright` is **not** where §4 is satisfied: it's an optional Apple key no
-licence names, three apps shipped without it, and all five now set it to `© 2026 Teddy Chan` to
-match About — ice-2 last, in 2.14.7. The kit neither reads nor requires it.
+The one slot a signature *cannot* close is `copyright:`, because it is a plain `String`. That is
+why it gets **CONFORMANCE §R14** instead. Before you touch §R14 or write anything nearby, read
+[Incidents §R14](docs/CONFORMANCE-INCIDENTS.md#r14--the-about-copyright-is-kit-assembled-and-names-one-holder):
+it records a legal justification that was written into the rule once, was wrong on the facts for
+two of the five apps, and must not be reinstated. Short version — it is a rule about a presentation
+slot, not about who holds a copyright; `LICENSE`, the licences page and `NSHumanReadableCopyright`
+are all out of scope.
 
-`<channel>` is `DragonBuildChannel` from the bundle — `Debug` for a local
-build, absent for a release one, so a release renders exactly as it did before the key existed.
-It is the only sanctioned way to show `Debug`: per
-[`docs/MAC-APP-RELEASE-LIFECYCLE.md`](docs/MAC-APP-RELEASE-LIFECYCLE.md) the word must never enter
-`CFBundleShortVersionString`, which stays the numeric candidate `X.Y.Z` that the release tag is
-asserted against. Link detail text is *derived* from the URL, never typed beside it, and the
-website must address the canonical `dragonapp.com/{app-name}-{major}` page — the same string as
-the support row's repo, which is how `websiteMatchesSupportRepo` checks one against the other.
-That property is only reachable from a constructed `AboutContent`, so only two apps asserted it;
-**CONFORMANCE §R15** now reads both literals per app, and dragon-sample-app — which has no public
-page — holds the one live §R11 exception.
+`<channel>` is `DragonBuildChannel` from the bundle — `Debug` for a local build, absent for a
+release one, so a release renders exactly as it did before the key existed. It is the only
+sanctioned way to show `Debug`; the word must never enter `CFBundleShortVersionString`. See
+[`docs/MAC-APP-RELEASE-LIFECYCLE.md`](docs/MAC-APP-RELEASE-LIFECYCLE.md), which owns that rule.
+
+Link detail text is *derived* from the URL, never typed beside it, and `websiteMatchesSupportRepo`
+checks the Website row against the Support row's repo name (**CONFORMANCE §R15**).
 
 **Attributions are `name → licence`** — `Sparkle → MIT`, `OpenCC → Apache-2.0`. Never a role
 label: clipmenu-2 wrote `Sparkle → MIT` while the sample app wrote `Update framework → Sparkle
 (MIT)` within a day of 3.0.0, in the one slot still app-supplied. The field names carry the rule,
 which is why `Attribution(component:source:)` is deprecated in favour of `init(name:license:)`.
+DragonKit itself is never an attribution — the kit writes its own `Built with` row.
 
-`AboutCanonTests` pins all of it.
+`AboutCanonTests` pins all of it. Note what it *cannot* pin: the kit's tests assert what the kit
+assembles, so they cannot see that two apps left an optional slot nil. **Five screenshots side by
+side is what has found every round of About drift**, including 4.0.0's.
 
 **Never hardcode a version, and always show it with a `v`.** The app's version is read from
 `Info.plist` (`CFBundleShortVersionString`); `DragonAbout.versionString()` is the shared helper.
@@ -150,10 +153,18 @@ only written down is exactly the failure this spec exists to prevent — documen
 stop any of the drift that motivated it, and the design spec even mandated one of the drifted
 items.
 
-A broken checker is worse than no checker: it passes everything silently. Two specific traps
-recorded in the spec — an unanchored version regex matches whichever dependency appears first
-in the file (it matched Sparkle's version in ice-2's `.pbxproj`), and deleting
-`.dragon-conformance.json` must itself be a violation.
+A broken checker is worse than no checker: it passes everything silently. Before writing or
+relaxing a rule, read [`docs/CONFORMANCE-INCIDENTS.md`](docs/CONFORMANCE-INCIDENTS.md) — most of
+the mistakes recorded there are mistakes about *rule design*, not about apps, and its closing
+section collects them as a checklist. The two shortest ones: an unanchored version regex matches
+whichever dependency appears first in the file, and anything a rule cannot read must be a
+violation rather than a skip.
+
+Rule numbers are not first-come. **Check open PRs for the next `R` number before claiming one** —
+`gh pr list --state open` and grep the diffs for `## R`. Two branches will happily take the same
+number, each `test_conformance.py` passes in isolation, and the collision only appears after the
+second merge. Renumbering needs no kit tag: a rule number is documentation plus a violation label,
+not public Swift API.
 
 ## Conventions
 
@@ -179,10 +190,12 @@ something else; do flag a PR that contradicts the recorded decision or skips its
 - **The reusable conformance workflow is pinned `@main` on purpose.** It reads the kit's default
   branch anyway, so a tag pin would freeze the interface while the rules moved.
 - **The `exceptions` in CONFORMANCE §R11 are sanctioned**, each with a reason and an owner — and
-  the registry is **what the apps declare**, never what prose here or in §R11 describes. One entry
-  exists across all five (dragon-sample-app's R15). An empty list means only that no divergence is
-  sanctioned: it is not evidence the app was checked, or that it conforms. Say *not currently
-  verified* when you have not run the checker against current source.
+  the registry is **what the apps declare**, never what prose here or in §R11 describes. An empty
+  list means only that no divergence is sanctioned: it is not evidence the app was checked, or that
+  it conforms. Say *not currently verified* when you have not run the checker against current
+  source, and read the apps' config files when you need to know what is actually declared. Do not
+  record a headcount here — a copy of the registry in prose is how §R11 acquired five phantom
+  sanctions that sat live for months.
 - **`Tests/*/HostWiringTests.swift` import the kit plainly, not `@testable`.** They stand in for a
   host app, and an app sees only the public surface — `@testable` would let a public-API break
   pass there while breaking five apps.

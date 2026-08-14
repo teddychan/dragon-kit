@@ -4,10 +4,10 @@
 
 **Status:** Approved target; app migration and machine enforcement deferred.
 
-The shared Settings information architecture is:
+The shared Settings information architecture is the canon owned by `CONFORMANCE.md` §R9:
 
 ```text
-General → app-owned panes → Permissions (when applicable) → Backup & Restore → What's New → Updates → About → Uninstall
+General → (the app's own panes) → Permissions (when applicable) → Backup & Restore → What's New → Updates → About → Uninstall
 ```
 
 The host controls its app-owned panes and whether its capabilities require

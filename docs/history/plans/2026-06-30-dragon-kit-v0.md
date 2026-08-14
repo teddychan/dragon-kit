@@ -28,7 +28,7 @@
 
 **Tech Stack:** Swift 6.1, SwiftUI + AppKit, SwiftPM, swift-testing, macOS 26 deployment target. Repo: `~/git/dragon-kit` (local; public `teddychan/dragon-kit` pushed only after v0 builds green).
 
-**Reference spec:** `docs/superpowers/specs/2026-06-30-dragon-kit-v0-template-design.md`
+**Reference spec:** `docs/history/specs/2026-06-30-dragon-kit-v0-template-design.md`
 
 **Conventions:** Commit as `teddychan <teddychan@gmail.com>` (repo already configured). End each commit message with `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`. Run all `swift` commands from `~/git/dragon-kit` unless noted.
 

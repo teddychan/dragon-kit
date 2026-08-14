@@ -1,6 +1,7 @@
 # Documentation rule-conflict changelog
 
-**Review checkpoint:** 2026-08-13
+**Status: CLOSED — archive.** No entries are being added. Review checkpoint 2026-08-13; all seven
+decisions re-checked against the normative documents on 2026-08-15 and all seven still hold.
 
 **Scope:** documentation changes only; entry 7 records read-only KeyKey implementation evidence
 
@@ -9,6 +10,12 @@ shared UI ownership, entry 5 fixes Debug identity, entry 6 records the app-repos
 release-ownership boundary, and entry 7 records KeyKey's verified integration topology. It is
 intentionally separate from the normative rules so a reviewer can evaluate what changed, why it
 changed, and whether the ownership boundary is correct.
+
+**It is not a rule and it does not override one.** Where a decision below and a normative document
+differ, [`../CONFORMANCE.md`](../CONFORMANCE.md) or
+[`MAC-APP-RELEASE-LIFECYCLE.md`](MAC-APP-RELEASE-LIFECYCLE.md) wins and this file is stale. A later
+doc-conflict pass should open a new register rather than extend this one, so each pass stays
+readable as the record of one review.
 
 ## Decision summary
 
@@ -141,27 +148,21 @@ BEFORE CONTINUING**. That review included the resulting corrections:
   guidance as previous guidance; and
 - described `SyncBackupPane` as an R9 slot spelling rather than an R11 exception.
 
-## Files in this review
+## Files that carried these changes
 
-Tracked across these documentation-conflict changes:
+The decisions above landed across `README.md`, `CONFORMANCE.md`,
+[`MAC-APP-RELEASE-LIFECYCLE.md`](MAC-APP-RELEASE-LIFECYCLE.md),
+[`STARTING-A-NEW-APP.md`](STARTING-A-NEW-APP.md),
+[`ADOPT-DRAGONKIT-PROMPT.md`](ADOPT-DRAGONKIT-PROMPT.md),
+[`IMPLEMENT-MAC-APP-RELEASE-LIFECYCLE-PROMPT.md`](IMPLEMENT-MAC-APP-RELEASE-LIFECYCLE-PROMPT.md),
+`docs/images/doc-rule-conflicts/*.png`, and the archival banners now indexed by
+[`history/README.md`](history/README.md).
 
-- `docs/ADOPT-DRAGONKIT-PROMPT.md`
-- `docs/DOC-RULE-CONFLICT-CHANGELOG.md`
-- `docs/STARTING-A-NEW-APP.md`
-- `docs/images/doc-rule-conflicts/*.png`
-- `README.md`
-- `CONFORMANCE.md`
-- `docs/MAC-APP-RELEASE-LIFECYCLE.md`
-- `docs/IMPLEMENT-MAC-APP-RELEASE-LIFECYCLE-PROMPT.md`
-- historical `docs/superpowers/` plans and specifications that require archival banners
-
-The matching Liquid Glass wording was updated locally in these external skill files, which are not
-part of the `dragon-kit` Git repository:
-
-- `~/.claude/skills/liquid-glass-macos/SKILL.md`
-- `~/.claude/skills/liquid-glass-macos/references/swiftui-recipes.md`
-- `~/.claude/skills/liquid-glass-macos/references/per-app-specs.md`
-- `~/.claude/skills/liquid-glass-macos/assets/doc-rule-conflicts/*.png`
+The matching Liquid Glass wording was updated in `~/.claude/skills/liquid-glass-macos/`
+(`SKILL.md`, `references/swiftui-recipes.md`, `references/per-app-specs.md`, and the mirrored
+`assets/doc-rule-conflicts/*.png`). Those files are **not part of this Git repository** and can
+drift from it without any CI noticing — which is why entry 1's ownership boundary is restated
+inside the skill itself rather than only here.
 
 ## Review boundaries
 

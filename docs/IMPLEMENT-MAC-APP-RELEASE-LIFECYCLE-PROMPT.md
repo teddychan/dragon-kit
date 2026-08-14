@@ -8,6 +8,14 @@ an app or app-release infrastructure to the DragonKit repository.
 Paste the block below into a fresh implementation session. The accepted lifecycle spec, not prior
 chat memory or historical release documents, is authoritative.
 
+> **Maintainers:** this prompt restates rules because it is pasted where this repository is absent.
+> The duplication is derived, never authoritative.
+>
+> <!-- MIRRORS: MAC-APP-RELEASE-LIFECYCLE (repository boundary, tag namespace, Debug identity, tag gate) -->
+>
+> A change to any mirrored rule must update this file and
+> [`ADOPT-DRAGONKIT-PROMPT.md`](ADOPT-DRAGONKIT-PROMPT.md) in the same PR.
+
 ---
 
 ```text

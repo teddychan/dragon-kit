@@ -32,7 +32,7 @@ accessory apps, and a localization helper.
   site refreshes independently afterward. Every app—including Dragon Sample App—uses an exact
   `vX.Y.Z` public tag. One repository owns one public version series; never invent a Debug,
   Sample, App Store, or other channel-specific tag prefix.
-- The dated records under `docs/superpowers/` are historical rationale only. Do not use them as
+- The dated records under `docs/history/` are historical rationale only. Do not use them as
   implementation instructions; use this guide, `CONFORMANCE.md`, the release-lifecycle document,
   and the external Dragon Sample App instead.
 
@@ -169,9 +169,8 @@ Credits: Created by · Based on* · Built with → DragonKit vX.Y.Z · License �
 Six rules the type carries, each because an app got it wrong:
 
 - **`websiteURL` must address `dragonapp.com/{app-name}-{major}`, the same string as
-  `supportURL`'s repo name** — `content.websiteMatchesSupportRepo` checks one against the other,
-  so pick a repo name that carries the major (`my-app-1`) and reuse it in both. CONFORMANCE §R15
-  fails a PR that gets it wrong, reading both literals out of this file.
+  `supportURL`'s repo name** — so pick a repo name that carries the major (`my-app-1`) and reuse it
+  in both. CONFORMANCE §R15 fails a PR that gets it wrong, reading both literals out of this file.
 - **Never type the detail text beside a link.** `AboutLinkDetail` derives it from the URL, so a
   typed string can't disagree with where the row goes.
 - **The upstream project is one value, not two.** `OriginalWork` carries the repository URL, so
@@ -183,14 +182,16 @@ Six rules the type carries, each because an app got it wrong:
   Dragon app links Sparkle or bundles third-party data, so the row belongs on all of them —
   publish `dragonapp.com/{app-name}-{major}/licenses/` as part of shipping the app.
 - **The copyright names one holder** — the app's own, via `DragonAbout.copyright(years:holder:)`.
-  This is a presentation rule about a settings-pane header, **not** a claim that your app has no
-  upstream copyright to carry: keep the upstream notice in `LICENSE` and on the licences page
-  exactly as your licence requires (ice-2, a GPL-3.0 fork, names Jordan Baird in `LICENSE` using
-  the GPL's own notice template). Inside the pane, lineage is `OriginalWork`'s job.
-  `NSHumanReadableCopyright` is an optional Apple key that no licence names — it draws a line in
-  Finder's Get Info panel, so set it to the same single-holder string About renders, `© <year>
-  <holder>`, and don't treat it as the place a licence obligation is met. CONFORMANCE §R14 rejects
-  a hand-typed string here.
+  CONFORMANCE §R14 rejects a hand-typed string here. This is a presentation rule about a
+  settings-pane header, **not** a claim that your app has no upstream copyright to carry: keep the
+  upstream notice in `LICENSE` and on the licences page exactly as your licence requires, and
+  inside the pane leave lineage to `OriginalWork`. Read
+  [Incidents §R14](CONFORMANCE-INCIDENTS.md#r14--the-about-copyright-is-kit-assembled-and-names-one-holder)
+  before writing anything about copyright near this call — the distinction has been got wrong here
+  once, in a way that was legally wrong for two of the five apps.
+  *Convention, not a rule:* Dragon apps also set `NSHumanReadableCopyright` to the same
+  single-holder string, so Finder's Get Info panel agrees with About. Nothing in DragonKit reads or
+  requires that key, and §R14 does not check it.
 - **An attribution is `name → licence`**, never a role label: `Attribution(name: "Sparkle",
   license: "MIT")`, not `Attribution(name: "Update framework", license: "Sparkle (MIT)")`.
   Use the SPDX identifier when the component declares one, otherwise the upstream wording
@@ -516,9 +517,10 @@ private struct SettingsRoot: View {
 }
 ```
 
-> Pane order matters: `General → (your panes) → Permissions → Backup & Restore → What's New →
-> Updates → About → Uninstall` is canon and §R9 checks it. The scaffold ships five of those
-> slots in that relative order; slot Backup & Restore and Updates in as you add them.
+> Pane order matters: `General → (your panes) → Permissions (when applicable) → Backup & Restore →
+> What's New → Updates → About → Uninstall` is canon and §R9 checks it — that section owns the
+> string. The scaffold ships five of those slots in that relative order; slot Backup & Restore and
+> Updates in as you add them.
 >
 > Swap `.accessibility()` for the permission your app actually needs. If it genuinely needs
 > none — an IME receives keystrokes via the IMK server, for instance — drop the pane and add
@@ -743,13 +745,15 @@ evaluated. (CONFORMANCE §R0 annotates the schema in prose; that listing is not 
 }
 ```
 
-- **`pin.pattern` must anchor on `dragon-kit`.** The pattern is one search over the whole file, so
-  an unanchored version regex matches whichever dependency appears first. That is a live trap, not
-  a hypothetical — in ice-2's `.pbxproj` it matched Sparkle's version and reported a false PASS.
+- **`pin.pattern` must anchor on `dragon-kit`** (§R10). The pattern is one search over the whole
+  file, so an unanchored version regex matches whichever dependency appears first and reports a
+  false PASS on a stale pin — [Incidents §R10](CONFORMANCE-INCIDENTS.md#r10--the-dragonkit-pin-is-current)
+  has the case that found it.
 - **`traits`** — add `"sparkle"` when you link `DragonKitUpdates` (and then §R5 requires
   `UpdatesSettingsPane`), `"mac-app-store"` for a sandboxed target, `"no-permissions"` if the app
   genuinely needs no TCC grant.
-- **`exceptions`** — §R11; each needs a `reason` and a `sanctionedBy`.
+- **`exceptions`** — §R11; each needs a `reason` and a `sanctionedBy`. Leave it empty until a rule
+  genuinely fires: a trait or a §R9 slot spelling is how a *structural* difference gets declared.
 
 ### `.github/workflows/conformance.yml`
 ```yaml
