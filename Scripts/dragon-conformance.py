@@ -81,15 +81,28 @@ DEFAULT_BUILD_FILES = [
 # a script's header comment, which two apps have — satisfied it while nothing wrote the key.
 # An empty `<key>DragonCommitDate</key>` placeholder is deliberately still accepted: ice-2 ships
 # one and the release workflow fills it, which is a real stamping route and not a TODO.
+# It is a CLOSED list, and CONFORMANCE.md §R12 says so — a correct stamp written some other way
+# is a violation, with §R11 as the route. Presenting it descriptively while enforcing it as a
+# whitelist would be a rule documented more broadly than it is enforced, which is the failure this
+# spec exists to prevent. The last entry is why it needed widening at all: a `plistlib` or Ruby
+# `plist` stamper assigns to the key rather than shelling out, and both genuinely write it.
 COMMIT_DATE_STAMPS = [
     r"(?:Set|Add)\s+:DragonCommitDate",          # PlistBuddy, which four of the five apps use
     r"<key>\s*DragonCommitDate\s*</key>",        # an Info.plist entry or placeholder
     r"INFOPLIST_KEY_DragonCommitDate",           # an Xcode build setting
     r"plutil[^\n]*DragonCommitDate",
     r"defaults\s+write[^\n]*DragonCommitDate",
+    r"""\[\s*["']DragonCommitDate["']\s*\]\s*=""",   # plistlib / Ruby plist: pl["…"] = date
 ]
 # The rules an §R11 exception can actually suppress, which is what makes one meaningful (R11).
-EXCUSABLE_RULES = {"R1", "R3", "R4", "R5", "R6", "R7", "R8", "R9", "R12", "R13", "R14", "R15"}
+# Contiguous now that R2 reads its own key; R0, R10 and R11 are not suppressible by design.
+EXCUSABLE_RULES = ["R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8", "R9",
+                   "R12", "R13", "R14", "R15"]
+# …and of those, the ones only ever consulted app-wide. A `path` on one of these reads as a live,
+# scoped sanction and suppresses nothing — the same defect class as naming a rule that never
+# fires, which §R11 already rejects. R15 is deliberately absent: it is consulted both ways, and
+# dragon-sample-app's live exception is path-scoped.
+APP_WIDE_ONLY_RULES = {"R5", "R8", "R9", "R12"}
 
 
 @dataclass
@@ -177,6 +190,11 @@ def strip_literals(line: str) -> str:
     return re.sub(r'"[^"\n]*"', '""', line)
 
 
+# A Swift raw-string opener: one or more `#`, then `"""` or `"`. `#if` and `#available` do not
+# match, because the hashes must be followed immediately by a quote.
+RAW_STRING_OPEN = re.compile(r'(#+)("""|")')
+
+
 def mask_noncode(text: str, *, blank_literals: bool = True) -> str:
     """A copy of `text` with comment text — and, by default, string-literal *contents* — blanked.
 
@@ -204,9 +222,20 @@ def mask_noncode(text: str, *, blank_literals: bool = True) -> str:
     grounds that no app wrote one in the wiring these rules read — but skipping it cut both ways:
     `/* LanguagePicker() */` was a false §R13 violation, and a block comment was an unread route
     past every rule that strips only `//`.
+
+    **Raw strings are the same trap as a multi-line string, and they are
+    already in shipping source** — eight files in ice-2, two in spectacle-2. Without the `#`
+    delimiter the leading `"` opened a *plain* literal, the raw string's inner quotes re-paired,
+    and an odd number of them left the scanner inside a literal to end of file. Both directions
+    were reproducible on ice-2's real `AboutConfig.swift`: one raw string above the construction
+    blanked it and reported a conforming app for having no About pane at all (§R15 "cannot read
+    'websiteURL:'"), and one above a hand-rolled `NSMenuItem(title: "Check for Updates…")` hid a
+    genuine §R1 violation. No `\\` escape processing happens inside one, because `\\#(…)` is the
+    interpolation form and a lone `\\` is literal there.
     """
     out = list(text)
-    inside: str | None = None  # the delimiter that opened the literal we are in
+    inside: str | None = None  # the closing delimiter of the literal we are in
+    raw = False                # …and whether it is a raw string, where \\ escapes nothing
     depth = 0                  # nesting depth of /* … */, which Swift allows
     index = 0
     while index < len(text):
@@ -224,10 +253,15 @@ def mask_noncode(text: str, *, blank_literals: bool = True) -> str:
             index += 2
             continue
         if inside is None:
-            if text.startswith('"""', index):
-                inside, index = '"""', index + 3
+            opener = RAW_STRING_OPEN.match(text, index)
+            if opener:  # #"…"# / ##"…"## / #"""…"""# — closed by the quote plus the same hashes
+                inside = opener.group(2) + opener.group(1)
+                raw = True
+                index = opener.end()
+            elif text.startswith('"""', index):
+                inside, raw, index = '"""', False, index + 3
             elif text[index] == '"':
-                inside, index = '"', index + 1
+                inside, raw, index = '"', False, index + 1
             elif text.startswith("//", index):
                 while index < len(text) and text[index] != "\n":
                     out[index] = " "
@@ -239,15 +273,19 @@ def mask_noncode(text: str, *, blank_literals: bool = True) -> str:
             else:
                 index += 1
             continue
-        if text[index] == "\\":  # an escape, so the next character closes nothing
+        if text[index] == "\\" and not raw:  # an escape, so the next character closes nothing
             if blank_literals:
                 out[index] = " "
-                if index + 1 < len(text):
+                # Never a newline: `\` at end of line is Swift's continuation inside a `"""`
+                # block, and blanking that one moved every line number below it. Length stayed
+                # right, so the index space was fine and only §R13 — which numbers from the
+                # masked copy — misreported, by up to 9 lines in ice-2's MenuBarItemManager.
+                if index + 1 < len(text) and text[index + 1] != "\n":
                     out[index + 1] = " "
             index += 2
         elif text.startswith(inside, index):
             index += len(inside)
-            inside = None
+            inside, raw = None, False
         else:
             if blank_literals and text[index] != "\n":
                 out[index] = " "
@@ -370,19 +408,32 @@ def rule_r1_r2_menu(root: str, cfg: Config, files: list[str]) -> list[Violation]
     for path in files:
         body = "".join(read(path))
         masked = mask_noncode(body)
+        # The titles have to survive, so the argument list is read from the copy that keeps
+        # literals — not from `body`, which also keeps *comments*. Slicing raw text was a
+        # regression this rewrite introduced: `NSMenuItem(title: title,  // Quit and About %@
+        # are built by DragonAppMenu` reported a false R1, which the line-based predecessor
+        # would not have, and which §R1's own prose says must not happen.
+        titles = mask_noncode(body, blank_literals=False)
         if "DragonAppMenu" in masked:
             uses_kit_menu = True
-        if cfg.excuses("R1", path):
+        if cfg.excuses("R1", path) and cfg.excuses("R2", path):
             continue
         for call in re.finditer(r"\bNSMenuItem\s*\(", masked):
             span = balanced(masked, call.end() - 1)
             if span is None:
                 continue
-            args = body[call.end():call.end() + len(span)]
+            args = titles[call.end():call.end() + len(span)]
             number = line_of(body, call.start())
+            # R2 reads its own key. It used to be gated on R1's, so an app needing an Uninstall
+            # exception had to declare R1 — which also switched off every lifecycle-title check
+            # on that path — while §R11 told it "R2 is not a rule this checker can suppress",
+            # which was false in the way that matters: R1 suppressed it.
             if re.search(r"uninstall", args, re.IGNORECASE):
-                out.append(Violation("R2", "menu item for Uninstall — it belongs in "
-                                     "UninstallSettingsPane, not the dropdown", path, number))
+                if not cfg.excuses("R2", path):
+                    out.append(Violation("R2", "menu item for Uninstall — it belongs in "
+                                         "UninstallSettingsPane, not the dropdown", path, number))
+                continue
+            if cfg.excuses("R1", path):
                 continue
             for pattern in LIFECYCLE_PATTERNS:
                 if re.search(pattern, args):
@@ -460,9 +511,17 @@ def rule_r6_r7_modules(root: str, cfg: Config, files: list[str]) -> list[Violati
     exactly two: `import LoginServiceKit` — the login-item library ClipMenu's upstream used — went
     straight past it. The lists below name every route the five apps could plausibly reach for.
 
-    Third-party names are anchored on `import` or a member access, never bare: ice-2 names
-    `LaunchAtLogin` in an About-pane comment and in its generated acknowledgements, and matching
-    the bare word would fail it for crediting a library it does not use.
+    Third-party names are anchored on `import` or a member access, never bare, so that *naming* a
+    library is distinguishable from *using* one — an entry in an `attributions` array, a test
+    asserting this very rule, a variable name. **No incident forced that, and an earlier version of
+    this comment claimed one**: it said ice-2 credits `LaunchAtLogin` in its generated
+    acknowledgements. It does the opposite —
+    `IceTests/AcknowledgementsTests.swift` asserts the bundled notices do **not** contain that
+    name, because the dependency is long gone; the only occurrence anywhere in ice-2's `sources`
+    is a `//` comment, which `strip_comment` removes before this rule sees it. Verified by
+    mutating the pattern to a bare-word list and re-running: ice-2 at `origin/main` still passes.
+    So the anchoring is defensive, and this comment now says so rather than inventing history for
+    it.
     """
     checks = [
         ("R6", r"\bimport\s+Sparkle\b|\bSPUStandardUpdaterController\b|\bSPUUpdater\b"
@@ -492,7 +551,9 @@ def rule_r8_kit_strings(root: str, cfg: Config) -> list[Violation]:
         return [Violation("R8", "config declares no 'strings' — R8 cannot read the app's own "
                           "keys, and §R13 reads the same globs for the app's '.lproj'. Point it "
                           "at the app's locale files, or sanction R8 in 'exceptions' with a "
-                          "reason and an owner (§R11)")]
+                          "reason and an owner (§R11) — and note an app with no '.lproj' at all "
+                          "needs its own R13 exception too; both rules fire, and one entry "
+                          "suppresses one rule")]
     out: list[Violation] = []
     for pattern in cfg.strings:
         for path in glob.glob(os.path.join(root, pattern), recursive=True):
@@ -601,6 +662,11 @@ def rule_r11_exceptions(root: str, cfg: Config) -> list[Violation]:
     fired on the apps they were written for, and "a row naming a rule the checker never fires is
     worse than no row — it reads as a live sanction, nothing contradicts it, and the next app
     copies the shape."
+
+    The `path` is validated for the same reason. §R5, §R8, §R9 and §R12 are whole-app checks —
+    each consults `excuses(rule, "")` and nothing else — so a path-scoped entry for one of them
+    printed as a live, narrowly-scoped sanction on every run and suppressed nothing at all. That
+    is the same defect the rule-name check closes, left open one field along.
     """
     out: list[Violation] = []
     for index, exc in enumerate(cfg.exceptions):
@@ -608,9 +674,14 @@ def rule_r11_exceptions(root: str, cfg: Config) -> list[Violation]:
         rule = exc.get("rule")
         if rule not in EXCUSABLE_RULES:
             out.append(Violation("R11", f"{where} names '{rule}', which is not a rule this "
-                                 f"checker can suppress ({', '.join(sorted(EXCUSABLE_RULES))}) — "
+                                 f"checker can suppress ({', '.join(EXCUSABLE_RULES)}) — "
                                  f"an exception for a rule that never fires reads as a live "
                                  f"sanction and sanctions nothing"))
+        elif rule in APP_WIDE_ONLY_RULES and str(exc.get("path", "")).strip():
+            out.append(Violation("R11", f"{where} scopes {rule} to path "
+                                 f"'{exc['path']}', but {rule} is only ever checked for the app "
+                                 f"as a whole — a path here suppresses nothing while printing as "
+                                 f"a live sanction. Drop 'path' to sanction it app-wide"))
         for key in ("reason", "sanctionedBy"):
             if not str(exc.get(key, "")).strip():
                 out.append(Violation("R11", f"{where} ({rule}) declares no '{key}' — §R11 "
@@ -774,15 +845,23 @@ def rule_r14_about_copyright(root: str, cfg: Config, files: list[str]) -> list[V
 
     `copyright` is the exception, and the reason this rule exists: it is a plain `String`, so no
     signature can stop an app hand-typing `© 2008–2014 Naotaka Morimoto · © 2026 Teddy Chan` and
-    reintroducing the dual-holder line 4.0.0 removed. A Dragon app reimplements its upstream
-    rather than reusing its source, so asserting the upstream author's copyright over *this*
-    binary states something the app's own notices contradict; the lineage belongs to
-    `OriginalWork` and the upstream licence text to the licences page.
+    reintroducing the dual-holder line 4.0.0 removed.
 
-    Three ways in, all checked: a literal in the slot, two copyright symbols on one line, and the
-    removed `original:` argument (a compile error today, but the `@available(*, unavailable)`
-    overload carrying that message is temporary, and after it goes the compiler only says "extra
-    argument").
+    **The rule is about this slot, not about who holds a copyright.** An earlier draft of this
+    docstring argued that a Dragon app reimplements its upstream rather than reusing its source,
+    and therefore has no upstream copyright to assert. CONFORMANCE.md §R14 retracts that in full
+    and CLAUDE.md says not to reinstate it — it is also backwards on the facts, since `ice-2`'s
+    own `LICENSE` reads "Copyright (C) 2024 Jordan Baird (original Ice…)" and clipmenu-2's names
+    Naotaka Morimoto. The notices *assert* the upstream holder; this rule must stay away from
+    them. The narrow reason that does hold: **the About header is a presentation slot in a
+    settings pane, and it read one way in three apps and another in two.** Lineage inside the pane
+    is `OriginalWork`'s job, twice over, and the upstream licence text belongs to `LICENSE` and
+    the licences page, neither of which this rule touches.
+
+    Three ways in, all checked: anything but the kit's call in the slot, two copyright symbols on
+    one line, and the removed `original:` argument (a compile error today, but the
+    `@available(*, unavailable)` overload carrying that message is temporary, and after it goes
+    the compiler only says "extra argument").
     """
     out: list[Violation] = []
     slot = re.compile(r"\bcopyright\s*:\s*")
@@ -792,19 +871,24 @@ def rule_r14_about_copyright(root: str, cfg: Config, files: list[str]) -> list[V
         if cfg.excuses("R14", path):
             continue
         body = "".join(read(path))
-        # Literals are kept: the dual-holder line this rule exists to catch is written *inside*
-        # one, so blanking them would hide the thing being counted. Comments still go, which is
-        # what lets ice-2 discuss the old spelling in a comment without failing.
-        masked = mask_noncode(body, blank_literals=False)
+        # Two views of one index space, because this rule needs both halves. `code` blanks literal
+        # contents, so a *label* is only found where it is really an argument label — reading the
+        # label out of the literal-preserving copy meant any Swift string containing the text
+        # `copyright:` was reported as a bad About slot, and yahoo-keykey-2's `sources` reach its
+        # own test suite. `literals` keeps contents, because the dual-holder line this rule exists
+        # to catch is written *inside* a literal. Comments go from both, which is what lets ice-2
+        # discuss the old spelling in a comment without failing.
+        code = mask_noncode(body)
+        literals = mask_noncode(body, blank_literals=False)
         # Positive: whatever fills the slot must BE the kit's call. The old test was
         # `copyright:\s*"` on one line, so it saw a literal on the same line and nothing else —
         # `copyright: Self.notice` passed, and so did a literal wrapped onto the following line,
         # which is how every one of these reads once the argument list is long enough to wrap.
-        for match in slot.finditer(masked):
-            value = masked[match.end():].lstrip()
+        for match in slot.finditer(code):
+            value = literals[match.end():].lstrip()
             if kit_call.match(value):
                 continue
-            number = line_of(masked, match.start())
+            number = line_of(body, match.start())
             if value.startswith('"'):
                 out.append(Violation("R14", "the About copyright is a string literal — assemble "
                                      "it with DragonAbout.copyright(years:holder:) so every app "
@@ -815,13 +899,13 @@ def rule_r14_about_copyright(root: str, cfg: Config, files: list[str]) -> list[V
                                      "DragonAbout.copyright(years:holder:); R14 reads the written "
                                      "call site and cannot follow an indirection to check what it "
                                      "names", path, number))
-        for number, line in enumerate(masked.splitlines(), 1):
+        for number, line in enumerate(literals.splitlines(), 1):
             if line.count("©") > 1:
                 out.append(Violation("R14", "two copyright holders on one line — the About "
                                      "copyright names the app's own holder only; the upstream "
                                      "author is credited by OriginalWork and their licence text "
                                      "by the licences page", path, number))
-        if dual_form.search(masked):
+        if dual_form.search(code):
             out.append(Violation("R14", "DragonAbout.copyright(original:) — the dual-holder "
                                  "copyright was removed in DragonKit 4.0.0; call "
                                  "copyright(years:holder:)", path))
