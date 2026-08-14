@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -166,6 +167,21 @@ def run(app: str) -> tuple[int, str]:
 
 FAILURES: list[str] = []
 
+# `  R15  Sources/AboutConfig.swift:12: message` — `Violation.render`'s shape, and also the shape
+# of the two `SystemExit` texts (R0's missing config, R13's missing DragonLanguage), which print
+# at column 0. The `exception  R15  …` line does not match: it leads with the word, not the rule.
+VIOLATION_LINE = re.compile(r"^\s*(R\d+)\s\s+(\S.*)$")
+
+
+def violations(out: str) -> list[tuple[str, str]]:
+    """Every `(rule, text)` the checker printed, so a test can assert on the branch, not the rule."""
+    found = []
+    for line in out.splitlines():
+        match = VIOLATION_LINE.match(line)
+        if match:
+            found.append((match.group(1), match.group(2)))
+    return found
+
 
 def expect_pass(name: str, app: str) -> None:
     code, out = run(app)
@@ -176,16 +192,48 @@ def expect_pass(name: str, app: str) -> None:
         print(f"  ok    {name}")
 
 
-def expect_violation(name: str, app: str, rule: str) -> None:
+def expect_violation(name: str, app: str, rule: str, because: str) -> None:
+    """Assert the checker fails, with `rule`, *on the branch whose message contains `because`*.
+
+    `because` is not decoration. This function used to assert `rule in out` and nothing more, so it
+    proved a rule fired somewhere — never that the intended code path did. Most rules here have
+    several branches, and a broken one usually falls through to another that reports the same rule
+    name, so targeted mutations of the checker left the entire suite green. Verified on this one:
+    narrowing R1's `Check\\s+for\\s+[Uu]pdates` pattern to `Check\\s+for\\s+Updates` stops the
+    "Check for updates…" fixture tripping the hand-rolled-item branch — and that fixture's menu
+    also never references `DragonAppMenu`, so R1 still fired from the *other* arm and the old
+    assertion reported `ok`. §R15 is the worst case: three fixtures written as negative controls
+    for the host comparison all resolved through the "cannot read the argument" arm instead, and
+    the host hole shipped underneath them.
+
+    The `other` check is the second half. A fixture that also fails for an unrelated reason is not
+    evidence about the rule under test, and it is how a fixture keeps reporting `ok` after the
+    branch it was written for stops firing at all.
+    """
     code, out = run(app)
     if code == 0:
         FAILURES.append(f"{name}: expected {rule} violation, but the checker PASSED.\n{out}")
         print(f"  FAIL  {name} (rule did not bite)")
-    elif rule not in out:
-        FAILURES.append(f"{name}: failed but not with {rule}:\n{out}")
-        print(f"  FAIL  {name} (wrong rule)")
-    else:
-        print(f"  ok    {name}")
+        return
+    found = violations(out)
+    if not any(r == rule and because in text for r, text in found):
+        same_rule = [text for r, text in found if r == rule]
+        if same_rule:
+            FAILURES.append(f"{name}: {rule} fired, but not the branch under test. Expected a "
+                            f"message containing {because!r}; got:\n" +
+                            "\n".join(f"  - {text}" for text in same_rule))
+            print(f"  FAIL  {name} (wrong branch of {rule})")
+        else:
+            FAILURES.append(f"{name}: failed but not with {rule}:\n{out}")
+            print(f"  FAIL  {name} (wrong rule)")
+        return
+    other = sorted({r for r, _ in found} - {rule})
+    if other:
+        FAILURES.append(f"{name}: expected {rule} alone, but {', '.join(other)} fired too — the "
+                        f"fixture fails for more than the reason under test:\n{out}")
+        print(f"  FAIL  {name} (collateral {', '.join(other)})")
+        return
+    print(f"  ok    {name}")
 
 
 def main() -> int:
@@ -194,7 +242,8 @@ def main() -> int:
         expect_pass("a fully compliant app passes", make_app(tmp))
 
         print("R0 — config required")
-        expect_violation("missing config is a violation", make_app(tmp, write_config=False), "R0")
+        expect_violation("missing config is a violation", make_app(tmp, write_config=False), "R0",
+            because="is missing from the app repo root")
 
         print("R1 — menu must come from DragonAppMenu")
         expect_violation("hand-rolled About item", make_app(tmp, menu=COMPLIANT_MENU + """
@@ -203,16 +252,19 @@ extension AppMenuController {
         NSMenuItem(title: "About Test App", action: nil, keyEquivalent: "")
     }
 }
-"""), "R1")
+"""), "R1",
+            because="hand-rolled app-lifecycle menu item")
         expect_violation("hand-rolled Check for Updates item", make_app(tmp, menu="""import AppKit
 final class M {
     func f() -> NSMenuItem { NSMenuItem(title: "Check for updates…", action: nil,
                                         keyEquivalent: "") }
 }
-"""), "R1")
+"""), "R1",
+            because="hand-rolled app-lifecycle menu item")
         expect_violation("app never references DragonAppMenu", make_app(tmp, menu="""import AppKit
 final class M { func f() -> NSMenu { NSMenu() } }
-"""), "R1")
+"""), "R1",
+            because="never references DragonAppMenu")
 
         print("R2 — no Uninstall in the menu")
         expect_violation("Uninstall menu item", make_app(tmp, menu=COMPLIANT_MENU + """
@@ -221,15 +273,18 @@ extension AppMenuController {
         NSMenuItem(title: "Uninstall Test App…", action: nil, keyEquivalent: "")
     }
 }
-"""), "R2")
+"""), "R2",
+            because="menu item for Uninstall")
 
         print("R3 — no shadowing kit type names")
         expect_violation("app declares its own UpdatesSettingsPane", make_app(
             tmp, extra={"Sources/Shadow.swift": "import SwiftUI\nstruct UpdatesSettingsPane {}\n"}
-        ), "R3")
+        ), "R3",
+            because="shadowing the public DragonKit")
         expect_violation("app declares its own UninstallView", make_app(
             tmp, extra={"Sources/Shadow.swift": "import SwiftUI\nstruct UninstallView {}\n"}
-        ), "R3")
+        ), "R3",
+            because="shadowing the public DragonKit")
 
         # Regression: R3 compared *nested* declarations against nested kit types, so ice-2's
         # SettingsBackup.BackupError was reported as shadowing DragonBackup.BackupError. Different
@@ -242,7 +297,8 @@ enum SettingsBackup {
 }
 """}))
         expect_violation("top-level shadow is still caught", make_app(
-            tmp, extra={"Sources/Shadow.swift": "import Foundation\nenum DragonBackup {}\n"}), "R3")
+            tmp, extra={"Sources/Shadow.swift": "import Foundation\nenum DragonBackup {}\n"}), "R3",
+            because="shadowing the public DragonKit")
 
         print("R4 — no re-implemented design primitives")
         expect_violation("app declares IceForm", make_app(
@@ -250,13 +306,15 @@ enum SettingsBackup {
 struct IceForm<Content: View>: View {
     var body: some View { Text("x") }
 }
-"""}), "R4")
+"""}), "R4",
+            because="a generic view wrapper")
         expect_violation("app declares IceSection", make_app(
             tmp, extra={"Sources/IceSection.swift": """import SwiftUI
 struct IceSection<Header: View, Content: View, Footer: View>: View {
     var body: some View { Text("x") }
 }
-"""}), "R4")
+"""}), "R4",
+            because="a generic view wrapper")
         # Regression: the first version of R4 matched any type named *Section, so ice-2's
         # app-domain MenuBarSection model was reported as a settings layout primitive.
         expect_pass("app-domain *Section model is not a layout primitive", make_app(
@@ -274,28 +332,35 @@ struct Custom: View {
             .formStyle(.grouped)
     }
 }
-"""}), "R4")
+"""}), "R4",
+            because="hand-rolled grouped Form")
 
         print("R5 — shared panes must be the kit's")
         expect_violation("no Uninstall pane", make_app(
             tmp, panes=COMPLIANT_PANES.replace("UninstallSettingsPane", "HomeGrownUninstall")
-        ), "R5")
+        ), "R5",
+            because="no reference to UninstallSettingsPane")
 
         print("R6/R7 — modules")
         expect_violation("direct Sparkle use", make_app(
-            tmp, extra={"Sources/Up.swift": "import Sparkle\nfinal class U {}\n"}), "R6")
+            tmp, extra={"Sources/Up.swift": "import Sparkle\nfinal class U {}\n"}), "R6",
+            because="direct Sparkle use")
         expect_violation("SPUStandardUpdaterController", make_app(
             tmp, extra={"Sources/Up.swift":
-                        "final class U { let c = SPUStandardUpdaterController() }\n"}), "R6")
+                        "final class U { let c = SPUStandardUpdaterController() }\n"}), "R6",
+            because="direct Sparkle use")
         expect_violation("direct SMAppService", make_app(
             tmp, extra={"Sources/Login.swift":
-                        "import ServiceManagement\nlet x = SMAppService.mainApp\n"}), "R7")
+                        "import ServiceManagement\nlet x = SMAppService.mainApp\n"}), "R7",
+            because="direct launch-at-login wiring")
 
         print("R8 — app must not own kit string keys")
         expect_violation("DragonKit.* key in app strings", make_app(
-            tmp, strings=COMPLIANT_STRINGS + '"DragonKit.menu.settings" = "Settings…";\n'), "R8")
+            tmp, strings=COMPLIANT_STRINGS + '"DragonKit.menu.settings" = "Settings…";\n'), "R8",
+            because="defines kit-owned key")
         expect_violation("kit menu title used as a key", make_app(
-            tmp, strings=COMPLIANT_STRINGS + '"Check for updates…" = "Rechercher…";\n'), "R8")
+            tmp, strings=COMPLIANT_STRINGS + '"Check for updates…" = "Rechercher…";\n'), "R8",
+            because="a kit-owned menu title")
 
         print("R9 — pane order")
         bad_order = COMPLIANT_PANES.replace(
@@ -305,7 +370,8 @@ struct Custom: View {
             "AnySettingsPane(AboutSettingsPane(content: AboutConfig.content)),\n"
             "            AnySettingsPane(PermissionsSettingsPane(permissions: "
             "[.accessibility()])),")
-        expect_violation("About before Permissions", make_app(tmp, panes=bad_order), "R9")
+        expect_violation("About before Permissions", make_app(tmp, panes=bad_order), "R9",
+            because="settings pane order is")
         # An app may drive its sidebar from an enum instead of a pane array (ice-2 does), so
         # R9 has to read case names too — measuring type names only reported a false order.
         expect_pass("enum-driven sidebar in canonical order", make_app(
@@ -330,7 +396,8 @@ enum SettingsNavigationIdentifier: String {
     case about = "About"
     case uninstall = "Uninstall"
 }
-"""}, config_over={"paneOrder": {"file": "Sources/Nav.swift"}}), "R9")
+"""}, config_over={"paneOrder": {"file": "Sources/Nav.swift"}}), "R9",
+            because="settings pane order is")
         # An app may ship its OWN backup pane under §R11 — clipmenu-2's `SyncBackupPane` adds
         # iCloud sync and versioned folder backup, which DragonBackup deliberately doesn't do.
         # It is still bound by R9's *position*. This was a live hole, not a hypothetical: the
@@ -362,18 +429,21 @@ enum SettingsNavigationIdentifier: String {
         expect_pass("app's own SyncBackupPane, in the canonical slot", make_app(
             tmp, panes=panes_with_backup_named("SyncBackupPane()")))
         expect_violation("app's own SyncBackupPane, ahead of Permissions", make_app(
-            tmp, panes=panes_with_backup_named("SyncBackupPane()", ahead_of_permissions=True)), "R9")
+            tmp, panes=panes_with_backup_named("SyncBackupPane()", ahead_of_permissions=True)), "R9",
+            because="settings pane order is")
 
         print("R10 — pin must be current")
         expect_violation("stale pin", make_app(tmp, package=(
-            '.package(url: "https://github.com/teddychan/dragon-kit", from: "0.0.1"),\n')), "R10")
+            '.package(url: "https://github.com/teddychan/dragon-kit", from: "0.0.1"),\n')), "R10",
+            because="a stale pin silently misses shared fixes")
         # The retired path-pin exemption, which returned "no violations" for any app declaring it
         # and had no fixture of its own — so the checker carried an always-pass branch that
         # nothing here would have noticed. It existed only for an app living inside the kit, an
         # arrangement MAC-APP-RELEASE-LIFECYCLE.md no longer permits. This fixture is what stops
         # it coming back as the cheapest way for a stale app to pass.
         expect_violation("retired path-pin exemption is itself a violation", make_app(
-            tmp, config_over={"pin": {"kind": "path"}}), "R10")
+            tmp, config_over={"pin": {"kind": "path"}}), "R10",
+            because="the exemption is retired")
         # Regression, and the reason §R0 now insists the pattern be anchored on dragon-kit.
         # The pattern is one search over the whole file, so an unanchored version regex matches
         # whichever dependency appears first. In ice-2's .pbxproj that was Sparkle at 2.5.2 —
@@ -398,12 +468,24 @@ enum SettingsNavigationIdentifier: String {
         expect_violation("anchored pbxproj pattern catches the real stale DragonKit pin", make_app(
             tmp, extra={"Proj.pbxproj": STALE_PBXPROJ},
             config_over={"pin": {"file": "Proj.pbxproj",
-                                 "pattern": r'dragon-kit";[^}]*minimumVersion = ([0-9.]+)'}}),
-            "R10")
-        expect_pass("unanchored pattern silently reads Sparkle's version — the trap", make_app(
+                                 "pattern": r'dragon-kit";[^}]*minimumVersion = ([0-9.]+)'}}), "R10",
+            because="a stale pin silently misses shared fixes")
+        # This fixture used to be an `expect_pass` — the suite asserted the trap's false PASS as
+        # *expected behaviour*, for the most-cited incident in the spec, while §R0 had said the
+        # pattern "MUST anchor on dragon-kit" the whole time. A rule stated in prose and
+        # contradicted by its own test is the failure this document exists to prevent, so R10
+        # now reads the pattern itself.
+        expect_violation("an unanchored pattern is rejected before it can read Sparkle", make_app(
             tmp, extra={"Proj.pbxproj": STALE_PBXPROJ},
             config_over={"pin": {"file": "Proj.pbxproj",
-                                 "pattern": r'minimumVersion = ([0-9.]+)'}}))
+                                 "pattern": r'minimumVersion = ([0-9.]+)'}}),
+            "R10", because="does not anchor on dragon-kit")
+        # ...and the anchor is a *spelling* test, not a literal one: yahoo-keykey-2 pins with
+        # `DRAGONKIT_TAG="v2.13.0"` in a shell script, which anchors just as surely.
+        expect_pass("keykey's DRAGONKIT_TAG spelling anchors too", make_app(
+            tmp, extra={"tools/build-app.sh": 'DRAGONKIT_TAG="v999.9.9"\n'},
+            config_over={"pin": {"file": "tools/build-app.sh",
+                                 "pattern": r'DRAGONKIT_TAG="v([0-9.]+)"'}}))
 
         print("R11 — exceptions suppress a rule at a path")
         expect_pass("sanctioned exception is honored", make_app(
@@ -426,7 +508,8 @@ struct MyBackupSection: View {
         # fallback to the executable's mtime is the drift this replaced. So "nobody stamps it"
         # has to be a violation rather than a quietly shorter version line.
         expect_violation("build script never stamps the commit date", make_app(
-            tmp, build='BUILD="$(git rev-list --count HEAD)"\n'), "R12")
+            tmp, build='BUILD="$(git rev-list --count HEAD)"\n'), "R12",
+            because="no build step stamps")
         expect_pass("stamped by a workflow instead of a script", make_app(
             tmp, build="# packaging happens in CI\n",
             extra={".github/workflows/release.yml":
@@ -436,7 +519,8 @@ struct MyBackupSection: View {
             extra={"Info.plist": "<key>DragonCommitDate</key><string></string>\n"}))
         expect_violation("declared buildFiles that don't stamp it", make_app(
             tmp, build='PlistBuddy -c "Set :DragonCommitDate $D" Info.plist\n',
-            config_over={"buildFiles": ["Package.swift"]}), "R12")
+            config_over={"buildFiles": ["Package.swift"]}), "R12",
+            because="no build step stamps")
 
         print("R13 — the language picker offers exactly what the app ships")
         # The false-positive trap this rule has to survive. clipmenu-2, spectacle-2 and
@@ -450,28 +534,33 @@ struct MyBackupSection: View {
         # 简体中文. Choosing one translated the kit's four panes and left every app string in
         # English, and nothing anywhere failed on it.
         expect_violation("bare picker in an app that ships two", make_app(
-            tmp, locales=("en", "zh-Hant"), extra={"Sources/Lang.swift": language_pane()}), "R13")
+            tmp, locales=("en", "zh-Hant"), extra={"Sources/Lang.swift": language_pane()}), "R13",
+            because="takes the kit's default of all")
         expect_pass("explicit list matching the shipped .lproj", make_app(
             tmp, locales=("en", "zh-Hant"),
             extra={"Sources/Lang.swift": language_pane("languages: [.en, .zhHant]")}))
         expect_violation("explicit list wider than the shipped .lproj", make_app(
             tmp, locales=("en", "zh-Hant"),
-            extra={"Sources/Lang.swift": language_pane("languages: [.en, .zhHant, .ja]")}), "R13")
+            extra={"Sources/Lang.swift": language_pane("languages: [.en, .zhHant, .ja]")}), "R13",
+            because="must agree")
         # The other direction: a translation shipped that no user can select. Equality catches it
         # because the picker is the app's statement of its own coverage, and keykey's own
         # testLanguagePickerOffersExactlyTheShippedLocalizations asserts the same both ways.
         expect_violation("shipped .lproj the picker never offers", make_app(
             tmp, locales=("en", "zh-Hant", "ja"),
-            extra={"Sources/Lang.swift": language_pane("languages: [.en, .zhHant]")}), "R13")
+            extra={"Sources/Lang.swift": language_pane("languages: [.en, .zhHant]")}), "R13",
+            because="must agree")
         # Source case names are not locale codes — `.zhHant` is `zh-Hant.lproj` on disk. An
         # unrecognized token has to be reported rather than dropped, or a typo shrinks the offered
         # set until it agrees with a shorter .lproj list by accident.
         expect_violation("a token that is no DragonLanguage case", make_app(
             tmp, locales=("en", "zh-Hant"),
-            extra={"Sources/Lang.swift": language_pane("languages: [.en, .zhhant]")}), "R13")
+            extra={"Sources/Lang.swift": language_pane("languages: [.en, .zhhant]")}), "R13",
+            because="no DragonLanguage case")
         expect_violation("non-literal languages: argument", make_app(
             tmp, locales=("en", "zh-Hant"),
-            extra={"Sources/Lang.swift": language_pane("languages: Self.supported")}), "R13")
+            extra={"Sources/Lang.swift": language_pane("languages: Self.supported")}), "R13",
+            because="non-literal 'languages:' argument")
         expect_pass("multi-line call site", make_app(
             tmp, locales=("en", "zh-Hant"), extra={"Sources/Lang.swift": """import SwiftUI
 import DragonKit
@@ -491,7 +580,8 @@ struct LanguageSection: View {
         # the "passes everything" failure the whole spec exists to prevent, and it would make R13
         # unenforceable for any app that localizes with String Catalogs instead of .lproj.
         expect_violation("picker with no .lproj to compare against", make_app(
-            tmp, locales=(), extra={"Sources/Lang.swift": language_pane()}), "R13")
+            tmp, locales=(), extra={"Sources/Lang.swift": language_pane()}), "R13",
+            because="no '.lproj' is reachable")
         expect_pass("...and that is what §R11 is for", make_app(
             tmp, locales=(), extra={"Sources/Lang.swift": language_pane()},
             config_over={"exceptions": [{
@@ -531,7 +621,8 @@ final class PickerTests: XCTestCase {
         expect_violation("a comment naming the call does not satisfy R13 either", make_app(
             tmp, locales=("en", "zh-Hant"), extra={"Sources/Lang.swift": language_pane() + """
 // TODO: LanguagePicker(languages: [.en, .zhHant]) once the strings land.
-"""}), "R13")
+"""}), "R13",
+            because="takes the kit's default of all")
 
         print("R14 — the About copyright is kit-assembled and names one holder")
         # `make_app` already writes this file; these tests replace it with a mutated copy. Shared
@@ -543,12 +634,14 @@ final class PickerTests: XCTestCase {
         expect_violation("copyright hand-typed as a literal", make_app(
             tmp, extra={"Sources/AboutConfig.swift": compliant_about.replace(
                 'DragonAbout.copyright(years: "2026", holder: "Teddy Chan")',
-                '"Copyright © 2026 Teddy Chan"')}), "R14")
+                '"Copyright © 2026 Teddy Chan"')}), "R14",
+            because="is a string literal")
         # The exact line 4.0.0 removed, hand-typed back in — the one route no signature can close.
         expect_violation("two copyright holders on one line", make_app(
             tmp, extra={"Sources/AboutConfig.swift": compliant_about.replace(
                 'DragonAbout.copyright(years: "2026", holder: "Teddy Chan")',
-                '"© 2008–2014 Naotaka Morimoto · © 2026 Teddy Chan"')}), "R14")
+                '"© 2008–2014 Naotaka Morimoto · © 2026 Teddy Chan"')}), "R14",
+            because="two copyright holders on one line")
         # Multi-line, exactly as clipmenu-2 and ice-2 wrote it. A compile error under 4.0.0 too,
         # but only while the @available(*, unavailable) overload carrying the message survives.
         expect_violation("the removed original: argument", make_app(
@@ -558,7 +651,8 @@ final class PickerTests: XCTestCase {
                 original: (years: "2008–2014", holder: "Naotaka Morimoto"),
                 years: "2026",
                 holder: "Teddy Chan"
-            )""")}), "R14")
+            )""")}), "R14",
+            because="the dual-holder")
         # Real cases from the apps, both of which must pass. yahoo-keykey-2's test suite asserts
         # the expected copyright, and ice-2's AboutConfig discusses the old spelling in a comment.
         expect_pass("a test asserting the expected copyright is not the slot", make_app(
@@ -585,7 +679,8 @@ final class ConfigContentTests: XCTestCase {
         expect_violation("website on the site root", make_app(
             tmp, extra={about: COMPLIANT_ABOUT.replace(
                 "https://www.dragonapp.com/fixture-2/\")!,\n            supportURL",
-                "https://www.dragonapp.com\")!,\n            supportURL")}), "R15")
+                "https://www.dragonapp.com\")!,\n            supportURL")}), "R15",
+            because="but the support row's repository is")
         expect_pass("...and that is what §R11 is for", make_app(
             tmp, extra={about: COMPLIANT_ABOUT.replace(
                 "https://www.dragonapp.com/fixture-2/\")!,\n            supportURL",
@@ -599,8 +694,8 @@ final class ConfigContentTests: XCTestCase {
         # but this comparison distinguishes it from the canonical page.
         expect_violation("website on the redirect stub, not the canonical page", make_app(
             tmp, extra={about: COMPLIANT_ABOUT.replace("/fixture-2/\")!,\n            supportURL",
-                                                       "/fixture/\")!,\n            supportURL")}),
-            "R15")
+                                                       "/fixture/\")!,\n            supportURL")}), "R15",
+            because="but the support row's repository is")
         # clipmenu-2 and ice-2 both name their URLs before passing them, so R15 reads nothing at
         # all for two of the five apps unless it follows one hop. Both directions are tested: the
         # indirection must resolve *and* must still bite, or "resolved" would just mean "skipped".
@@ -630,21 +725,25 @@ enum AboutConfig {
             tmp, extra={about: indirect}))
         expect_violation("a constant holding the wrong page still bites", make_app(
             tmp, extra={about: indirect.replace('dragonapp.com/fixture-2/")!  // canon',
-                                                'dragonapp.com")!  // canon')}), "R15")
+                                                'dragonapp.com")!  // canon')}), "R15",
+            because="but the support row's repository is")
         # An argument the checker cannot read must fail, not pass. R15 compares written literals,
         # so anything it can't resolve is a rule that would otherwise go quiet.
         expect_violation("a websiteURL R15 cannot resolve", make_app(
             tmp, extra={about: COMPLIANT_ABOUT.replace(
                 'URL(string: "https://www.dragonapp.com/fixture-2/")!',
-                "Self.site")}), "R15")
+                "Self.site")}), "R15",
+            because="cannot read 'websiteURL:'")
         expect_violation("a support row that names no repository", make_app(
             tmp, extra={about: COMPLIANT_ABOUT.replace(
                 "https://github.com/teddychan/fixture-2/issues",
-                "https://www.dragonapp.com/fixture-2/support/")}), "R15")
+                "https://www.dragonapp.com/fixture-2/support/")}), "R15",
+            because="which names no")
         # The silent-checker arm. An app that restructures its About wiring out of the checker's
         # sight must fail rather than drop out of the rule — §R0, §R10 and §R13 all take this line.
         expect_violation("no AboutContent construction anywhere", make_app(
-            tmp, extra={about: "import Foundation\n\nenum AboutConfig { }\n"}), "R15")
+            tmp, extra={about: "import Foundation\n\nenum AboutConfig { }\n"}), "R15",
+            because="no AboutContent(…) construction is reachable")
         expect_pass("an app-wide exception silences that arm too", make_app(
             tmp, extra={about: "import Foundation\n\nenum AboutConfig { }\n"},
             config_over={"exceptions": [{
@@ -679,7 +778,8 @@ final class AboutTests: XCTestCase {
             tmp, extra={about: multiline}))
         expect_violation("...and the construction below it is still read", make_app(
             tmp, extra={about: multiline.replace("/fixture-2/\")!,\n            supportURL",
-                                                 "\")!,\n            supportURL")}), "R15")
+                                                 "\")!,\n            supportURL")}), "R15",
+            because="but the support row's repository is")
         # ...and the other direction, the one R13 also pins: prose cannot satisfy the rule either.
         expect_violation("a commented-out construction does not count as one", make_app(
             tmp, extra={about: """import Foundation
@@ -688,7 +788,8 @@ import DragonKit
 // AboutContent(websiteURL: URL(string: "https://www.dragonapp.com/fixture-2/")!,
 //              supportURL: URL(string: "https://github.com/teddychan/fixture-2/issues")!)
 enum AboutConfig { }
-"""}), "R15")
+"""}), "R15",
+            because="no AboutContent(…) construction is reachable")
 
         print("no-false-positive checks")
         expect_pass("app builds its own non-lifecycle menu items", make_app(
