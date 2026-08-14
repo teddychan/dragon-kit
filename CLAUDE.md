@@ -178,7 +178,11 @@ something else; do flag a PR that contradicts the recorded decision or skips its
 - **Uninstall stays out of the menu** and in `UninstallSettingsPane`, last in the sidebar.
 - **The reusable conformance workflow is pinned `@main` on purpose.** It reads the kit's default
   branch anyway, so a tag pin would freeze the interface while the rules moved.
-- **The `exceptions` in CONFORMANCE §R11 are sanctioned**, each with a reason and an owner.
+- **The `exceptions` in CONFORMANCE §R11 are sanctioned**, each with a reason and an owner — and
+  the registry is **what the apps declare**, never what prose here or in §R11 describes. One entry
+  exists across all five (dragon-sample-app's R15). An empty list means only that no divergence is
+  sanctioned: it is not evidence the app was checked, or that it conforms. Say *not currently
+  verified* when you have not run the checker against current source.
 - **`Tests/*/HostWiringTests.swift` import the kit plainly, not `@testable`.** They stand in for a
   host app, and an app sees only the public surface — `@testable` would let a public-API break
   pass there while breaking five apps.
