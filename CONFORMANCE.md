@@ -84,10 +84,12 @@ deleting the file would be the easiest way to "pass").
   // REQUIRED, for the same reason: no `paneOrder` meant no §R9 at all, silently.
   "paneOrder": { "file": "app/Sources/ClipMenu/SettingsWindowController.swift" },
   "traits": ["sparkle", "mac-app-store"],   // see §R5, §R6
-  // §R11, and this is the value in four of the five apps: empty. dragon-sample-app declares
-  // exactly one — R15, for having no public page — and it is the only one anywhere. The schema
-  // is shown there, not here, because an example exception reads as a live sanction: this one
-  // named a rule R3 never fired and a path (`SyncBackupPane.swift`) clipmenu-2 does not have.
+  // §R11. This is the empty-registry starting point for a new app, NOT a statement about the
+  // fleet: four of the five apps are empty and dragon-sample-app declares one (R15, for having
+  // no public page). An empty list says only that no divergence is sanctioned — it does not say
+  // the app was checked, or that it conforms. The schema is shown in §R11, not here, because an
+  // example exception reads as a live sanction: the last one named a rule R3 never fired and a
+  // path (`SyncBackupPane.swift`) clipmenu-2 does not have.
   "exceptions": []
 }
 ```
@@ -335,6 +337,31 @@ five apps** — the one above, dragon-sample-app's, which §R15 landed and which
 Keep it there — an exception is the last resort, after a trait, a slot spelling, and changing the
 app.
 
+### The registry is what the apps declare, and an empty one proves nothing
+
+**The current exception registry is the union of the entries in the five apps'
+`.dragon-conformance.json` files.** No prose example here, no historical note, and no memory adds
+an entry to it. The schema shown in §R0 is the empty-registry starting point for a new app, not a
+statement about the fleet.
+
+**An empty registry means only that no divergence is *declared*.** It does not mean the app was
+checked, and it does not mean the app conforms — the two are independent, and reading one off the
+other is the reasoning error that produced the table below. Where current source or a current
+checker run has not established a result, say **not currently verified** rather than "conforming".
+
+Three things follow, and each has already been got wrong here:
+
+- **A prose-only reservation was never an exception.** If it was never declared in an app's
+  config, it never suppressed anything, so it is historical context — not a live sanction, and not
+  a "resolved" one either. Retiring it changes nothing about that app's conformance.
+- **The checker validates an entry's shape, not its necessity.** It now enforces all four fields
+  (above), but nothing checks that the rule would actually *fire* without the entry. That is still
+  a review step: reproduce the unsuppressed violation before treating an entry as load-bearing, or
+  it joins the phantom sanctions below.
+- **A sample or reference app is not a special case.** dragon-sample-app's §R15 entry is an
+  exception on exactly the same terms as a production app's would be: an applicable rule genuinely
+  fires, and the app declares it.
+
 ### What this table used to say
 
 It listed five "currently sanctioned" exceptions, for months, while **not one of them was
@@ -376,12 +403,15 @@ order would have red-X'd the app for a divergence already agreed. In between it 
 checker matches exceptions by rule name, so it only added a printed line — which is what made
 landing it first safe.
 
-**ice-2's R13 row is gone, unused.** It sat here reserved from the day R13 landed: ice-2 shipped no
-localization at all — no `.lproj`, no String Catalog, no `L()` call site — so nothing on disk
-stated its coverage, and the sanction was written down in advance so it would already be agreed
-when the app adopted a picker. It never was declared, and now never will be. ice-2 PR #102 ships
-all seven locales and calls `LanguagePicker()` bare, which is what R13 asks of an app whose
-coverage matches the kit's; **all five apps now satisfy R13 outright.**
+**ice-2's R13 row was a documented reservation, never an active exception.** It sat here from the
+day R13 landed: ice-2 shipped no localization at all — no `.lproj`, no String Catalog, no `L()`
+call site — so nothing on disk stated its coverage, and the sanction was written down in advance so
+it would already be agreed when the app adopted a picker. It never appeared in ice-2's
+`.dragon-conformance.json`, so it never suppressed a violation — which makes it historical context
+rather than a *resolved* exception; there was nothing to resolve. ice-2 PR #102 ships all seven
+locales and calls `LanguagePicker()` bare, which is what R13 asks of an app whose coverage matches
+the kit's. Verified against ice-2 v2.15.0 and the current checker: **all five apps satisfy R13
+outright.**
 
 Worth recording, because it is the second time this section has made the same point: the row was
 never load-bearing. R13 is silent for an app that constructs no `LanguagePicker`, so for the whole
