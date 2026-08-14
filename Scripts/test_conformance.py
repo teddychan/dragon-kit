@@ -248,6 +248,10 @@ def check_masking_invariants() -> None:
     """
     import importlib.util
 
+    # Importing the checker makes CPython cache its bytecode next to the script. Harmless, but it
+    # left a `Scripts/__pycache__/` for a `git add -A` to sweep into a commit, which is what
+    # happened.
+    sys.dont_write_bytecode = True
     spec = importlib.util.spec_from_file_location("dragon_conformance", CHECKER)
     checker = importlib.util.module_from_spec(spec)
     sys.modules["dragon_conformance"] = checker
