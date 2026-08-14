@@ -139,6 +139,11 @@ sidebar.
 **Violation:** any menu item whose arguments contain "uninstall" (case-insensitive), read across
 the whole construction — see §R1 on why one line was not enough.
 
+**This rule has its own `exceptions` key.** It was gated on §R1's, so an app needing an Uninstall
+exception had to declare `R1` — which also switched off every lifecycle-title check on that path —
+while §R11 told it `R2` was not suppressible at all. Sanctioning `R2` now suppresses `R2` and
+nothing else.
+
 **Rationale:** a rarely-used destructive action does not belong one click away in the
 everyday menu, next to Quit.
 
