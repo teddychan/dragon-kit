@@ -462,6 +462,18 @@ def rule_r10_pin(root: str, cfg: Config, kit: str) -> list[Violation]:
     if not spec.get("file") or not spec.get("pattern"):
         return [Violation("R10", "config declares no 'pin' — cannot verify the DragonKit "
                           "version is current")]
+    # §R0 has said the pattern MUST anchor on dragon-kit since the trap was found, and nothing
+    # enforced it — while `test_conformance.py` asserted the false pass it produces as *expected
+    # behaviour*. The pattern is one search over the whole file, so an unanchored version regex
+    # matches whichever dependency appears first: `minimumVersion = ([0-9.]+)` read Sparkle's
+    # 2.5.2 out of ice-2's .pbxproj and compared that against the kit's tags, reporting a pass
+    # while the real pin was stale. Compared with the separators removed so yahoo-keykey-2's
+    # `DRAGONKIT_TAG="v([0-9.]+)"` anchors as surely as `dragon-kit", from: "([0-9.]+)"`.
+    if "dragonkit" not in re.sub(r"[^a-z0-9]", "", spec["pattern"].lower()):
+        return [Violation("R10", f"pin.pattern {spec['pattern']!r} does not anchor on dragon-kit "
+                          "— one unanchored search over the file matches whichever dependency "
+                          "comes first, which is how a stale pin reported PASS against Sparkle's "
+                          'version. Anchor it: "dragon-kit\\";[^}]*minimumVersion = ([0-9.]+)"')]
     path = os.path.join(root, spec["file"])
     if not os.path.exists(path):
         return [Violation("R10", f"pin.file '{spec['file']}' does not exist")]

@@ -207,6 +207,18 @@ order. Three names for one slot, and the gap was in the app the rule most needed
 The version at `pin.file`/`pin.pattern` must be `>=` the newest `vX.Y.Z` tag in dragon-kit.
 **Every app pins a published version — there is no path-dependency exemption.**
 
+**`pin.pattern` must anchor on dragon-kit, and the checker now reads the pattern to make sure it
+does.** §R0 has required this since the trap was found, and nothing enforced it: the pattern is one
+search over the whole file, so an unanchored version regex matches whichever dependency appears
+first. `minimumVersion = ([0-9.]+)` read Sparkle's 2.5.2 out of ice-2's `.pbxproj` and compared
+*that* against the kit's tags — a false PASS on a stale pin, which is worse than a false failure
+because it looks like the rule is protecting you. The anchor is tested on the pattern with its
+separators removed, so yahoo-keykey-2's `DRAGONKIT_TAG="v([0-9.]+)"` satisfies it exactly as
+`dragon-kit", from: "([0-9.]+)"` does.
+
+`test_conformance.py` used to assert that false PASS as *expected behaviour* — an `expect_pass`
+named "the trap" — for the most-cited incident in this document.
+
 **Rationale:** a stale pin is how an app silently misses shared fixes. Every app sat on 1.3.0
 while the kit was at 1.4.0, so none had the shared menu at all.
 
