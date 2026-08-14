@@ -166,7 +166,7 @@ header:  icon → name → versionString → copyright
 links:   Website globe · Support on GitHub lifepreserver · Original project heart* · Open-source licenses doc.text
 Credits: Created by · Based on* · Built with → DragonKit vX.Y.Z · License · attributions*
 ```
-Five rules the type carries, each because an app got it wrong:
+Six rules the type carries, each because an app got it wrong:
 
 - **`websiteURL` must address `dragonapp.com/{app-name}-{major}`, the same string as
   `supportURL`'s repo name** — `content.websiteMatchesSupportRepo` checks one against the other,
@@ -829,10 +829,12 @@ Once the shell runs:
   arrays were removed, this cheat-sheet kept printing them, and the `AboutConfig.swift` it handed
   out did not compile either — while the sentence claiming verification sat right here.
 - **Verified against DragonKit 4.0.0.** §3's starter files were assembled into a scratch package,
-  built clean with `swift build`, and passed `dragon-conformance.py` — R10 excepted, because the
-  scratch package pinned the kit by `path:` (4.0.0's required `licensesURL` and
-  `OriginalWork.url` predate its tag) and the pin pattern finds no version in a path dependency.
-  Re-run that before touching this claim — and note that the kit's own
+  built clean with `swift build`, and passed `dragon-conformance.py` **except §R10**, which the
+  scratch package cannot satisfy: it pinned the kit by `path:`, and §R10 now makes
+  `{"kind": "path"}` a violation outright while a `pattern` finds no version in a path dependency
+  either. That is a property of the scratch harness, not a sanctioned exception — `rule_r10_pin`
+  never consults `excuses()`, so no §R11 entry could suppress it, and a real app pins a published
+  version. Re-run that before touching this claim — and note that the kit's own
   `Tests/DragonKitTests/HostWiringTests.swift` and `Tests/DragonKitUpdatesTests/HostWiringTests.swift`
   now build the same `AboutContent` / `WhatsNewContent` / `BackupConfig` / `UninstallConfig` call
   sites from a plain, non-`@testable` import, so the kit can no longer change one of them and go
