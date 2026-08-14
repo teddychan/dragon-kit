@@ -236,7 +236,60 @@ def expect_violation(name: str, app: str, rule: str, because: str) -> None:
     print(f"  ok    {name}")
 
 
+def check_masking_invariants() -> None:
+    """`mask_noncode` must preserve length AND line count, for every caller and every input.
+
+    Asserted directly rather than only through fixtures, because the two properties are what let a
+    rule read one file through two views at one index space — and a break in either is silent.
+    Line count was the one that broke: `\\` at end of line is Swift's continuation inside a
+    multi-line string, and blanking the newline after it kept the length right while moving every
+    line number below. §R1 and §R15 number from the original body and never noticed; §R13 numbers
+    from the masked copy and misreported by up to 9 lines in ice-2's MenuBarItemManager.swift.
+    """
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("dragon_conformance", CHECKER)
+    checker = importlib.util.module_from_spec(spec)
+    sys.modules["dragon_conformance"] = checker
+    spec.loader.exec_module(checker)
+
+    cases = {
+        "line continuation in a multi-line string": '''let s = """
+a b \\
+c "d"
+"""
+let after = 1
+''',
+        "raw string with an odd inner quote": 'let q = #"a straight " here"#\nlet after = 1\n',
+        "nested raw delimiters": 'let q = ##"a "# sequence"##\nlet after = 1\n',
+        "raw multi-line": 'let q = #"""\n"quoted", 12" wide\n"""#\nlet after = 1\n',
+        "backslash inside a raw string": '#"a \\ and a \\#(x)"#\nlet after = 1\n',
+        "unterminated block comment": "code()\n/* never closed\nmore\n",
+        "unterminated literal": 'let s = "never closed\nlet after = 1\n',
+        "comment markers inside a literal": 'let s = "// not a comment /* nor this */"\nx()\n',
+        "literal markers inside a comment": '// a " and a #" and a """\nx()\n',
+        "escaped quote at end of literal": 'let s = "ends with \\""\nlet after = 1\n',
+        "empty": "",
+    }
+    for name, text in cases.items():
+        for blank in (True, False):
+            masked = checker.mask_noncode(text, blank_literals=blank)
+            label = f"{name} (blank_literals={blank})"
+            if len(masked) != len(text):
+                FAILURES.append(f"{label}: length {len(text)} -> {len(masked)}")
+                print(f"  FAIL  {label} (length)")
+            elif masked.count("\n") != text.count("\n"):
+                FAILURES.append(f"{label}: newlines {text.count(chr(10))} -> "
+                                f"{masked.count(chr(10))}")
+                print(f"  FAIL  {label} (line count)")
+            else:
+                print(f"  ok    {label}")
+
+
 def main() -> int:
+    print("mask_noncode invariants")
+    check_masking_invariants()
+
     with tempfile.TemporaryDirectory() as tmp:
         print("compliant baseline")
         expect_pass("a fully compliant app passes", make_app(tmp))
@@ -311,6 +364,49 @@ extension AppMenuController {
     }
 }
 """), "R1",
+            because="hand-rolled app-lifecycle menu item")
+        # Reading the arguments across the whole construction was right; slicing them out of the
+        # RAW text was not. It let comments *inside* the argument list match, which the line-based
+        # predecessor would never have done — a regression, and one §R1's own prose forbids. The
+        # existing "commented-out lifecycle item" fixture does not cover it: there the whole
+        # `NSMenuItem(` sits inside the comment, so masking hides the call itself.
+        expect_pass("a comment inside the argument list is not a title", make_app(
+            tmp, menu=COMPLIANT_MENU + """
+extension AppMenuController {
+    func appOwn(_ title: String) -> NSMenuItem {
+        NSMenuItem(title: title,   // Quit and About %@ are built by DragonAppMenu, not here
+                   action: nil, keyEquivalent: "")
+    }
+}
+"""))
+        # R2 reads its own exception key. It was gated on R1's, so an app needing an Uninstall
+        # exception had to declare R1 — switching off every lifecycle-title check on that path —
+        # while §R11 told it "R2 is not a rule this checker can suppress", which was false in the
+        # way that mattered: R1 suppressed it.
+        uninstall_menu = COMPLIANT_MENU + """
+extension AppMenuController {
+    func bad() -> NSMenuItem {
+        NSMenuItem(title: "Uninstall Test App…", action: nil, keyEquivalent: "")
+    }
+}
+"""
+        expect_pass("an R2 exception suppresses R2", make_app(
+            tmp, menu=uninstall_menu, config_over={"exceptions": [{
+                "rule": "R2", "path": "Sources/Menu.swift",
+                "reason": "the host assembles this menu itself",
+                "sanctionedBy": "CONFORMANCE.md §R11"}]}))
+        # ...and it suppresses R2 *only* — an R2 exception must not silence the lifecycle arm.
+        expect_violation("an R2 exception does not silence R1", make_app(
+            tmp, menu=uninstall_menu + """
+extension AppMenuController {
+    func legacy() -> NSMenuItem {
+        NSMenuItem(title: "About Test App", action: nil, keyEquivalent: "")
+    }
+}
+""", config_over={"exceptions": [{
+                "rule": "R2", "path": "Sources/Menu.swift",
+                "reason": "the host assembles this menu itself",
+                "sanctionedBy": "CONFORMANCE.md §R11"}]}), "R1",
             because="hand-rolled app-lifecycle menu item")
 
         print("R3 — no shadowing kit type names")
@@ -609,11 +705,32 @@ struct MyBackupSection: View {
         # The §R11 table's own recorded mistake, machine-checked: five sanctions sat there for
         # months naming rules that never fired on the apps they were written for. A row naming a
         # rule the checker cannot suppress reads as a live sanction and sanctions nothing.
+        # R10 is genuinely un-suppressible: `rule_r10_pin` never consults `excuses()`, because a
+        # stale pin is the one thing no app may opt out of. (R2 used to stand here, and was the
+        # wrong example — see "R2 reads its own exception key" below.)
         expect_violation("an exception for a rule that cannot fire", make_app(
             tmp, config_over={"exceptions": [{
-                "rule": "R2", "reason": "the IMK menu is assembled by macOS",
+                "rule": "R10", "reason": "we will bump next sprint",
                 "sanctionedBy": "CONFORMANCE.md §R11"}]}), "R11",
             because="not a rule this checker can suppress")
+        # §R5, §R8, §R9 and §R12 are whole-app checks — each consults `excuses(rule, "")` and
+        # nothing else — so a path-scoped entry printed as a live, narrowly-scoped sanction on
+        # every run and suppressed nothing. Same defect as naming a rule that never fires, left
+        # open one field along: this fixture PASSED §R11 and still failed §R8.
+        expect_violation("a path on a rule that is only ever checked app-wide", make_app(
+            tmp, config_over={"exceptions": [{
+                "rule": "R8", "path": "Sources", "reason": "String Catalogs",
+                "sanctionedBy": "CONFORMANCE.md §R11"}]}), "R11",
+            because="only ever checked for the app as a whole")
+        # ...and §R15 must keep accepting one, because dragon-sample-app's live exception is
+        # path-scoped and that rule is consulted both ways.
+        expect_pass("§R15 still takes a path", make_app(
+            tmp, extra={"Sources/AboutConfig.swift": COMPLIANT_ABOUT.replace(
+                "https://www.dragonapp.com/fixture-2/\")!,\n            supportURL",
+                "https://www.dragonapp.com\")!,\n            supportURL")},
+            config_over={"exceptions": [{
+                "rule": "R15", "path": "Sources/AboutConfig.swift",
+                "reason": "no public app page exists", "sanctionedBy": "CONFORMANCE.md §R11"}]}))
 
         print("R12 — the build stamps DragonCommitDate")
         # About shows no timestamp at all when the key is absent — deliberately, since a silent
@@ -632,6 +749,17 @@ struct MyBackupSection: View {
         # The rule accepted the key appearing *anywhere* in the build surface, so a note in a
         # script's header comment satisfied it while nothing wrote the key — and two of the five
         # apps have exactly such a comment, next to a real stamp that was doing the work.
+        # A scripting-language stamper assigns to the key rather than shelling out to PlistBuddy,
+        # and genuinely writes it. The list is closed — CONFORMANCE.md §R12 says so now — so a
+        # route it does not name has to be added here rather than left to §R11.
+        expect_pass("a plistlib stamper", make_app(
+            tmp, build="# packaging is python\n",
+            extra={"scripts/stamp.py": 'import plistlib\npl["DragonCommitDate"] = date\n'},
+            config_over={"buildFiles": ["scripts/*.py"]}))
+        expect_pass("a Ruby plist stamper", make_app(
+            tmp, build="# packaging is ruby\n",
+            extra={"scripts/stamp.rb": "plist['DragonCommitDate'] = date\n"},
+            config_over={"buildFiles": ["scripts/*.rb"]}))
         expect_violation("the key named in a comment is not a stamp", make_app(
             tmp, build="""#!/bin/bash
 # Stamps CFBundleVersion, and should stamp DragonCommitDate too.
@@ -772,6 +900,20 @@ struct LanguageSection: View {
 }
 """}), "R13",
             because="aliases LanguagePicker")
+        # The other half of the raw-string trap, on the rule whose line numbers come from the
+        # masked copy: a raw string must not hide a live call below it, and `\\` inside one
+        # escapes nothing.
+        expect_violation("a raw string does not hide the picker below it", make_app(
+            tmp, locales=("en", "zh-Hant"), extra={"Sources/Lang.swift": '''import SwiftUI
+import DragonKit
+
+let hint = #"type a straight " to search"#
+
+struct LanguageSection: View {
+    var body: some View { LanguagePicker() }
+}
+'''}), "R13",
+            because="takes the kit's default of all")
         expect_pass("a block-commented call is not a call site", make_app(
             tmp, locales=("en", "zh-Hant"),
             extra={"Sources/Lang.swift": language_pane("languages: [.en, .zhHant]") + """
@@ -840,6 +982,19 @@ final class ConfigContentTests: XCTestCase {
                 'copyright: DragonAbout.copyright(years: "2026", holder: "Teddy Chan"),',
                 'copyright:\n                DragonAbout.copyright(years: "2026", '
                 'holder: "Teddy Chan"),')}))
+        # The label is located in the fully-masked copy and the *value* read from the
+        # literal-preserving one. Reading the label out of the literal-preserving copy meant any
+        # Swift string containing the text `copyright:` was reported as a bad About slot — and
+        # yahoo-keykey-2's `sources: ["App", "Packages"]` reach its own test suite, which is the
+        # trap §R13 hit for real. The fixture below this one asserts on `content.copyright`, a
+        # property read with no label at all, so it never covered this.
+        expect_pass("a literal containing the label is not the slot", make_app(
+            tmp, extra={"Sources/AboutConfig.swift": compliant_about,
+                        "Sources/Legacy.swift": """import Foundation
+
+let legacyNotice = "copyright: (c) 2008 Somebody"
+let template = "copyright: %@"
+"""}))
         expect_pass("copyright prose in a comment is not a violation", make_app(
             tmp, extra={"Sources/AboutConfig.swift": compliant_about.replace(
                 "enum AboutConfig {",
@@ -975,6 +1130,35 @@ final class AboutTests: XCTestCase {
 ''')
         expect_pass("a multi-line string above the construction", make_app(
             tmp, extra={about: multiline}))
+        # Raw strings are the same trap, and unlike the multi-line case they are already in
+        # shipping source: eight files in ice-2, two in spectacle-2. Without the `#` delimiter the
+        # leading `"` opened a *plain* literal, the inner quotes re-paired, and an odd number of
+        # them left the scanner inside a literal to end of file — blanking the real construction
+        # below and reporting a conforming app for having no About pane at all. Reproduced on
+        # ice-2's own AboutConfig.swift before the fix.
+        # ONE raw string holding an ODD number of quotes is the whole defect: unaware of the `#`,
+        # the scanner re-pairs the inner quotes, runs out of them, and stays inside a literal to
+        # end of file — blanking the construction below. An even count would re-pair by luck and
+        # prove nothing, so this fixture is deliberately minimal. Verified against the unfixed
+        # scanner on ice-2's own AboutConfig.swift, which reported `R15 cannot read 'websiteURL:'`.
+        odd_raw = COMPLIANT_ABOUT.replace(
+            "enum AboutConfig {",
+            'private let quoteHint = #"use a straight " here"#\n\nenum AboutConfig {')
+        expect_pass("a raw string above the construction", make_app(
+            tmp, extra={about: odd_raw}))
+        expect_violation("...and the construction below it is still read", make_app(
+            tmp, extra={about: odd_raw.replace("/fixture-2/\")!,\n            supportURL",
+                                               "\")!,\n            supportURL")}), "R15",
+            because="but the support row's repository is")
+        # The other delimiter forms, as a positive control: `##"…"##` and the raw multi-line form
+        # must not be read as code either.
+        expect_pass("every raw-string delimiter form", make_app(
+            tmp, extra={about: COMPLIANT_ABOUT.replace("enum AboutConfig {", '''enum AboutConfig {
+    static let nested = ##"a "# sequence needs two hashes"##
+    static let block = #"""
+    A raw multi-line "quote", 12" wide.
+    """#
+''')}))
         expect_violation("...and the construction below it is still read", make_app(
             tmp, extra={about: multiline.replace("/fixture-2/\")!,\n            supportURL",
                                                  "\")!,\n            supportURL")}), "R15",

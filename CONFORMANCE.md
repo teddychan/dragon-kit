@@ -119,8 +119,12 @@ lifecycle item, or an app that never references `DragonAppMenu` **in code**.
 Both halves read the code, not the line. `"DragonAppMenu" in line` counted the name wherever it
 appeared, so `let marker = "DragonAppMenu"` — or the name in a comment — satisfied this rule for an
 app that never called it. And an `NSMenuItem(` whose title sat on the *next* line matched nothing,
-which is the spelling every one of these takes once it has four arguments. The call's arguments are
-read as a whole now, from the unmasked text so the titles are still there to match.
+which is the spelling every one of these takes once it has four arguments.
+
+The call's arguments are read as a whole now, from a copy that keeps **literals but not comments**.
+Reading them from raw text was the first cut and was wrong in this rule's own terms: it made
+`NSMenuItem(title: title,  // Quit and About %@ come from DragonAppMenu)` a violation, which the
+line-based predecessor would never have reported.
 
 **Rationale:** this is the drift that motivated the whole spec. Order, naming, casing,
 ellipsis, icons and the omission rules (`onCheckForUpdates: nil` for Mac App Store,
@@ -202,9 +206,15 @@ reference `DragonUpdater`" fails an app with the `mac-app-store` trait, which li
 all; "the app must reference `LoginItem`" fails any app that simply has no launch-at-login feature.
 What a deny-list costs is that it only knows the routes written into it, and §R7 knew exactly two:
 `import LoginServiceKit` — the login-item library ClipMenu's upstream used — went straight past it.
-Third-party names are matched on `import` or a member access, never bare, because ice-2 credits
-`LaunchAtLogin` in an About-pane comment and in its generated acknowledgements, and matching the
-word alone would fail it for naming a library it does not use.
+
+Third-party names are matched on `import` or a member access, never bare, so that *naming* a
+library stays distinguishable from *using* one: an entry in an `attributions` array, a test
+asserting this rule, a variable name. **That is defensive, with no incident behind it**, and this
+paragraph used to claim one — that ice-2 credits `LaunchAtLogin` in its generated acknowledgements.
+It does the opposite: `IceTests/AcknowledgementsTests.swift` asserts the bundled notices do *not*
+name it, the dependency having been dropped long ago, and the single mention anywhere in ice-2's
+`sources` is a `//` comment that never reaches this rule. Verified by widening the pattern to bare
+words and re-running: ice-2 still passes either way.
 
 ## R8 — The app owns no kit string keys
 
@@ -274,12 +284,29 @@ itself an R10 violation, the same way §R0 makes deleting `.dragon-conformance.j
 ## R11 — Exceptions are explicit, reasoned, and few
 
 A sanctioned divergence goes in the app's own `.dragon-conformance.json` — which is the only
-place the checker reads them from — with a `reason` and a `sanctionedBy`. **All three fields are
-validated**: the rule must be one the checker can actually suppress (`R1`, `R3`–`R9`, `R12`–`R15`),
-and both `reason` and `sanctionedBy` must be non-empty. Neither was checked before, so an entry
-with no reason suppressed its rule just as effectively while the run printed `NO REASON GIVEN`
-beside it and passed. Validating the rule name is this section's own history made machine-checkable
-— see the table below, where five sanctions sat for months naming rules that never fired.
+place the checker reads them from — with a `reason` and a `sanctionedBy`. **All four fields are
+validated:**
+
+| Field | Rule |
+|---|---|
+| `rule` | must be one the checker can actually suppress: `R1`–`R9`, `R12`–`R15`. `R0`, `R10` and `R11` are not suppressible by design |
+| `path` | optional — but **not accepted on `R5`, `R8`, `R9` or `R12`**, which are whole-app checks |
+| `reason` | non-empty |
+| `sanctionedBy` | non-empty |
+
+`reason` and `sanctionedBy` were required in prose and checked nowhere, so an entry with neither
+suppressed its rule just as effectively while the run printed `NO REASON GIVEN` beside it and
+passed. Validating `rule` is this section's own history made machine-checkable — see the table
+below, where five sanctions sat for months naming rules that never fired.
+
+`path` is validated for exactly the same reason, one field along. §R5, §R8, §R9 and §R12 consult
+`excuses(rule, "")` and nothing else, so a path-scoped entry for one of them printed as a live,
+narrowly-scoped sanction on every run and suppressed nothing at all — the app still failed. §R15
+takes a path (dragon-sample-app's live exception is one) because it is consulted both ways.
+
+**§R2 reads its own key.** It was gated on §R1's, so an app needing an Uninstall exception had to
+declare `R1` — which also switched off every lifecycle-title check on that path — while this list
+told it `R2` was not suppressible, which was false in the way that mattered.
 
 ```jsonc
 "exceptions": [
@@ -355,9 +382,22 @@ what the table above records as the mistake.
 
 Some build step must write `git log -1 --format=%cI` into the packaged `Info.plist` as
 `DragonCommitDate`, alongside the `CFBundleVersion = git rev-list --count HEAD` stamp. The
-checker greps the app's build surface for **a stamp**, not for the word: PlistBuddy's `Set :` /
-`Add :`, a `<key>DragonCommitDate</key>` entry, `INFOPLIST_KEY_DragonCommitDate`, `plutil`, or
-`defaults write`. Declare `buildFiles` to narrow where it looks.
+checker greps the app's build surface for **a stamp**, not for the word. Declare `buildFiles` to
+narrow where it looks.
+
+**The recognized spellings are a closed list**, and a correct stamp written any other way is a
+violation — add the route here and to `COMMIT_DATE_STAMPS`, or sanction §R12 under §R11:
+
+- PlistBuddy `Set :DragonCommitDate` / `Add :DragonCommitDate`
+- a `<key>DragonCommitDate</key>` entry in an `Info.plist`, including an empty placeholder
+- `INFOPLIST_KEY_DragonCommitDate` in an Xcode project
+- `plutil` or `defaults write` naming the key
+- an assignment to the key by index — `pl["DragonCommitDate"] = …` — which is how a `plistlib` or
+  Ruby `plist` stamper writes it without shelling out
+
+Saying which spellings count and enforcing a *whitelist* are the same statement here; listing them
+descriptively while rejecting everything else would be a rule documented more broadly than it is
+enforced, which is the failure this document exists to prevent.
 
 It used to accept the key appearing *anywhere* in those files, so `# TODO: stamp DragonCommitDate`
 satisfied it while nothing wrote the key — and two of the five apps carry exactly such a comment,
