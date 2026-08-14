@@ -1,5 +1,9 @@
 .DS_Store
 .build/
+# `test_conformance.py` imports the checker to assert `mask_noncode`'s invariants directly, and
+# CPython caches bytecode for an imported module. It also sets `sys.dont_write_bytecode`, so this
+# is the belt to that suspenders — a stray `git add -A` committed the directory once already.
+__pycache__/
 *.xcodeproj
 sample-app/.build/
 # SwiftPM lock file — regenerated on build; not tracked for a library package.
