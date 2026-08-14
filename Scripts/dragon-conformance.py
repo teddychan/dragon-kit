@@ -163,32 +163,52 @@ def strip_literals(line: str) -> str:
     return re.sub(r'"[^"\n]*"', '""', line)
 
 
-def mask_noncode(text: str) -> str:
-    """A copy of `text` with comment text and string-literal *contents* blanked to spaces.
+def mask_noncode(text: str, *, blank_literals: bool = True) -> str:
+    """A copy of `text` with comment text — and, by default, string-literal *contents* — blanked.
 
-    Length-preserving, which is the point: R15 needs both halves of one file at once — the masked
-    copy says which `AboutContent(` occurrences are real code, and the original holds the URLs
-    written inside the literals. One index space serves both.
+    Length-preserving, which is the point: a rule needs both halves of one file at once. The masked
+    copy says which occurrences of a call are real code, and the original holds the literals written
+    inside it. One index space serves both.
 
-    Neither existing helper can do it. ``strip_comment`` cuts `URL(string: "https://…")` at the
+    Neither line-based helper can do it. ``strip_comment`` cuts `URL(string: "https://…")` at the
     slashes in `https://`, and clipmenu-2 and ice-2 both name their website constant on exactly
     such a line; ``strip_literals`` collapses `"…"` to `""` and moves every offset after it.
 
-    Scanned in one pass over the whole file rather than line by line, because both states outlive a
-    line: a Swift multi-line string spans them, and a line inside one that contains a URL would
-    otherwise have its `//` read as a comment. Its triple-quote delimiter is matched as a unit for
-    the same reason — read as three single quotes it goes open-close-open, so any odd number of `"`
-    inside the block leaves the scanner stuck in a literal, blanks the app's real `AboutContent(`
-    and reports a conforming app for having none. Twenty-seven files across the five apps use
-    multi-line strings, none of them yet in the file that builds About.
+    Scanned in one pass over the whole file rather than line by line, because every state here
+    outlives a line: a Swift multi-line string spans them, a `/* … */` spans them, and a line inside
+    a literal that contains a URL would otherwise have its `//` read as a comment. The triple-quote
+    delimiter is matched as a unit for the same reason — read as three single quotes it goes
+    open-close-open, so any odd number of `"` inside the block leaves the scanner stuck in a
+    literal, blanks the real construction below it and reports a conforming app for having none.
+    Twenty-seven files across the five apps use multi-line strings.
 
-    `/* … */` is deliberately not handled, matching every other rule here: no Dragon app writes one
-    in its About wiring, and singling this rule out for it would be a lone deviation.
+    `blank_literals=False` keeps literal contents, for §R14: the dual-holder copyright it exists to
+    catch is written *inside* a literal, so blanking one would hide the very thing being counted.
+    Comments go either way — that is the half every caller needs.
+
+    `/* … */` is handled, and nests the way Swift's does. It used to be skipped deliberately, on the
+    grounds that no app wrote one in the wiring these rules read — but skipping it cut both ways:
+    `/* LanguagePicker() */` was a false §R13 violation, and a block comment was an unread route
+    past every rule that strips only `//`.
     """
     out = list(text)
     inside: str | None = None  # the delimiter that opened the literal we are in
+    depth = 0                  # nesting depth of /* … */, which Swift allows
     index = 0
     while index < len(text):
+        if depth:
+            if text.startswith("/*", index):
+                depth += 1
+            elif text.startswith("*/", index):
+                depth -= 1
+            else:
+                if text[index] != "\n":
+                    out[index] = " "
+                index += 1
+                continue
+            out[index] = out[index + 1] = " "
+            index += 2
+            continue
         if inside is None:
             if text.startswith('"""', index):
                 inside, index = '"""', index + 3
@@ -198,22 +218,32 @@ def mask_noncode(text: str) -> str:
                 while index < len(text) and text[index] != "\n":
                     out[index] = " "
                     index += 1
+            elif text.startswith("/*", index):
+                depth = 1
+                out[index] = out[index + 1] = " "
+                index += 2
             else:
                 index += 1
             continue
         if text[index] == "\\":  # an escape, so the next character closes nothing
-            out[index] = " "
-            if index + 1 < len(text):
-                out[index + 1] = " "
+            if blank_literals:
+                out[index] = " "
+                if index + 1 < len(text):
+                    out[index + 1] = " "
             index += 2
         elif text.startswith(inside, index):
             index += len(inside)
             inside = None
         else:
-            if text[index] != "\n":
+            if blank_literals and text[index] != "\n":
                 out[index] = " "
             index += 1
     return "".join(out)
+
+
+def line_of(body: str, index: int) -> int:
+    """The 1-based line number of `index` in `body`."""
+    return body.count("\n", 0, index) + 1
 
 
 def literal_at(body: str, masked: str, quote: int) -> str | None:
@@ -312,23 +342,36 @@ def latest_kit_version(kit: str) -> tuple[int, int, int] | None:
 # --------------------------------------------------------------------------- rules
 
 def rule_r1_r2_menu(root: str, cfg: Config, files: list[str]) -> list[Violation]:
+    """Both halves read the code, not the line.
+
+    Two line-based substring tests used to decide this. `"DragonAppMenu" in line` counted the name
+    wherever it appeared, so `let marker = "DragonAppMenu"` — or the name in a comment — satisfied
+    §R1 for an app that never called it; the masked copy sees only real code. And an `NSMenuItem(`
+    whose title sat on the *next* line matched neither the lifecycle patterns nor §R2's `uninstall`,
+    which is the spelling every one of these calls takes once it has four arguments. The call's
+    arguments are now read as a whole, from the original text so the titles are intact.
+    """
     out: list[Violation] = []
     uses_kit_menu = False
     for path in files:
-        for number, raw in enumerate(read(path), 1):
-            line = strip_comment(raw)
-            if "DragonAppMenu" in line:
-                uses_kit_menu = True
-            if "NSMenuItem(" not in line:
+        body = "".join(read(path))
+        masked = mask_noncode(body)
+        if "DragonAppMenu" in masked:
+            uses_kit_menu = True
+        if cfg.excuses("R1", path):
+            continue
+        for call in re.finditer(r"\bNSMenuItem\s*\(", masked):
+            span = balanced(masked, call.end() - 1)
+            if span is None:
                 continue
-            if cfg.excuses("R1", path):
-                continue
-            if re.search(r"uninstall", line, re.IGNORECASE):
+            args = body[call.end():call.end() + len(span)]
+            number = line_of(body, call.start())
+            if re.search(r"uninstall", args, re.IGNORECASE):
                 out.append(Violation("R2", "menu item for Uninstall — it belongs in "
                                      "UninstallSettingsPane, not the dropdown", path, number))
                 continue
             for pattern in LIFECYCLE_PATTERNS:
-                if re.search(pattern, line):
+                if re.search(pattern, args):
                     out.append(Violation("R1", "hand-rolled app-lifecycle menu item — build it "
                                          "with DragonAppMenu.items(_:)", path, number))
                     break
@@ -372,7 +415,13 @@ def rule_r4_design_primitives(root: str, cfg: Config, files: list[str]) -> list[
 
 
 def rule_r5_shared_panes(root: str, cfg: Config, files: list[str]) -> list[Violation]:
-    body = "".join("".join(read(path)) for path in files)
+    """Read from code only: a *commented-out* pane reference used to satisfy this rule.
+
+    It searched the raw text of every source file, so `// AnySettingsPane(UninstallSettingsPane…)`
+    left behind by a migration counted as wiring the kit's pane — the one rule where prose about
+    the kit was accepted as use of the kit.
+    """
+    body = "".join(mask_noncode("".join(read(path))) for path in files)
     required = [("AboutSettingsPane", "AboutPane"), ("WhatsNewSettingsPane", "WhatsNewPane"),
                 ("UninstallSettingsPane",)]
     if "sparkle" in cfg.traits:
@@ -571,9 +620,23 @@ def rule_r13_language_picker(root: str, cfg: Config, files: list[str],
     for path in files:
         if cfg.excuses("R13", path):
             continue
-        body = "\n".join(strip_literals(strip_comment(raw.rstrip("\n"))) for raw in read(path))
-        for call in re.finditer(r"\bLanguagePicker\s*\(", body):
-            number = body.count("\n", 0, call.start()) + 1
+        raw_body = "".join(read(path))
+        # Masked rather than line-stripped: `strip_comment` never saw `/* LanguagePicker() */`, so
+        # a block-commented call was a false violation, and a block comment was an unread route
+        # past the rule in both directions.
+        body = mask_noncode(raw_body)
+        # An alias puts the call site out of the rule's sight — `typealias LP = LanguagePicker`
+        # then `LP()` reads as no picker at all. Reported rather than chased: R13 compares written
+        # arguments, so one hop of type indirection has no written argument to compare.
+        for alias in re.finditer(r"\btypealias\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*LanguagePicker\b",
+                                 body):
+            out.append(Violation("R13", f"aliases LanguagePicker as '{alias.group(1)}' — R13 reads "
+                                 "the written call site, so an alias hides which languages the "
+                                 "picker offers. Construct LanguagePicker by name", path,
+                                 line_of(body, alias.start())))
+        # `.init` spelled out is the same construction and used to be invisible to this rule.
+        for call in re.finditer(r"\bLanguagePicker\s*(?:\.\s*init\s*)?\(", body):
+            number = line_of(body, call.start())
             args = balanced(body, call.end() - 1) or ""
             if not shipped:
                 out.append(Violation("R13", "constructs LanguagePicker, but no '.lproj' is "
@@ -642,26 +705,43 @@ def rule_r14_about_copyright(root: str, cfg: Config, files: list[str]) -> list[V
     argument").
     """
     out: list[Violation] = []
-    literal = re.compile(r"\bcopyright:\s*\"")
-    dual_form = re.compile(r"DragonAbout\.copyright\s*\(\s*original\s*:")
+    slot = re.compile(r"\bcopyright\s*:\s*")
+    kit_call = re.compile(r"DragonAbout\s*\.\s*copyright\s*\(")
+    dual_form = re.compile(r"DragonAbout\s*\.\s*copyright\s*\(\s*original\s*:")
     for path in files:
         if cfg.excuses("R14", path):
             continue
-        stripped: list[str] = []
-        for number, raw in enumerate(read(path), 1):
-            line = strip_comment(raw)
-            stripped.append(line)
-            if literal.search(line):
+        body = "".join(read(path))
+        # Literals are kept: the dual-holder line this rule exists to catch is written *inside*
+        # one, so blanking them would hide the thing being counted. Comments still go, which is
+        # what lets ice-2 discuss the old spelling in a comment without failing.
+        masked = mask_noncode(body, blank_literals=False)
+        # Positive: whatever fills the slot must BE the kit's call. The old test was
+        # `copyright:\s*"` on one line, so it saw a literal on the same line and nothing else —
+        # `copyright: Self.notice` passed, and so did a literal wrapped onto the following line,
+        # which is how every one of these reads once the argument list is long enough to wrap.
+        for match in slot.finditer(masked):
+            value = masked[match.end():].lstrip()
+            if kit_call.match(value):
+                continue
+            number = line_of(masked, match.start())
+            if value.startswith('"'):
                 out.append(Violation("R14", "the About copyright is a string literal — assemble "
                                      "it with DragonAbout.copyright(years:holder:) so every app "
                                      "formats it identically", path, number))
+            else:
+                out.append(Violation("R14", f"the About copyright comes from "
+                                     f"'{value.split(chr(10))[0].strip()[:40]}' — assemble it with "
+                                     "DragonAbout.copyright(years:holder:); R14 reads the written "
+                                     "call site and cannot follow an indirection to check what it "
+                                     "names", path, number))
+        for number, line in enumerate(masked.splitlines(), 1):
             if line.count("©") > 1:
                 out.append(Violation("R14", "two copyright holders on one line — the About "
                                      "copyright names the app's own holder only; the upstream "
                                      "author is credited by OriginalWork and their licence text "
                                      "by the licences page", path, number))
-        match = dual_form.search("".join(stripped))
-        if match:
+        if dual_form.search(masked):
             out.append(Violation("R14", "DragonAbout.copyright(original:) — the dual-holder "
                                  "copyright was removed in DragonKit 4.0.0; call "
                                  "copyright(years:holder:)", path))
