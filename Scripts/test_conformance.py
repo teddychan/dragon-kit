@@ -739,6 +739,30 @@ enum AboutConfig {
                 "https://github.com/teddychan/fixture-2/issues",
                 "https://www.dragonapp.com/fixture-2/support/")}), "R15",
             because="which names no")
+        # The hole this rule shipped with, and why the audit rates it CRITICAL: **neither host was
+        # checked**. Only the path was compared, so any host carrying `/fixture-2/` satisfied the
+        # rule — and `endswith("github.com")` is true of `notgithub.com`, which yielded an owner
+        # and a repo and made the comparison agree with itself. Both fixtures below PASSED before
+        # the fix. Three negative controls for §R15 already existed; all three tested paths and
+        # none tested a host, which is exactly how this sat open underneath them.
+        expect_violation("the right path on somebody else's site", make_app(
+            tmp, extra={about: COMPLIANT_ABOUT.replace(
+                "https://www.dragonapp.com/fixture-2/\")!,\n            supportURL",
+                "https://evil-example.com/fixture-2/\")!,\n            supportURL")}), "R15",
+            because="not the studio site")
+        expect_violation("a support row on a github.com lookalike", make_app(
+            tmp, extra={about: COMPLIANT_ABOUT.replace(
+                "https://github.com/teddychan/fixture-2/issues",
+                "https://notgithub.com/teddychan/fixture-2/issues")}), "R15",
+            because="which names no")
+        # ...and the label boundary has to cut the other way too, or the fix fails four real apps:
+        # `www.` is a subdomain of each site, and the bare domain is the site itself.
+        expect_pass("www. and the bare domain are both the site", make_app(
+            tmp, extra={about: COMPLIANT_ABOUT.replace(
+                "https://www.dragonapp.com/fixture-2/\")!,\n            supportURL",
+                "https://dragonapp.com/fixture-2/\")!,\n            supportURL").replace(
+                    "https://github.com/teddychan/fixture-2/issues",
+                    "https://www.github.com/teddychan/fixture-2/issues")}))
         # The silent-checker arm. An app that restructures its About wiring out of the checker's
         # sight must fail rather than drop out of the rule — §R0, §R10 and §R13 all take this line.
         expect_violation("no AboutContent construction anywhere", make_app(

@@ -259,8 +259,15 @@ public struct AboutContent {
     /// The site convention is `{app-name}-{major}`, which is also the GitHub repo name for every
     /// Dragon app — so the two rows check each other with no table to maintain. The Dragon
     /// Sample App is the sanctioned exception: it has no marketing page and points at the hub.
+    ///
+    /// **Both hosts are checked, and that was the hole.** This compared only the *path*, so
+    /// `https://evil-example.com/ice-2/` satisfied it as readily as the real page; the audit that
+    /// found it also found the checker's copy of the same gap, and the two would have re-split if
+    /// only one were fixed. The website host must be the studio site, because the whole point of
+    /// the property is that the Website row addresses the page the Support row's repository has.
     public var websiteMatchesSupportRepo: Bool {
-        guard let repo = AboutLinkDetail.repository(of: supportURL) else { return false }
+        guard let repo = AboutLinkDetail.repository(of: supportURL),
+              AboutLinkDetail.isDragonAppSite(websiteURL) else { return false }
         let path = websiteURL.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         return path == repo
     }
@@ -288,10 +295,28 @@ public enum AboutLinkDetail {
     /// The owner in a `github.com/owner/repo/...` URL.
     public static func owner(of url: URL) -> String? { gitHubComponents(of: url)?.owner }
 
+    /// Whether `url` is served by the studio site — `dragonapp.com` or a subdomain of it.
+    ///
+    /// Split out because ``AboutContent/websiteMatchesSupportRepo`` compared paths alone, so any
+    /// host with the right path satisfied it. Matched the same way as ``gitHubComponents(of:)``
+    /// below, for the same reason: a bare suffix test also accepts `notdragonapp.com`.
+    public static func isDragonAppSite(_ url: URL) -> Bool { host(of: url, is: "dragonapp.com") }
+
     private static func gitHubComponents(of url: URL) -> (owner: String, repo: String)? {
-        guard url.host?.hasSuffix("github.com") == true else { return nil }
+        guard host(of: url, is: "github.com") else { return nil }
         let parts = url.path.split(separator: "/").map(String.init)
         guard parts.count >= 2 else { return nil }
         return (parts[0], parts[1])
+    }
+
+    /// Whether `url`'s host is `domain` or a subdomain of it.
+    ///
+    /// `hasSuffix("github.com")` — which this replaces — is true of **`notgithub.com`**, so a
+    /// support row pointing at a lookalike host yielded an owner and repo and read as a GitHub
+    /// link throughout the pane. The label boundary is what makes `www.` a subdomain and
+    /// `notgithub` a different registrable name.
+    private static func host(of url: URL, is domain: String) -> Bool {
+        guard let host = url.host?.lowercased() else { return false }
+        return host == domain || host.hasSuffix("." + domain)
     }
 }

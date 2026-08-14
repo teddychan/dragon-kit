@@ -210,5 +210,32 @@ import Foundation
         #expect(check(website: "https://www.dragonapp.com/clipmenu-2/", support: issues))
         #expect(!check(website: "https://www.dragonapp.com/clipmenu/", support: issues))
         #expect(!check(website: "https://www.dragonapp.com", support: issues))
+        // Both hosts, which is what this compared nothing of: the path alone decided it, so any
+        // site serving `/clipmenu-2/` agreed with the support row, and `hasSuffix("github.com")`
+        // accepted `notgithub.com` and handed back an owner and a repo to agree with.
+        #expect(!check(website: "https://evil-example.com/clipmenu-2/", support: issues))
+        #expect(!check(website: "https://www.dragonapp.com/clipmenu-2/",
+                       support: "https://notgithub.com/teddychan/clipmenu-2/issues"))
+        // The boundary cuts the other way too, or four shipping apps would start failing: `www.`
+        // is a subdomain, and the bare domain is the site itself.
+        #expect(check(website: "https://dragonapp.com/clipmenu-2/", support: issues))
+        #expect(check(website: "https://www.dragonapp.com/clipmenu-2/",
+                      support: "https://www.github.com/teddychan/clipmenu-2/issues"))
+    }
+
+    /// `AboutLinkDetail` renders the row's trailing text from the same host test, so a lookalike
+    /// host must not read as a GitHub link there either — it falls back to `host/path`.
+    @Test func lookalikeHostsAreNotGitHub() {
+        #expect(AboutLinkDetail.repository(
+            of: URL(string: "https://notgithub.com/teddychan/ice-2/issues")!
+        ) == nil)
+        #expect(AboutLinkDetail.detail(
+            for: URL(string: "https://notgithub.com/teddychan/ice-2/issues")!
+        ) == "notgithub.com/teddychan/ice-2/issues")
+        #expect(AboutLinkDetail.repository(
+            of: URL(string: "https://www.github.com/teddychan/ice-2/issues")!
+        ) == "ice-2")
+        #expect(!AboutLinkDetail.isDragonAppSite(URL(string: "https://notdragonapp.com/ice-2/")!))
+        #expect(AboutLinkDetail.isDragonAppSite(URL(string: "https://dragonapp.com/ice-2/")!))
     }
 }
