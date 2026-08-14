@@ -103,8 +103,14 @@ than honoring the closure-backed item's private target. This adapter does not ha
 lifecycle item and is not an R11 exception: DragonKit still supplies each item's title, icon,
 order, and omission behavior.
 
-**Violation:** any `NSMenuItem(title:)` whose title literal or `L()` key matches a lifecycle
-item, or an app that never references `DragonAppMenu`.
+**Violation:** any `NSMenuItem(…)` whose arguments contain a title literal or `L()` key matching a
+lifecycle item, or an app that never references `DragonAppMenu` **in code**.
+
+Both halves read the code, not the line. `"DragonAppMenu" in line` counted the name wherever it
+appeared, so `let marker = "DragonAppMenu"` — or the name in a comment — satisfied this rule for an
+app that never called it. And an `NSMenuItem(` whose title sat on the *next* line matched nothing,
+which is the spelling every one of these takes once it has four arguments. The call's arguments are
+read as a whole now, from the unmasked text so the titles are still there to match.
 
 **Rationale:** this is the drift that motivated the whole spec. Order, naming, casing,
 ellipsis, icons and the omission rules (`onCheckForUpdates: nil` for Mac App Store,
@@ -116,7 +122,8 @@ There is no `Uninstall` item in the dropdown, and no way to add one — `DragonA
 has no such parameter since v2.0.0. Uninstall is `UninstallSettingsPane`, last in the
 sidebar.
 
-**Violation:** any menu item whose title contains "uninstall" (case-insensitive).
+**Violation:** any menu item whose arguments contain "uninstall" (case-insensitive), read across
+the whole construction — see §R1 on why one line was not enough.
 
 **Rationale:** a rarely-used destructive action does not belong one click away in the
 everyday menu, next to Quit.
@@ -151,6 +158,10 @@ About, What's New, Permissions, Updates and Uninstall must be the kit's panes. R
 references: `AboutSettingsPane` or `AboutPane`; `WhatsNewSettingsPane` or `WhatsNewPane`;
 `UninstallSettingsPane`; `UpdatesSettingsPane` (unless the app lacks the `sparkle` trait);
 `PermissionsSettingsPane` (unless the app has the `no-permissions` trait).
+
+The reference must be **in code**. This searched raw text, so a line a migration left behind —
+`// AnySettingsPane(UninstallSettingsPane(config: config))` — counted as wiring the kit's pane.
+It was the one rule where prose *about* the kit was accepted as use of the kit.
 
 **Rationale:** every pane an app writes itself is a pane that stops receiving shared fixes.
 ice-2's own updates pane meant it never got the reworded "up to date" alert.
@@ -332,9 +343,14 @@ call it bare and all ship seven `.lproj`; a rule that simply demanded an explici
 fail three conforming apps.
 
 **Violation:** the offered set differs from the shipped set in either direction; a `languages:`
-argument that isn't a literal list, or that names something which is no `DragonLanguage` case; or
-a picker in an app with no `.lproj` reachable through `strings` at all, where nothing can be
-compared and the rule would otherwise pass by having no work to do.
+argument that isn't a literal list, or that names something which is no `DragonLanguage` case; a
+`typealias` for `LanguagePicker`, which hides the call site the rule reads; or a picker in an app
+with no `.lproj` reachable through `strings` at all, where nothing can be compared and the rule
+would otherwise pass by having no work to do.
+
+`LanguagePicker.init()` is the same construction and counts. A call inside `/* … */` does **not**
+— that used to be a false violation with no compliant fix but deleting the comment, because only
+`//` was stripped.
 
 Compared as equality because the picker is the app's own statement of its coverage. Offering more
 than it ships is the shipping bug below; shipping more than it offers is translation work no user
@@ -364,8 +380,16 @@ same signal.
 ## R14 — The About copyright is kit-assembled and names one holder
 
 `copyright:` must come from `DragonAbout.copyright(years:holder:)` and name the app's own
-copyright holder only. The checker rejects a string literal in the slot, two `©` on one line, and
-the `original:` argument removed in DragonKit 4.0.0.
+copyright holder only.
+
+**The slot is checked positively: whatever fills it must *be* that call.** The checker rejects
+anything else — a string literal, a constant, a helper — plus two `©` on one line and the
+`original:` argument removed in DragonKit 4.0.0. It was a same-line search for `copyright: "`,
+which is a test of the one spelling nobody was going to use: `copyright: Self.notice` passed, and
+so did a literal wrapped onto the following line, which is how the slot reads as soon as the
+argument list is long enough to wrap. A rule that reads the written call site cannot follow an
+indirection to see what it names, so an indirection is a violation rather than a skip — §R13 and
+§R15 take the same line for the same reason.
 
 **Rationale:** the rest of the About pane's slots are closed by the kit's own signature, and need
 no rule here. `licensesURL` is a required parameter; the upstream project's repository lives

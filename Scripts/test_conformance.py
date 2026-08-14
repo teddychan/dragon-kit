@@ -265,6 +265,16 @@ final class M {
 final class M { func f() -> NSMenu { NSMenu() } }
 """), "R1",
             because="never references DragonAppMenu")
+        # `"DragonAppMenu" in line` counted the name wherever it appeared, so a string literal —
+        # or a comment — satisfied R1 for an app that never calls the kit's menu at all.
+        expect_violation("the kit's name in a literal is not a call", make_app(
+            tmp, menu="""import AppKit
+final class M {
+    let marker = "DragonAppMenu"
+    func f() -> NSMenu { NSMenu() }
+}
+"""), "R1",
+            because="never references DragonAppMenu")
 
         print("R2 — no Uninstall in the menu")
         expect_violation("Uninstall menu item", make_app(tmp, menu=COMPLIANT_MENU + """
@@ -275,6 +285,33 @@ extension AppMenuController {
 }
 """), "R2",
             because="menu item for Uninstall")
+        # The same item wrapped, which is how every one of these reads once it has four arguments.
+        # Both rules were line-based substring tests, so the line holding `NSMenuItem(` carried no
+        # title to match and the item was invisible to R1 and R2 alike.
+        expect_violation("a multi-line Uninstall item", make_app(tmp, menu=COMPLIANT_MENU + """
+extension AppMenuController {
+    func bad() -> NSMenuItem {
+        NSMenuItem(
+            title: "Uninstall Test App…",
+            action: nil,
+            keyEquivalent: ""
+        )
+    }
+}
+"""), "R2",
+            because="menu item for Uninstall")
+        expect_violation("a multi-line About item", make_app(tmp, menu=COMPLIANT_MENU + """
+extension AppMenuController {
+    func legacy() -> NSMenuItem {
+        NSMenuItem(
+            title: "About Test App",
+            action: nil,
+            keyEquivalent: ""
+        )
+    }
+}
+"""), "R1",
+            because="hand-rolled app-lifecycle menu item")
 
         print("R3 — no shadowing kit type names")
         expect_violation("app declares its own UpdatesSettingsPane", make_app(
@@ -339,6 +376,15 @@ struct Custom: View {
         expect_violation("no Uninstall pane", make_app(
             tmp, panes=COMPLIANT_PANES.replace("UninstallSettingsPane", "HomeGrownUninstall")
         ), "R5",
+            because="no reference to UninstallSettingsPane")
+        # R5 searched raw text, so the line a migration left behind counted as wiring the pane —
+        # the one rule where prose *about* the kit was accepted as use of the kit.
+        expect_violation("a commented-out pane reference is not a pane", make_app(
+            tmp, panes=COMPLIANT_PANES.replace(
+                "UninstallSettingsPane", "HomeGrownUninstall") + """
+// Migration note: this used to be AnySettingsPane(UninstallSettingsPane(config: config)).
+/* AnySettingsPane(UninstallSettingsPane(config: UninstallConfig(appName: "T"))) */
+"""), "R5",
             because="no reference to UninstallSettingsPane")
 
         print("R6/R7 — modules")
@@ -623,6 +669,40 @@ final class PickerTests: XCTestCase {
 // TODO: LanguagePicker(languages: [.en, .zhHant]) once the strings land.
 """}), "R13",
             because="takes the kit's default of all")
+        # Three ways the rule used to read nothing where a picker stood, or read a picker where
+        # none stood. `.init` spelled out is the same construction; an alias hides which languages
+        # a picker offers; and a block comment was invisible to `strip_comment`, so a disabled
+        # call was reported as a live one — a false violation with no compliant fix but deleting
+        # the comment.
+        expect_violation("LanguagePicker.init() is the same construction", make_app(
+            tmp, locales=("en", "zh-Hant"),
+            extra={"Sources/Lang.swift": """import SwiftUI
+import DragonKit
+
+struct LanguageSection: View {
+    var body: some View { LanguagePicker.init() }
+}
+"""}), "R13",
+            because="takes the kit's default of all")
+        expect_violation("an aliased picker is reported, not skipped", make_app(
+            tmp, locales=ALL_LOCALES,
+            extra={"Sources/Lang.swift": """import SwiftUI
+import DragonKit
+
+typealias AppLanguagePicker = LanguagePicker
+
+struct LanguageSection: View {
+    var body: some View { AppLanguagePicker() }
+}
+"""}), "R13",
+            because="aliases LanguagePicker")
+        expect_pass("a block-commented call is not a call site", make_app(
+            tmp, locales=("en", "zh-Hant"),
+            extra={"Sources/Lang.swift": language_pane("languages: [.en, .zhHant]") + """
+/* Superseded: LanguagePicker() offered all seven while this app shipped two.
+   /* and Swift lets these nest, so the scanner has to as well */
+*/
+"""}))
 
         print("R14 — the About copyright is kit-assembled and names one holder")
         # `make_app` already writes this file; these tests replace it with a mutated copy. Shared
@@ -665,6 +745,25 @@ final class ConfigContentTests: XCTestCase {
     }
 }
 """}))
+        # The slot is checked positively now: whatever fills it must BE the kit's call. The old
+        # test was `copyright:\\s*"` on a single line, so it saw a same-line literal and nothing
+        # else — an indirection passed, and so did a literal wrapped onto the next line, which is
+        # how these read as soon as the argument list is long enough to wrap.
+        expect_violation("copyright from an indirection", make_app(
+            tmp, extra={"Sources/AboutConfig.swift": compliant_about.replace(
+                'DragonAbout.copyright(years: "2026", holder: "Teddy Chan")',
+                "Self.notice")}), "R14",
+            because="the About copyright comes from")
+        expect_violation("a literal wrapped onto the following line", make_app(
+            tmp, extra={"Sources/AboutConfig.swift": compliant_about.replace(
+                'copyright: DragonAbout.copyright(years: "2026", holder: "Teddy Chan"),',
+                'copyright:\n                "Copyright 2026 Teddy Chan",')}), "R14",
+            because="is a string literal")
+        expect_pass("...and the kit's call wrapped the same way is fine", make_app(
+            tmp, extra={"Sources/AboutConfig.swift": compliant_about.replace(
+                'copyright: DragonAbout.copyright(years: "2026", holder: "Teddy Chan"),',
+                'copyright:\n                DragonAbout.copyright(years: "2026", '
+                'holder: "Teddy Chan"),')}))
         expect_pass("copyright prose in a comment is not a violation", make_app(
             tmp, extra={"Sources/AboutConfig.swift": compliant_about.replace(
                 "enum AboutConfig {",
