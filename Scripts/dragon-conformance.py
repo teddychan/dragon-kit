@@ -218,7 +218,11 @@ def mask_noncode(text: str, *, blank_literals: bool = True) -> str:
     delimiter is matched as a unit for the same reason — read as three single quotes it goes
     open-close-open, so any odd number of `"` inside the block leaves the scanner stuck in a
     literal, blanks the real construction below it and reports a conforming app for having none.
-    Twenty-seven files across the five apps use multi-line strings.
+    Multi-line strings are ordinary across the five apps; no count is given here because a
+    hand-counted one drifts every time an app moves (this line said "twenty-seven files" and
+    measured twenty-four when someone checked). What does hold, and is the reason this has never
+    bitten in the field, is that none of them is in a file that builds `AboutContent` — the wiring
+    §R14 and §R15 read. That is luck, not design.
 
     `blank_literals=False` keeps literal contents, for §R14: the dual-holder copyright it exists to
     catch is written *inside* a literal, so blanking one would hide the very thing being counted.
@@ -229,10 +233,15 @@ def mask_noncode(text: str, *, blank_literals: bool = True) -> str:
     `/* LanguagePicker() */` was a false §R13 violation, and a block comment was an unread route
     past every rule that strips only `//`.
 
-    **Raw strings are the same trap as a multi-line string, and they are
-    already in shipping source** — eight files in ice-2, two in spectacle-2. Without the `#`
-    delimiter the leading `"` opened a *plain* literal, the raw string's inner quotes re-paired,
-    and an odd number of them left the scanner inside a literal to end of file. Both directions
+    **Raw strings are the same trap as a multi-line string, and they are already written in these
+    codebases** — ice-2 and spectacle-2 both have them (eight occurrences across five files in
+    ice-2, two in one file in spectacle-2, when this was written; re-measure rather than trust
+    that). Where they sit is the part worth knowing: all but one are in `IceTests/`, which is
+    outside ice-2's `sources`, so today this rule barely meets one. That is not reassurance —
+    yahoo-keykey-2's `sources` *do* cover its test packages, which is the trap §R13 hit for real,
+    and one file moving into a scanned root is all it takes. Without the `#` delimiter the leading
+    `"` opened a *plain* literal, the raw string's inner quotes re-paired, and an odd number of
+    them left the scanner inside a literal to end of file. Both directions
     were reproducible on ice-2's real `AboutConfig.swift`: one raw string above the construction
     blanked it and reported a conforming app for having no About pane at all (§R15 "cannot read
     'websiteURL:'"), and one above a hand-rolled `NSMenuItem(title: "Check for Updates…")` hid a
