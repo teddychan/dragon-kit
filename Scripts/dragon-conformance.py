@@ -76,6 +76,20 @@ DEFAULT_BUILD_FILES = [
     "*.sh", "scripts/*.sh", "scripts/**/*.sh", "**/scripts/*.sh",
     ".github/workflows/*.yml", "**/Info.plist", "**/*.pbxproj",
 ]
+# What actually stamping `DragonCommitDate` looks like (R12). The rule used to accept the key
+# appearing *anywhere* in the build surface, so `# TODO: stamp DragonCommitDate` — or the note in
+# a script's header comment, which two apps have — satisfied it while nothing wrote the key.
+# An empty `<key>DragonCommitDate</key>` placeholder is deliberately still accepted: ice-2 ships
+# one and the release workflow fills it, which is a real stamping route and not a TODO.
+COMMIT_DATE_STAMPS = [
+    r"(?:Set|Add)\s+:DragonCommitDate",          # PlistBuddy, which four of the five apps use
+    r"<key>\s*DragonCommitDate\s*</key>",        # an Info.plist entry or placeholder
+    r"INFOPLIST_KEY_DragonCommitDate",           # an Xcode build setting
+    r"plutil[^\n]*DragonCommitDate",
+    r"defaults\s+write[^\n]*DragonCommitDate",
+]
+# The rules an §R11 exception can actually suppress, which is what makes one meaningful (R11).
+EXCUSABLE_RULES = {"R1", "R3", "R4", "R5", "R6", "R7", "R8", "R9", "R12", "R13", "R14", "R15"}
 
 
 @dataclass
@@ -437,10 +451,26 @@ def rule_r5_shared_panes(root: str, cfg: Config, files: list[str]) -> list[Viola
 
 
 def rule_r6_r7_modules(root: str, cfg: Config, files: list[str]) -> list[Violation]:
+    """Deny-lists of the known direct routes, deliberately — there is no positive form.
+
+    Neither rule can be inverted into "the app must reference `DragonUpdater`/`LoginItem`". An app
+    with the `mac-app-store` trait links no updater at all, and an app may legitimately have no
+    launch-at-login feature, so a positive rule would fail conforming apps for not having a
+    feature. What a deny-list costs is that it only knows the routes written into it, and §R7 knew
+    exactly two: `import LoginServiceKit` — the login-item library ClipMenu's upstream used — went
+    straight past it. The lists below name every route the five apps could plausibly reach for.
+
+    Third-party names are anchored on `import` or a member access, never bare: ice-2 names
+    `LaunchAtLogin` in an About-pane comment and in its generated acknowledgements, and matching
+    the bare word would fail it for crediting a library it does not use.
+    """
     checks = [
-        ("R6", r"\bimport\s+Sparkle\b|SPUStandardUpdaterController|\bSPUUpdater\b",
+        ("R6", r"\bimport\s+Sparkle\b|\bSPUStandardUpdaterController\b|\bSPUUpdater\b"
+               r"|\bSPUStandardUserDriver\b|\bSUUpdater\b",
          "direct Sparkle use — updates go through DragonKitUpdates' DragonUpdater"),
-        ("R7", r"\bSMAppService\b|\bimport\s+LaunchAtLogin\b",
+        ("R7", r"\bSMAppService\b|\bSMLoginItemSetEnabled\s*\(|\bLSSharedFileList[A-Za-z]*\s*\("
+               r"|\bimport\s+(?:LaunchAtLogin|LoginServiceKit)\b"
+               r"|\b(?:LaunchAtLogin|LoginServiceKit)\s*\.",
          "direct launch-at-login wiring — use the kit's LoginItem"),
     ]
     out: list[Violation] = []
@@ -454,6 +484,15 @@ def rule_r6_r7_modules(root: str, cfg: Config, files: list[str]) -> list[Violati
 
 
 def rule_r8_kit_strings(root: str, cfg: Config) -> list[Violation]:
+    # Omitting `strings` used to disable this rule outright: the loop had nothing to iterate and
+    # the app passed by giving the checker no work to do. That is the same shape as deleting
+    # `.dragon-conformance.json`, which §R0 makes a violation for exactly this reason — and §R13
+    # reads the same globs, so a missing one quietly narrowed two rules at once.
+    if not cfg.strings and not cfg.excuses("R8", ""):
+        return [Violation("R8", "config declares no 'strings' — R8 cannot read the app's own "
+                          "keys, and §R13 reads the same globs for the app's '.lproj'. Point it "
+                          "at the app's locale files, or sanction R8 in 'exceptions' with a "
+                          "reason and an owner (§R11)")]
     out: list[Violation] = []
     for pattern in cfg.strings:
         for path in glob.glob(os.path.join(root, pattern), recursive=True):
@@ -475,8 +514,15 @@ def rule_r8_kit_strings(root: str, cfg: Config) -> list[Violation]:
 
 def rule_r9_pane_order(root: str, cfg: Config) -> list[Violation]:
     target = cfg.pane_order.get("file")
+    # Same hole as R8's missing `strings`: no `paneOrder` meant no rule at all, silently. The
+    # sidebar order is canon that changes the UI of every Dragon app at once, so an app that
+    # doesn't say where its order lives has opted out of the one check on it.
     if not target:
-        return []
+        if cfg.excuses("R9", ""):
+            return []
+        return [Violation("R9", "config declares no 'paneOrder' — the canonical sidebar order "
+                          "cannot be checked. Name the file that declares the panes, or sanction "
+                          "R9 in 'exceptions' with a reason and an owner (§R11)")]
     path = os.path.join(root, target)
     if not os.path.exists(path):
         return [Violation("R9", f"paneOrder.file '{target}' does not exist")]
@@ -542,6 +588,37 @@ def rule_r10_pin(root: str, cfg: Config, kit: str) -> list[Violation]:
     return []
 
 
+def rule_r11_exceptions(root: str, cfg: Config) -> list[Violation]:
+    """An exception must name a rule that can actually fire, and carry a reason and an owner.
+
+    §R11 has required `reason` and `sanctionedBy` since it was written, and nothing checked either:
+    an entry with neither suppressed its rule just as effectively, and the run printed
+    `NO REASON GIVEN` beside it without failing. It now guards a live exception —
+    dragon-sample-app's R15 — so the schema is load-bearing rather than decorative.
+
+    The rule name is validated against the rules the checker can actually suppress, because §R11's
+    own table records that mistake: five sanctions sat here for months naming rules that never
+    fired on the apps they were written for, and "a row naming a rule the checker never fires is
+    worse than no row — it reads as a live sanction, nothing contradicts it, and the next app
+    copies the shape."
+    """
+    out: list[Violation] = []
+    for index, exc in enumerate(cfg.exceptions):
+        where = f"exceptions[{index}]"
+        rule = exc.get("rule")
+        if rule not in EXCUSABLE_RULES:
+            out.append(Violation("R11", f"{where} names '{rule}', which is not a rule this "
+                                 f"checker can suppress ({', '.join(sorted(EXCUSABLE_RULES))}) — "
+                                 f"an exception for a rule that never fires reads as a live "
+                                 f"sanction and sanctions nothing"))
+        for key in ("reason", "sanctionedBy"):
+            if not str(exc.get(key, "")).strip():
+                out.append(Violation("R11", f"{where} ({rule}) declares no '{key}' — §R11 "
+                                     f"requires a reason and an owner, so an exception stays "
+                                     f"reviewable instead of becoming permanent"))
+    return out
+
+
 def rule_r12_commit_date(root: str, cfg: Config) -> list[Violation]:
     """The build must stamp `DragonCommitDate` into Info.plist.
 
@@ -564,10 +641,13 @@ def rule_r12_commit_date(root: str, cfg: Config) -> list[Violation]:
         for path in glob.glob(os.path.join(root, pattern), recursive=True):
             if skipped(path, root) or not os.path.isfile(path):
                 continue
-            if "DragonCommitDate" in "".join(read(path)):
+            body = "".join(read(path))
+            if any(re.search(stamp, body) for stamp in COMMIT_DATE_STAMPS):
                 return []
     return [Violation("R12", "no build step stamps 'DragonCommitDate' into Info.plist — About's "
-                      "version line will show no build timestamp (searched "
+                      "version line will show no build timestamp. Recognized spellings: "
+                      "PlistBuddy 'Set :'/'Add :', a <key>DragonCommitDate</key> entry, "
+                      "INFOPLIST_KEY_DragonCommitDate, plutil, or defaults write (searched "
                       f"{cfg.build_files or DEFAULT_BUILD_FILES})")]
 
 
@@ -933,6 +1013,7 @@ def main() -> int:
     violations += rule_r8_kit_strings(root, cfg)
     violations += rule_r9_pane_order(root, cfg)
     violations += rule_r10_pin(root, cfg, kit)
+    violations += rule_r11_exceptions(root, cfg)
     violations += rule_r12_commit_date(root, cfg)
     violations += rule_r13_language_picker(root, cfg, files, languages)
     violations += rule_r14_about_copyright(root, cfg, files)

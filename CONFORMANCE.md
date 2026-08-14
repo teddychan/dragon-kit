@@ -13,8 +13,9 @@ any other app, not exempted as the kit's own fixture.
 
 These rules are **machine-checked**, not review-enforced. `Scripts/dragon-conformance.py`
 implements them; `.github/workflows/conformance.yml` is a reusable workflow each app calls
-from its own CI, so a violation fails the PR. Rules live here and only here — apps get new
-rules automatically by pinning the workflow at a major tag.
+from its own CI, so a violation fails the PR. Rules live here and only here — every app calls the
+workflow `@main`, so **a rule merged here is live in all five apps' CI the same day.** See "How to
+comply" below for why the pin is `@main` and not a tag.
 
 ## Why this exists
 
@@ -66,8 +67,10 @@ deleting the file would be the easiest way to "pass").
 {
   "app": "ClipMenu 2",
   "sources": ["app/Sources"],            // Swift source roots to scan
-  // Does double duty: §R8 reads the keys inside these files, and §R13 reads the `.lproj`
-  // directory names in the paths to learn which languages the app ships its own strings in.
+  // REQUIRED. Does double duty: §R8 reads the keys inside these files, and §R13 reads the
+  // `.lproj` directory names in the paths to learn which languages the app ships its own
+  // strings in. Omitting it used to disable §R8 outright — the rule had nothing to iterate
+  // and the app passed by giving the checker no work to do.
   "strings": ["app/Sources/**/*.lproj/Localizable.strings"],
   "pin": {                               // where the DragonKit version is declared
     "file": "app/Package.swift",
@@ -78,14 +81,21 @@ deleting the file would be the easiest way to "pass").
     //   "dragon-kit\";[^}]*minimumVersion = ([0-9.]+)"
     "pattern": "dragon-kit\", from: \"([0-9.]+)\""
   },
+  // REQUIRED, for the same reason: no `paneOrder` meant no §R9 at all, silently.
   "paneOrder": { "file": "app/Sources/ClipMenu/SettingsWindowController.swift" },
   "traits": ["sparkle", "mac-app-store"],   // see §R5, §R6
-  // §R11, and this is the real value in all five apps: empty. The schema is shown there,
-  // not here, because an example exception reads as a live sanction — this one named a
-  // rule R3 never fired and a path (`SyncBackupPane.swift`) clipmenu-2 does not have.
+  // §R11, and this is the value in four of the five apps: empty. dragon-sample-app declares
+  // exactly one — R15, for having no public page — and it is the only one anywhere. The schema
+  // is shown there, not here, because an example exception reads as a live sanction: this one
+  // named a rule R3 never fired and a path (`SyncBackupPane.swift`) clipmenu-2 does not have.
   "exceptions": []
 }
 ```
+
+**`sources`, `strings` and `paneOrder` are all required.** A missing key used to switch its rule
+off without a word — the same shape as deleting this file, which §R0 makes a violation for exactly
+that reason. If an app genuinely cannot supply one (String Catalogs instead of `.lproj`, say), that
+is what §R11 is for: a sanctioned exception with a reason and an owner, printed on every run.
 
 ## R1 — The lifecycle menu comes from `DragonAppMenu`
 
@@ -130,11 +140,18 @@ everyday menu, next to Quit.
 
 ## R3 — No app type may shadow a public DragonKit type
 
-An app must not declare a `struct`/`class`/`enum`/`protocol` whose name matches a public
-DragonKit type. The checker derives the list from the kit's own sources, so it stays correct
-as the kit grows.
+An app must not declare a **top-level** `struct`/`class`/`enum`/`protocol` whose name matches a
+top-level public DragonKit type. The checker derives the list from the kit's own sources, so it
+stays correct as the kit grows.
 
-**Violation:** e.g. an app-local `UpdatesSettingsPane`, `BackupSettingsPane`, `UninstallView`.
+**Violation:** e.g. an app-local top-level `UpdatesSettingsPane`, `BackupSettingsPane`,
+`UninstallView`.
+
+**Top-level on both sides, and that is the rule, not a limitation of the checker.** A nested type
+lives in its own namespace and cannot shadow anything: ice-2's `SettingsBackup.BackupError` was
+reported against `DragonBackup.BackupError` and was a false positive. Scraping nested kit types is
+also what forced `Config` and `Kind` onto a hand-maintained exclusion list — a symptom of the same
+bug rather than real exceptions.
 
 **Rationale:** ice-2 declared its own `UpdatesSettingsPane` and `BackupSettingsPane` in files
 that also `import DragonKit`. It compiled — Swift resolves the local type — so the app
@@ -174,16 +191,30 @@ Use `DragonUpdater`. Apps with the `mac-app-store` trait link `DragonKit` only a
 
 ## R7 — Launch-at-login goes through `LoginItem`
 
-No direct `SMAppService` use and no third-party launch-at-login package.
+No direct `SMAppService` or `SMLoginItemSetEnabled` use, no `LSSharedFileList` route, and no
+third-party launch-at-login package (`LaunchAtLogin`, `LoginServiceKit`).
 
 **Rationale:** two code paths writing the same `SMAppService.mainApp` registration is a
 split-brain waiting to happen, and the uninstall flow has to unregister it too.
+
+**§R6 and §R7 are deny-lists, deliberately — neither has a positive form.** "The app must
+reference `DragonUpdater`" fails an app with the `mac-app-store` trait, which links no updater at
+all; "the app must reference `LoginItem`" fails any app that simply has no launch-at-login feature.
+What a deny-list costs is that it only knows the routes written into it, and §R7 knew exactly two:
+`import LoginServiceKit` — the login-item library ClipMenu's upstream used — went straight past it.
+Third-party names are matched on `import` or a member access, never bare, because ice-2 credits
+`LaunchAtLogin` in an About-pane comment and in its generated acknowledgements, and matching the
+word alone would fail it for naming a library it does not use.
 
 ## R8 — The app owns no kit string keys
 
 App `.strings` files must not define any key beginning `DragonKit.`, nor any key that is one
 of the kit's canonical menu titles used verbatim as a key (`About %@`, `Check for Updates…`,
 `Settings…`, `Quit %@`, `Uninstall %@…`).
+
+The `strings` globs are **required** (§R0): with none declared this rule had nothing to iterate and
+passed by having no work to do, and §R13 reads the same globs, so one missing key quietly narrowed
+two rules at once.
 
 **Rationale:** clipmenu-2 and keykey-2 both duplicated these across their own locale files,
 which is exactly how the casing drifted without anyone noticing. Note `L()` resolves the
@@ -197,8 +228,9 @@ General → (the app's own panes) → Permissions → Backup & Restore → What'
 ```
 
 The checker extracts kit pane identifiers in declaration order from the file named by
-`paneOrder` and requires their **relative** order to match. App-specific panes anywhere
-between General and Permissions are fine.
+`paneOrder` — a **required** key, since an app that named no file used to skip this rule in
+silence — and requires their **relative** order to match. App-specific panes anywhere between
+General and Permissions are fine.
 
 Each slot is matched on the **pane identifier**, never on its display title — so a slot is
 satisfied by `BackupSettingsPane` (which the kit titles "Backup & Restore") or by a recognized
@@ -242,7 +274,12 @@ itself an R10 violation, the same way §R0 makes deleting `.dragon-conformance.j
 ## R11 — Exceptions are explicit, reasoned, and few
 
 A sanctioned divergence goes in the app's own `.dragon-conformance.json` — which is the only
-place the checker reads them from — with a `reason` and a `sanctionedBy`:
+place the checker reads them from — with a `reason` and a `sanctionedBy`. **All three fields are
+validated**: the rule must be one the checker can actually suppress (`R1`, `R3`–`R9`, `R12`–`R15`),
+and both `reason` and `sanctionedBy` must be non-empty. Neither was checked before, so an entry
+with no reason suppressed its rule just as effectively while the run printed `NO REASON GIVEN`
+beside it and passed. Validating the rule name is this section's own history made machine-checkable
+— see the table below, where five sanctions sat for months naming rules that never fired.
 
 ```jsonc
 "exceptions": [
@@ -318,8 +355,15 @@ what the table above records as the mistake.
 
 Some build step must write `git log -1 --format=%cI` into the packaged `Info.plist` as
 `DragonCommitDate`, alongside the `CFBundleVersion = git rev-list --count HEAD` stamp. The
-checker greps the app's build surface for the key — a shell script, a workflow, an `Info.plist`
-placeholder or an Xcode project all satisfy it. Declare `buildFiles` to narrow where it looks.
+checker greps the app's build surface for **a stamp**, not for the word: PlistBuddy's `Set :` /
+`Add :`, a `<key>DragonCommitDate</key>` entry, `INFOPLIST_KEY_DragonCommitDate`, `plutil`, or
+`defaults write`. Declare `buildFiles` to narrow where it looks.
+
+It used to accept the key appearing *anywhere* in those files, so `# TODO: stamp DragonCommitDate`
+satisfied it while nothing wrote the key — and two of the five apps carry exactly such a comment,
+next to the real stamp that was doing the work. An empty `<key>DragonCommitDate</key>` placeholder
+is still accepted deliberately: ice-2 ships one and the release workflow fills it, which is a
+stamping route rather than a note about one.
 
 **Rationale:** About renders `v2.4.1 (756) · 2026-Aug-07 16:54:20 UTC`. The count came from the
 commit; the timestamp came from the *executable's* modification date — when CI linked and signed
