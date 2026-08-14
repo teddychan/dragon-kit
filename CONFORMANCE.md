@@ -125,9 +125,8 @@ exception: DragonKit still supplies each item's title, icon, order, and omission
 lifecycle item, or an app that never references `DragonAppMenu` **in code**. Both halves read the
 code, not the line: arguments are read as a whole, from a copy that keeps literals but not comments.
 
-**Why:** order, naming, casing, ellipsis, icons and the omission rules
-(`onCheckForUpdates: nil` for Mac App Store, `includeQuit: false` for an IME) are canon, not per-app
-choices. This is the drift that motivated the whole spec.
+**Why:** every one of these properties is canon, and four apps proved they drift when each app owns
+them. Omissions are canon too — they come from `DragonAppMenu.Config`, not from a hand-built item.
 
 → [Incidents §R1](docs/CONFORMANCE-INCIDENTS.md#r1--the-lifecycle-menu-comes-from-dragonappmenu)
 
@@ -142,8 +141,7 @@ the whole construction — see §R1 on why one line was not enough.
 
 **This rule has its own `exceptions` key.** Sanctioning `R2` suppresses `R2` and nothing else.
 
-**Why:** a rarely-used destructive action does not belong one click away in the everyday menu,
-next to Quit.
+**Why:** destructive and rare is the wrong neighbour for Quit.
 
 → [Incidents §R2](docs/CONFORMANCE-INCIDENTS.md#r2--uninstall-is-not-in-the-menu)
 
@@ -173,8 +171,8 @@ declare its own grouped-`Form` wrapper.
 **Violation:** a type declaration containing both `Form {` and `.formStyle(.grouped)`, or a
 type named `*Form`/`*Section`/`*GroupBox` that isn't from the kit.
 
-**Rationale:** `IceForm`/`IceSection` were line-for-line identical to the kit types — the kit
-was *ported from them* and ice-2 never adopted the port back.
+**Rationale:** the kit's primitives were *ported from* an app's own, and that app then kept its
+copy — so two identical implementations shipped, and only one received fixes.
 
 → [Incidents §R4](docs/CONFORMANCE-INCIDENTS.md#r4--no-re-implemented-design-primitives) — including
 a parked owner decision about this rule's prose. Do not act on it without the owner.
@@ -221,9 +219,8 @@ App `.strings` files must not define any key beginning `DragonKit.`, nor any key
 of the kit's canonical menu titles used verbatim as a key (`About %@`, `Check for Updates…`,
 `Settings…`, `Quit %@`, `Uninstall %@…`).
 
-**Why:** two apps duplicated these across their own locale files, which is exactly how the casing
-drifted without anyone noticing. `L()` resolves the module bundle **first**, so an app cannot
-override a kit key even if it tries — a duplicated key is dead weight that merely *looks*
+**Why:** duplicated kit keys are how the menu's casing drifted invisibly. `L()` resolves the module
+bundle **first**, so a duplicate cannot even take effect — it is dead weight that merely *looks*
 authoritative.
 
 → [Incidents §R8](docs/CONFORMANCE-INCIDENTS.md#r8--the-app-owns-no-kit-string-keys)

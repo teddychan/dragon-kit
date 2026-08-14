@@ -409,21 +409,20 @@ understood a literal at the call site would read nothing at all for two of the f
 
 ---
 
-## The rule-design lessons, collected
+## Before you write rule R16
 
-Every one of these was learned by shipping the mistake:
+Seven failure modes, each already shipped here at least once. This is an index, not a summary —
+follow the link for the case.
 
-1. **A rule that has nothing to iterate passes.** §R8 without `strings`, §R9 without `paneOrder`,
-   §R13 against an app with no `.lproj`. Anything the rule cannot read is a violation, never a skip.
-2. **A rule that reads text, not code, reads comments.** §R1, §R2, §R5 and §R13 all shipped
-   line-based or raw-text first, and all four were satisfied — or falsely tripped — by a comment.
-3. **An unanchored pattern matches the wrong thing silently.** §R10, via Sparkle's version.
-4. **An indirection the rule cannot follow is a violation, not a skip.** §R13, §R14 and §R15 all take
-   this line, for the same reason: a checker that goes quiet when an app restructures reports a pass
-   on every app that stopped conforming.
-5. **A documented reservation is not an exception.** If it is not in an app's config it suppresses
-   nothing, and it still reads as a live sanction to the next person.
-6. **The test can defend the bug.** §R10's "the trap" asserted a false PASS as expected behaviour.
-7. **What actually finds About drift is five screenshots side by side** — not the kit's tests, which
-   pin what the kit assembles and cannot see that two apps left an optional slot nil. Prefer closing
-   a gap in the *signature* over writing a rule.
+1. A rule with nothing to iterate passes → [§R0](#r0--declare-the-app), [§R13](#r13--the-language-picker-offers-exactly-the-languages-the-app-ships)
+2. A rule that reads text rather than code reads comments → [§R1](#r1--the-lifecycle-menu-comes-from-dragonappmenu), [§R5](#r5--shared-panes-come-from-the-kit)
+3. An unanchored pattern matches the wrong dependency, silently → [§R10](#r10--the-dragonkit-pin-is-current)
+4. An indirection the rule cannot follow must be a violation, not a skip → [§R15](#r15--abouts-website-row-addresses-the-apps-canonical-page)
+5. A documented reservation is not an exception → [§R11](#ice-2s-r13-row-the-same-mistake-a-second-time)
+6. The test can defend the bug → [§R10](#r10--the-dragonkit-pin-is-current)
+7. A rule with no incident behind it should say so rather than borrow one → [§R7](#r6-and-r7--why-both-are-deny-lists)
+
+And the one that is not about rules at all: **what finds About drift is five screenshots side by
+side.** Prefer closing a gap in the *signature* — a required parameter, two fields folded into one
+type — over writing an eighth rule. The kit's tests pin what the kit assembles; they cannot see
+that two apps left an optional slot nil.
