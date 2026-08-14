@@ -411,9 +411,23 @@ five ever diverge there, that is a second presentation slot drifting, not a lice
 ## R15 — About's Website row addresses the app's canonical page
 
 `websiteURL`'s path must equal the repository name in `supportURL` — `dragonapp.com/ice-2/`
-against `github.com/teddychan/ice-2/issues`. The site convention is
-`dragonapp.com/{app-name}-{major}`, which is also the GitHub repo name for every Dragon app, so
-the Website row and the Support row check each other and there is no table of URLs to maintain.
+against `github.com/teddychan/ice-2/issues` — **and both rows must be on the host they claim.**
+The site convention is `dragonapp.com/{app-name}-{major}`, which is also the GitHub repo name for
+every Dragon app, so the Website row and the Support row check each other and there is no table of
+URLs to maintain.
+
+**Violation:** a Website row on any host but `dragonapp.com` or a subdomain of it; a Support row on
+any host but `github.com` or a subdomain of it; a path that does not equal the repository name.
+
+The host half was missing from the rule as it first shipped, and from
+`AboutContent.websiteMatchesSupportRepo` — the kit property §R15 exists to assert per app — so the
+two had the same hole and would have re-split if only one were fixed. Only the *path* was compared,
+which `https://evil-example.com/ice-2/` satisfies as readily as the real page; and a bare
+`hasSuffix("github.com")` is true of **`notgithub.com`**, which yielded an owner and a repo for the
+comparison to agree with. Both are now matched on the label boundary, so `www.` is a subdomain and
+`notgithub` is a different registrable name. §R15 already had three negative controls when this was
+found: all three tested wrong *paths*, none tested a wrong *host*, and the gap sat open underneath
+them.
 
 This is the per-app assertion of `AboutContent.websiteMatchesSupportRepo`, which the kit has had
 since the About slots were fixed. The checker reads the written literals out of the app's

@@ -680,12 +680,23 @@ URL_CONSTANT = re.compile(r'\blet\s+([A-Za-z_][A-Za-z0-9_]*)\s*(?::[^=\n]+)?=\s*
                           r'URL\s*\(\s*string:\s*"')
 
 
+def host_is(url: str, domain: str) -> bool:
+    """Whether `url`'s host is `domain` or a subdomain of it — `AboutLinkDetail.host(of:is:)`.
+
+    A bare `endswith("github.com")` — which this replaces on both sides — is also true of
+    **`notgithub.com`**, so a support row on a lookalike host yielded an owner and a repo and
+    read as a GitHub link everywhere. The leading dot is what makes `www.` a subdomain and
+    `notgithub` a different registrable name.
+    """
+    host = (urllib.parse.urlsplit(url).hostname or "").lower()
+    return host == domain or host.endswith("." + domain)
+
+
 def github_repository(url: str) -> str | None:
     """The repo name in a `github.com/owner/repo/...` URL — `AboutLinkDetail.repository(of:)`."""
-    parts = urllib.parse.urlsplit(url)
-    if not (parts.hostname or "").endswith("github.com"):
+    if not host_is(url, "github.com"):
         return None
-    segments = [segment for segment in parts.path.split("/") if segment]
+    segments = [segment for segment in urllib.parse.urlsplit(url).path.split("/") if segment]
     return segments[1] if len(segments) >= 2 else None
 
 
@@ -764,6 +775,16 @@ def rule_r15_website_page(root: str, cfg: Config, files: list[str]) -> list[Viol
                                      "github.com/owner/repo — the Website row is checked against "
                                      "the support row's repository, so there is nothing to compare "
                                      "it with", path, number))
+                continue
+            # The host was never checked at all, on either side of the comparison, so
+            # `websiteURL: URL(string: "https://evil-example.com/ice-2/")!` passed this rule
+            # silently — the path was all it read. Checked before the path so the message names
+            # the actual defect rather than reporting a page mismatch on the wrong site.
+            if not host_is(website, "dragonapp.com"):
+                out.append(Violation("R15", f"About's Website row is on "
+                                     f"'{urllib.parse.urlsplit(website).hostname or website}', not "
+                                     f"the studio site — the canonical page is "
+                                     f"https://www.dragonapp.com/{repo}/", path, number))
                 continue
             page = urllib.parse.urlsplit(website).path.strip("/")
             if page != repo:
