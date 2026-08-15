@@ -34,6 +34,9 @@ Two options, both defensible, neither taken yet:
   text is recoverable from git history. Loses the ability to read the original task bodies without a
   `git show`.
 
-Directory renamed from `docs/superpowers/` on 2026-08-15 — the old name described the tool that
-produced the files rather than what they are. Relative links inside the files were unaffected: the
-new path is the same depth.
+This directory keeps the name `docs/superpowers/`. It was briefly renamed to `docs/history/` on
+the grounds that the old name described a tool rather than a purpose — and reverted, because
+`clipmenu-2`, `ice-2`, `spectacle-2`, `yahoo-keykey-2` and `www.dragonapp.com` all use
+`docs/superpowers/` for exactly this, and the files themselves open with
+`REQUIRED SUB-SKILL: Use superpowers:executing-plans`. The name is accurate provenance, and one
+repo differing from five is worse than either consistent state.

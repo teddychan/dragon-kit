@@ -32,7 +32,7 @@ accessory apps, and a localization helper.
   site refreshes independently afterward. Every app—including Dragon Sample App—uses an exact
   `vX.Y.Z` public tag. One repository owns one public version series; never invent a Debug,
   Sample, App Store, or other channel-specific tag prefix.
-- The dated records under `docs/history/` are historical rationale only. Do not use them as
+- The dated records under `docs/superpowers/` are historical rationale only. Do not use them as
   implementation instructions; use this guide, `CONFORMANCE.md`, the release-lifecycle document,
   and the external Dragon Sample App instead.
 

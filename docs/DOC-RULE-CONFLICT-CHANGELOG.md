@@ -156,7 +156,7 @@ The decisions above landed across `README.md`, `CONFORMANCE.md`,
 [`ADOPT-DRAGONKIT-PROMPT.md`](ADOPT-DRAGONKIT-PROMPT.md),
 [`IMPLEMENT-MAC-APP-RELEASE-LIFECYCLE-PROMPT.md`](IMPLEMENT-MAC-APP-RELEASE-LIFECYCLE-PROMPT.md),
 `docs/images/doc-rule-conflicts/*.png`, and the archival banners now indexed by
-[`history/README.md`](history/README.md).
+[`history/README.md`](superpowers/README.md).
 
 The matching Liquid Glass wording was updated in `~/.claude/skills/liquid-glass-macos/`
 (`SKILL.md`, `references/swiftui-recipes.md`, `references/per-app-specs.md`, and the mirrored

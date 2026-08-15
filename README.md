@@ -220,7 +220,7 @@ Start here.
 | [`docs/STARTING-A-NEW-APP.md`](docs/STARTING-A-NEW-APP.md) · [`docs/ADOPT-DRAGONKIT-PROMPT.md`](docs/ADOPT-DRAGONKIT-PROMPT.md) | Current operational guides. They *apply* the two documents above and never overrule them. |
 | [`docs/CONFORMANCE-INCIDENTS.md`](docs/CONFORMANCE-INCIDENTS.md) | Why each rule exists. Non-normative; read before changing a rule. |
 | [`TechDebt.md`](TechDebt.md) | Sequenced work and parked decisions. |
-| [`docs/history/`](docs/history/) | Superseded plans and specs, kept as dated evidence. **Never implement from them.** |
+| [`docs/superpowers/`](docs/superpowers/) | Superseded plans and specs, kept as dated evidence. **Never implement from them.** |
 
 Where two documents disagree, the normative one wins — and please open an issue, because that
 disagreement is the failure mode this set is arranged to prevent.
