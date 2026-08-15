@@ -1,8 +1,8 @@
 # DragonKit
 
-Shared SwiftUI foundations for [Dragon App](https://www.dragonapp.com) macOS
-apps (ice-2, clipmenu-2, spectacle-2, and the Yahoo! KeyKey input method) — built and
-updated once.
+Shared SwiftUI foundations for the five [Dragon App](https://www.dragonapp.com) macOS apps —
+ice-2, clipmenu-2, spectacle-2, the Yahoo! KeyKey input method, and
+[dragon-sample-app](https://github.com/teddychan/dragon-sample-app) — built and updated once.
 
 ## Status — the About pane is canon, settings survive an upgrade, and the rules are machine-checked
 
@@ -44,14 +44,12 @@ Modules:
   `Website` / `Support on GitHub` / `Original project`\* / `Open-source licenses`, then a
   **Credits** section of `Created by` / `Based on`\* / `Built with · DragonKit vX.Y.Z` /
   `License` / app attributions\* (`*` = optional). Attributions are `name → licence`
-  (`Sparkle → MIT`), never a role label. Link detail text is derived from the URL
-  rather than typed beside it, and `websiteMatchesSupportRepo` checks the website addresses the
-  canonical `dragonapp.com/{app-name}-{major}` page (CONFORMANCE §R15). `AboutContent` took free-form
-  `links`/`credits` arrays until five apps used them to ship five different panes. Two slots
-  closed again in 4.0.0, after the same drift reappeared in the gaps between them: `licensesURL`
-  is **required**, and the upstream repository lives **inside** `OriginalWork`, so the
-  `Original project` link and the `Based on` credit are one value. The copyright names **one
-  holder** — the app's own (CONFORMANCE §R14).
+  (`Sparkle → MIT`), never a role label. Link detail text is derived from the URL rather than
+  typed beside it. `AboutContent` took free-form `links`/`credits` arrays until five apps used
+  them to ship five different panes; 4.0.0 closed the remaining gaps by making `licensesURL`
+  required and folding the upstream repository into `OriginalWork`. Two properties of the pane are
+  checked per app rather than by the signature — the Website row
+  ([CONFORMANCE.md](CONFORMANCE.md) §R15) and the single-holder copyright (§R14).
 - **What's New** — release-notes pane: `WhatsNewContent` / `ChangeSection` (Added /
   Changed / Fixed …) + `WhatsNewPane` / `WhatsNewSettingsPane`. `version` is not public; the
   pane renders `displayVersion`, so every version in the UI carries exactly one `v`.
@@ -139,7 +137,7 @@ the order the app puts them in its `settingsPanes` list, so each app is responsi
 for following this convention:
 
 ```
-General → (the app's own panes) → Permissions → Backup & Restore → What's New → Updates → About → Uninstall
+General → (the app's own panes) → Permissions (when applicable) → Backup & Restore → What's New → Updates (when applicable) → About → Uninstall
 ```
 
 [Dragon Sample App](https://github.com/teddychan/dragon-sample-app) wires its panes up in this
@@ -213,12 +211,19 @@ See [`docs/STARTING-A-NEW-APP.md`](docs/STARTING-A-NEW-APP.md) — a self-contai
 
 ## For AI agents: current documentation authority
 
-Start here. [`CONFORMANCE.md`](CONFORMANCE.md) is normative for adoption and UI ownership, and
-[`docs/MAC-APP-RELEASE-LIFECYCLE.md`](docs/MAC-APP-RELEASE-LIFECYCLE.md) is normative for Debug,
-release, and repository ownership. [`docs/STARTING-A-NEW-APP.md`](docs/STARTING-A-NEW-APP.md) and
-[`docs/ADOPT-DRAGONKIT-PROMPT.md`](docs/ADOPT-DRAGONKIT-PROMPT.md) are the current operational
-guides. Everything under `docs/superpowers/plans/` and `docs/superpowers/specs/` is historical
-rationale only; never implement from those dated files.
+Start here.
+
+| Document | Authority |
+|---|---|
+| [`CONFORMANCE.md`](CONFORMANCE.md) | **Normative** for adoption and UI ownership. Owns every machine-checked rule, and the canonical settings-pane order. |
+| [`docs/MAC-APP-RELEASE-LIFECYCLE.md`](docs/MAC-APP-RELEASE-LIFECYCLE.md) | **Normative** for Debug identity, versions, tags, release and repository ownership. |
+| [`docs/STARTING-A-NEW-APP.md`](docs/STARTING-A-NEW-APP.md) · [`docs/ADOPT-DRAGONKIT-PROMPT.md`](docs/ADOPT-DRAGONKIT-PROMPT.md) | Current operational guides. They *apply* the two documents above and never overrule them. |
+| [`docs/CONFORMANCE-INCIDENTS.md`](docs/CONFORMANCE-INCIDENTS.md) | Why each rule exists. Non-normative; read before changing a rule. |
+| [`TechDebt.md`](TechDebt.md) | Sequenced work and parked decisions. |
+| [`docs/superpowers/`](docs/superpowers/) | Superseded plans and specs, kept as dated evidence. **Never implement from them.** |
+
+Where two documents disagree, the normative one wins — and please open an issue, because that
+disagreement is the failure mode this set is arranged to prevent.
 
 DragonKit is a **published SwiftPM package** — the one place the shared parts of every
 Dragon macOS app live. **Depend on it; never copy its code into your app.**

@@ -68,12 +68,20 @@ Symbols; anything re-introducing Uninstall to the dropdown; any change to the ca
 pane order. These change every Dragon app's UI at once. A canon change that doesn't also update
 `README.md`, `CONFORMANCE.md` and the tests is incomplete.
 
+**Mirrored rules in the two prompt documents.** `docs/ADOPT-DRAGONKIT-PROMPT.md` and
+`docs/IMPLEMENT-MAC-APP-RELEASE-LIFECYCLE-PROMPT.md` deliberately restate rules, because a prompt
+is pasted where this repo is absent. Each carries a `<!-- MIRRORS: … -->` marker naming what it
+mirrors. If the diff touches a mirrored rule and neither prompt changed, that is a finding — those
+two files are the copies most likely to drift, and the least likely to be noticed.
+
 **Conformance triad.** If any one of `CONFORMANCE.md`, `Scripts/dragon-conformance.py`,
 `Scripts/test_conformance.py` changed, check the other two. A rule written but not implemented
 is the exact failure the spec exists to prevent. Also check: does a new rule have a test? Is a
 new regex anchored on `dragon-kit` (an unanchored one matches whichever dependency appears first
 in the file — it matched Sparkle's version in ice-2's `.pbxproj`)? Does the rule stay
-enforceable if the app deletes its `.dragon-conformance.json`?
+enforceable if the app deletes its `.dragon-conformance.json`? Does the new or changed rule have a
+matching section in `docs/CONFORMANCE-INCIDENTS.md` — a rule with no recorded incident is either
+undermotivated or is borrowing someone else's, and §R7 is the template for saying so honestly.
 
 **Exception status.** Never infer conformance from an empty `exceptions` list, or from the absence
 of a documented exception. The registry is what the apps declare; an empty one says only that no
@@ -113,7 +121,8 @@ created.
 - Nitpicks a senior engineer wouldn't raise: formatting, naming taste, import order.
 - Missing app-side localizations. Out of scope by design — the rule is that localization *goes
   through* `L()`, not that every app ships seven languages.
-- The untracked `Example/` directory. Stale build output from an earlier sample-app layout.
+- The untracked `sample-app/` directory. Stale build output (`.build/`, `Package.resolved`) left
+  from when Dragon Sample App lived here; `.gitignore` names it. It is not an in-tree app.
 - Missing test coverage or documentation in general, unless the change is to canon or to a
   conformance rule — where both are required.
 

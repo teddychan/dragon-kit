@@ -8,6 +8,18 @@ DragonKit Settings UI, with host-specific lifecycle and backend behavior.
 
 Paste the block below, then apply the per-app tweaks noted underneath.
 
+> **Maintainers:** a prompt is pasted into a context where this repository is absent, so it names
+> rules the agent would otherwise have to fetch. That duplication is deliberate — but it is
+> *derived*, never authoritative. The block below names rules; it does not restate their content,
+> and where the two disagree `CONFORMANCE.md` wins.
+>
+> <!-- MIRRORS: CONFORMANCE §R0 §R1 §R2 §R3 §R5 §R6 §R7 §R9 §R10 §R11 §R12 §R13 · MAC-APP-RELEASE-LIFECYCLE (Debug identity, tag namespace) -->
+>
+> The marker must be **exhaustive, not illustrative** — it is the only enforcement these files
+> have. A change to any mirrored rule must update this file and
+> [`IMPLEMENT-MAC-APP-RELEASE-LIFECYCLE-PROMPT.md`](IMPLEMENT-MAC-APP-RELEASE-LIFECYCLE-PROMPT.md)
+> in the same PR; `.claude/skills/dragonkit-review/SKILL.md` asks a reviewer to check that.
+
 ## Visual ownership guide
 
 Liquid Glass defines the appearance. DragonKit owns the shared Settings structure and leaves
@@ -98,7 +110,7 @@ modules, supplying only this app's own content/config. Use:
 Settings pane (sidebar) order — list panes in settingsPanes in this order, so every
 Dragon app's Settings sidebar matches (the order is host-owned; the shell just renders
 what you give it):
-  General → (this app's own panes) → Permissions → Backup & Restore → What's New → Updates → About → Uninstall
+  General → (this app's own panes) → Permissions (when applicable) → Backup & Restore → What's New → Updates (when applicable) → About → Uninstall
 If the app declares `no-permissions`, omit only Permissions and preserve the relative order of
 every remaining pane. Yahoo KeyKey's current sidebar is General → Backup & Restore → What's New
 → Updates → About → Uninstall.
@@ -238,12 +250,10 @@ hosting, Quit behavior, launch behavior, or uninstall implementation.
   `Contents/Resources`. Local clean builds first generate `Resources/data.txt` with
   `tools/build-lm.sh`; the release workflow does the same before invoking `tools/build-app.sh`.
 
-- **Declaring a script-build pin (§R10)** — when there is no top-level product `Package.swift`, the checker
-  reads whatever file states the version. Point `pin.file` at the build script and anchor
-  `pin.pattern` on the variable that holds the tag, e.g. `DRAGONKIT_TAG="([0-9.]+)"`. Anchor it
-  on something dragon-kit-specific: the pattern is one search over the whole file, so a bare
-  version regex matches whichever dependency appears first — in ice-2's `.pbxproj` that was
-  Sparkle's version, and R10 reported a false PASS against a stale pin.
+- **Declaring a script-build pin (§R10)** — when there is no top-level product `Package.swift`, the
+  checker reads whatever file states the version. Point `pin.file` at the build script and anchor
+  `pin.pattern` on the variable that holds the tag, e.g. `DRAGONKIT_TAG="([0-9.]+)"`. The anchoring
+  requirement and the trap behind it are in the prompt block above, once.
 
 - **Permissions (§R5)** — don't add a Permissions pane an app doesn't need. An IME receives
   keystrokes through the IMK server, so it needs no Accessibility or Input-Monitoring grant.

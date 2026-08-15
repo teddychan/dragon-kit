@@ -17,17 +17,27 @@ from its own CI, so a violation fails the PR. Rules live here and only here — 
 workflow `@main`, so **a rule merged here is live in all five apps' CI the same day.** See "How to
 comply" below for why the pin is `@main` and not a tag.
 
+**Every rule below is a failure that actually happened.** The failure itself — which app, which
+bug, which wrong first attempt at the rule — is recorded once, in
+[`docs/CONFORMANCE-INCIDENTS.md`](docs/CONFORMANCE-INCIDENTS.md), section by section. Read it
+before relaxing a rule or writing a new one. This file states the rules; that one says why they
+are shaped the way they are.
+
 ## Why this exists
 
-Every rule below is a failure that actually happened, not a hypothetical. Before 2026-08-04
-all four shipping apps had independently hand-rolled the same menu and drifted: three
-different string sets, two casings, two update icons, a stray ellipsis, and one app with no
-icons. ice-2 had `IceForm`/`IceSection` files that were line-for-line identical to
-`DragonForm`/`DragonSection`, plus its own Sparkle wiring — so it silently missed a shared
-alert reword. clipmenu-2 and keykey-2 each duplicated the kit's menu strings in their own
-`.strings` files, which is how the casing drifted invisibly.
+Documentation did not prevent any of the drift these rules exist to stop. Four shipping apps had
+independently hand-rolled the same lifecycle menu; the design spec even *mandated* one of the
+drifted items. That is the whole argument for machine-checking, and the detail is in
+[Incidents → Why the spec exists at all](docs/CONFORMANCE-INCIDENTS.md#why-the-spec-exists-at-all).
 
-Documentation did not prevent any of it. The design spec even *mandated* the drifted item.
+Three consequences that govern how every rule below is written:
+
+- **A rule that is only written down is not a rule.** `CONFORMANCE.md` (the rule),
+  `Scripts/dragon-conformance.py` (the enforcement) and `Scripts/test_conformance.py` (the test for
+  the enforcement) change **together**, or not at all.
+- **A broken checker is worse than no checker** — it passes everything silently.
+- **Anything a rule cannot read is a violation, never a skip.** A checker that goes quiet when an
+  app restructures reports a pass on every app that stopped conforming.
 
 ## How to comply
 
@@ -48,56 +58,54 @@ its default branch anyway, so pinning it to a tag would freeze the *interface* w
 If you ever want the workflow itself pinned, cut a floating `v2` tag on dragon-kit first
 (the way `dragon-release-ci` maintains `v5`); until then `@v2` does not resolve.
 
-
 Run it locally the same way CI does:
 
 ```bash
 python3 /path/to/dragon-kit/Scripts/dragon-conformance.py --app .
 ```
 
+Starting a new app? [`docs/STARTING-A-NEW-APP.md`](docs/STARTING-A-NEW-APP.md) carries a scaffold
+written to pass every rule here, including a copyable `.dragon-conformance.json`.
+
 ---
 
 ## R0 — Declare the app
 
-**`.dragon-conformance.json` must exist at the app repo root.** Without it the checker cannot
-know where an app keeps its sources, and a missing config is itself a violation (otherwise
-deleting the file would be the easiest way to "pass").
+**`.dragon-conformance.json` must exist at the app repo root**, and **`sources`, `strings` and
+`paneOrder` are all required.** A missing file, or a missing key, used to switch off its rule in
+silence — which is the same shape as deleting the file to "pass".
+
+The listing below is **annotated JSONC for reading. The real file is strict JSON** — the checker
+parses it with `json.load`, so a `//` line raises `JSONDecodeError` before a single rule is
+evaluated. Copy the file from
+[`docs/STARTING-A-NEW-APP.md`](docs/STARTING-A-NEW-APP.md#dragon-conformancejson-repo-root--required-by-r0),
+not from here.
 
 ```jsonc
 {
   "app": "ClipMenu 2",
-  "sources": ["app/Sources"],            // Swift source roots to scan
-  // REQUIRED. Does double duty: §R8 reads the keys inside these files, and §R13 reads the
-  // `.lproj` directory names in the paths to learn which languages the app ships its own
-  // strings in. Omitting it used to disable §R8 outright — the rule had nothing to iterate
-  // and the app passed by giving the checker no work to do.
+  "sources": ["app/Sources"],            // Swift source roots to scan. REQUIRED.
+  // REQUIRED. Double duty: §R8 reads the keys inside these files, and §R13 reads the `.lproj`
+  // directory names in the paths to learn which languages the app ships its own strings in.
   "strings": ["app/Sources/**/*.lproj/Localizable.strings"],
   "pin": {                               // where the DragonKit version is declared
     "file": "app/Package.swift",
-    // MUST anchor on dragon-kit. The pattern is one search over the whole file, so an
-    // unanchored version regex silently matches whichever dependency appears first. In an
-    // Xcode .pbxproj this is a live trap: `minimumVersion = ([0-9.]+)` matched Sparkle's
-    // 2.5.2 in ice-2 and compared *that* against DragonKit's tags. Anchor it:
+    // MUST anchor on dragon-kit — see §R10. An unanchored version regex matches whichever
+    // dependency appears first in the file. In an Xcode .pbxproj, anchor it:
     //   "dragon-kit\";[^}]*minimumVersion = ([0-9.]+)"
     "pattern": "dragon-kit\", from: \"([0-9.]+)\""
   },
-  // REQUIRED, for the same reason: no `paneOrder` meant no §R9 at all, silently.
-  "paneOrder": { "file": "app/Sources/ClipMenu/SettingsWindowController.swift" },
+  "paneOrder": { "file": "app/Sources/ClipMenu/SettingsWindowController.swift" },  // REQUIRED. §R9.
   "traits": ["sparkle", "mac-app-store"],   // see §R5, §R6
-  // §R11. This is the empty-registry starting point for a new app, NOT a statement about the
-  // fleet: four of the five apps are empty and dragon-sample-app declares one (R15, for having
-  // no public page). An empty list says only that no divergence is sanctioned — it does not say
-  // the app was checked, or that it conforms. The schema is shown in §R11, not here, because an
-  // example exception reads as a live sanction: the last one named a rule R3 never fired and a
-  // path (`SyncBackupPane.swift`) clipmenu-2 does not have.
-  "exceptions": []
+  "exceptions": []                       // §R11. Empty is the starting point for a new app.
 }
 ```
 
-**`sources`, `strings` and `paneOrder` are all required.** A missing key used to switch its rule
-off without a word — the same shape as deleting this file, which §R0 makes a violation for exactly
-that reason. If an app genuinely cannot supply one (String Catalogs instead of `.lproj`, say), that
-is what §R11 is for: a sanctioned exception with a reason and an owner, printed on every run.
+If an app genuinely cannot supply `sources`, `strings` or `paneOrder` — String Catalogs instead of
+`.lproj`, say — that is what §R11 is for: a sanctioned exception with a reason and an owner,
+printed on every run.
+
+→ [Incidents §R0](docs/CONFORMANCE-INCIDENTS.md#r0--declare-the-app)
 
 ## R1 — The lifecycle menu comes from `DragonAppMenu`
 
@@ -110,27 +118,17 @@ Accessibility warning row — and append the shared items after their own separa
 
 The host still owns dispatch at a system boundary. KeyKey's IMK menu obtains the canonical
 `NSMenuItem`s from `DragonAppMenu.items(_:)`, then retargets those same items to `@objc` selectors
-on `InputController`, because IMK routes top-level selections back to the input controller rather
-than honoring the closure-backed item's private target. This adapter does not hand-build a
-lifecycle item and is not an R11 exception: DragonKit still supplies each item's title, icon,
-order, and omission behavior.
+on `InputController`. This adapter does not hand-build a lifecycle item and is not an R11
+exception: DragonKit still supplies each item's title, icon, order, and omission behavior.
 
 **Violation:** any `NSMenuItem(…)` whose arguments contain a title literal or `L()` key matching a
-lifecycle item, or an app that never references `DragonAppMenu` **in code**.
+lifecycle item, or an app that never references `DragonAppMenu` **in code**. Both halves read the
+code, not the line: arguments are read as a whole, from a copy that keeps literals but not comments.
 
-Both halves read the code, not the line. `"DragonAppMenu" in line` counted the name wherever it
-appeared, so `let marker = "DragonAppMenu"` — or the name in a comment — satisfied this rule for an
-app that never called it. And an `NSMenuItem(` whose title sat on the *next* line matched nothing,
-which is the spelling every one of these takes once it has four arguments.
+**Why:** every one of these properties is canon, and four apps proved they drift when each app owns
+them. Omissions are canon too — they come from `DragonAppMenu.Config`, not from a hand-built item.
 
-The call's arguments are read as a whole now, from a copy that keeps **literals but not comments**.
-Reading them from raw text was the first cut and was wrong in this rule's own terms: it made
-`NSMenuItem(title: title,  // Quit and About %@ come from DragonAppMenu)` a violation, which the
-line-based predecessor would never have reported.
-
-**Rationale:** this is the drift that motivated the whole spec. Order, naming, casing,
-ellipsis, icons and the omission rules (`onCheckForUpdates: nil` for Mac App Store,
-`includeQuit: false` for an IME) are canon, not per-app choices.
+→ [Incidents §R1](docs/CONFORMANCE-INCIDENTS.md#r1--the-lifecycle-menu-comes-from-dragonappmenu)
 
 ## R2 — Uninstall is not in the menu
 
@@ -141,13 +139,11 @@ sidebar.
 **Violation:** any menu item whose arguments contain "uninstall" (case-insensitive), read across
 the whole construction — see §R1 on why one line was not enough.
 
-**This rule has its own `exceptions` key.** It was gated on §R1's, so an app needing an Uninstall
-exception had to declare `R1` — which also switched off every lifecycle-title check on that path —
-while §R11 told it `R2` was not suppressible at all. Sanctioning `R2` now suppresses `R2` and
-nothing else.
+**This rule has its own `exceptions` key.** Sanctioning `R2` suppresses `R2` and nothing else.
 
-**Rationale:** a rarely-used destructive action does not belong one click away in the
-everyday menu, next to Quit.
+**Why:** destructive and rare is the wrong neighbour for Quit.
+
+→ [Incidents §R2](docs/CONFORMANCE-INCIDENTS.md#r2--uninstall-is-not-in-the-menu)
 
 ## R3 — No app type may shadow a public DragonKit type
 
@@ -159,15 +155,13 @@ stays correct as the kit grows.
 `UninstallView`.
 
 **Top-level on both sides, and that is the rule, not a limitation of the checker.** A nested type
-lives in its own namespace and cannot shadow anything: ice-2's `SettingsBackup.BackupError` was
-reported against `DragonBackup.BackupError` and was a false positive. Scraping nested kit types is
-also what forced `Config` and `Kind` onto a hand-maintained exclusion list — a symptom of the same
-bug rather than real exceptions.
+lives in its own namespace and cannot shadow anything.
 
-**Rationale:** ice-2 declared its own `UpdatesSettingsPane` and `BackupSettingsPane` in files
-that also `import DragonKit`. It compiled — Swift resolves the local type — so the app
-silently used its own copy while looking like it used the kit's. Name collision is the most
-dangerous drift because it is invisible.
+**Why:** an app-local copy compiles — Swift resolves the local type — so the app silently uses its
+own version while looking like it uses the kit's. Name collision is the most dangerous drift
+because it is invisible.
+
+→ [Incidents §R3](docs/CONFORMANCE-INCIDENTS.md#r3--no-app-type-may-shadow-a-public-dragonkit-type)
 
 ## R4 — No re-implemented design primitives
 
@@ -180,6 +174,9 @@ type named `*Form`/`*Section`/`*GroupBox` that isn't from the kit.
 **Rationale:** `IceForm`/`IceSection` were line-for-line identical to the kit types — the kit
 was *ported from them* and ice-2 never adopted the port back.
 
+→ [Incidents §R4](docs/CONFORMANCE-INCIDENTS.md#r4--no-re-implemented-design-primitives) — including
+a parked owner decision about this rule's prose. Do not act on it without the owner.
+
 ## R5 — Shared panes come from the kit
 
 About, What's New, Permissions, Updates and Uninstall must be the kit's panes. Required
@@ -187,12 +184,11 @@ references: `AboutSettingsPane` or `AboutPane`; `WhatsNewSettingsPane` or `Whats
 `UninstallSettingsPane`; `UpdatesSettingsPane` (unless the app lacks the `sparkle` trait);
 `PermissionsSettingsPane` (unless the app has the `no-permissions` trait).
 
-The reference must be **in code**. This searched raw text, so a line a migration left behind —
-`// AnySettingsPane(UninstallSettingsPane(config: config))` — counted as wiring the kit's pane.
-It was the one rule where prose *about* the kit was accepted as use of the kit.
+The reference must be **in code**, not in a comment.
 
-**Rationale:** every pane an app writes itself is a pane that stops receiving shared fixes.
-ice-2's own updates pane meant it never got the reworded "up to date" alert.
+**Why:** every pane an app writes itself is a pane that stops receiving shared fixes.
+
+→ [Incidents §R5](docs/CONFORMANCE-INCIDENTS.md#r5--shared-panes-come-from-the-kit)
 
 ## R6 — Updates go through `DragonKitUpdates`
 
@@ -205,23 +201,17 @@ Use `DragonUpdater`. Apps with the `mac-app-store` trait link `DragonKit` only a
 No direct `SMAppService` or `SMLoginItemSetEnabled` use, no `LSSharedFileList` route, and no
 third-party launch-at-login package (`LaunchAtLogin`, `LoginServiceKit`).
 
-**Rationale:** two code paths writing the same `SMAppService.mainApp` registration is a
-split-brain waiting to happen, and the uninstall flow has to unregister it too.
-
-**§R6 and §R7 are deny-lists, deliberately — neither has a positive form.** "The app must
-reference `DragonUpdater`" fails an app with the `mac-app-store` trait, which links no updater at
-all; "the app must reference `LoginItem`" fails any app that simply has no launch-at-login feature.
-What a deny-list costs is that it only knows the routes written into it, and §R7 knew exactly two:
-`import LoginServiceKit` — the login-item library ClipMenu's upstream used — went straight past it.
-
 Third-party names are matched on `import` or a member access, never bare, so that *naming* a
-library stays distinguishable from *using* one: an entry in an `attributions` array, a test
-asserting this rule, a variable name. **That is defensive, with no incident behind it**, and this
-paragraph used to claim one — that ice-2 credits `LaunchAtLogin` in its generated acknowledgements.
-It does the opposite: `IceTests/AcknowledgementsTests.swift` asserts the bundled notices do *not*
-name it, the dependency having been dropped long ago, and the single mention anywhere in ice-2's
-`sources` is a `//` comment that never reaches this rule. Verified by widening the pattern to bare
-words and re-running: ice-2 still passes either way.
+library stays distinguishable from *using* one.
+
+**Why:** two code paths writing the same `SMAppService.mainApp` registration is a split-brain
+waiting to happen, and the uninstall flow has to unregister it too.
+
+**§R6 and §R7 are deny-lists, deliberately — neither has a positive form.** A positive form would
+fail an app with the `mac-app-store` trait, or an app that simply has no launch-at-login feature.
+What a deny-list costs is that it only knows the routes written into it.
+
+→ [Incidents §R6 and §R7](docs/CONFORMANCE-INCIDENTS.md#r6-and-r7--why-both-are-deny-lists)
 
 ## R8 — The app owns no kit string keys
 
@@ -229,25 +219,30 @@ App `.strings` files must not define any key beginning `DragonKit.`, nor any key
 of the kit's canonical menu titles used verbatim as a key (`About %@`, `Check for Updates…`,
 `Settings…`, `Quit %@`, `Uninstall %@…`).
 
-The `strings` globs are **required** (§R0): with none declared this rule had nothing to iterate and
-passed by having no work to do, and §R13 reads the same globs, so one missing key quietly narrowed
-two rules at once.
+**Why:** duplicated kit keys are how the menu's casing drifted invisibly. `L()` resolves the module
+bundle **first**, so a duplicate cannot even take effect — it is dead weight that merely *looks*
+authoritative.
 
-**Rationale:** clipmenu-2 and keykey-2 both duplicated these across their own locale files,
-which is exactly how the casing drifted without anyone noticing. Note `L()` resolves the
-module bundle **first**, so an app cannot override a kit key even if it tries — a duplicated
-key is dead weight that merely *looks* authoritative.
+→ [Incidents §R8](docs/CONFORMANCE-INCIDENTS.md#r8--the-app-owns-no-kit-string-keys)
 
 ## R9 — Settings pane order matches the canon
 
 ```
-General → (the app's own panes) → Permissions → Backup & Restore → What's New → Updates → About → Uninstall
+General → (the app's own panes) → Permissions (when applicable) → Backup & Restore → What's New → Updates (when applicable) → About → Uninstall
 ```
 
+**This exact line is the canon**, and it is quoted from here by `CLAUDE.md`, `README.md`,
+`TechDebt.md` and the two guides.
+
+**Two slots are conditional, and §R5 owns both conditions** — Permissions is omitted for an app
+declaring the `no-permissions` trait, Updates for an app without `sparkle`. Both carry the marker
+so neither reads as mandatory: annotating one and not the other is how a reader concludes the
+unmarked one is required, which for Updates would mean telling a Mac App Store target to ship a
+pane it cannot link. Every other slot is required, and the relative order never changes.
+
 The checker extracts kit pane identifiers in declaration order from the file named by
-`paneOrder` — a **required** key, since an app that named no file used to skip this rule in
-silence — and requires their **relative** order to match. App-specific panes anywhere between
-General and Permissions are fine.
+`paneOrder` — a **required** key (§R0) — and requires their **relative** order to match.
+App-specific panes anywhere between General and Permissions are fine.
 
 Each slot is matched on the **pane identifier**, never on its display title — so a slot is
 satisfied by `BackupSettingsPane` (which the kit titles "Backup & Restore") or by a recognized
@@ -257,44 +252,24 @@ R11 exceptions. Both go when those two apps migrate to `BackupSettingsPane` + `D
 [TechDebt.md](TechDebt.md); they are migration debt, not a supported difference. The canon line
 names what the kit itself ships rather than every recognized identifier.
 
-**Rationale:** the canon line used to read "Sync & Backup" — clipmenu-2's name for it — while
-the kit's own pane is titled "Backup & Restore" and the checker's slot spellings recognized
-only `BackupSettingsPane`/`backup`. So the one app whose pane is named differently had this
-slot **silently unchecked**: `\bbackup\b` doesn't match `SyncBackupPane`, R9 compares only the
-slots it actually saw, and clipmenu-2 passed with its backup pane free to sit anywhere in the
-order. Three names for one slot, and the gap was in the app the rule most needed to cover.
-
-`IceBackupSettingsPane` was added later, on the same reasoning: `README.md` and `TechDebt.md`
-both stated the rule recognized it and the slot did not name it. Nothing failed, because ice-2
-drives its sidebar from an enum whose `case backup` matches — but that made the hole one refactor
-away from live. A rule that happens to be satisfied by an unrelated detail of one app's spelling
-is not a rule that is checking that app.
+→ [Incidents §R9](docs/CONFORMANCE-INCIDENTS.md#r9--settings-pane-order-matches-the-canon)
 
 ## R10 — The DragonKit pin is current
 
 The version at `pin.file`/`pin.pattern` must be `>=` the newest `vX.Y.Z` tag in dragon-kit.
-**Every app pins a published version — there is no path-dependency exemption.**
+**Every app pins a published version — there is no path-dependency exemption**, and declaring
+`"pin": {"kind": "path"}` is itself an R10 violation.
 
-**`pin.pattern` must anchor on dragon-kit, and the checker now reads the pattern to make sure it
-does.** §R0 has required this since the trap was found, and nothing enforced it: the pattern is one
-search over the whole file, so an unanchored version regex matches whichever dependency appears
-first. `minimumVersion = ([0-9.]+)` read Sparkle's 2.5.2 out of ice-2's `.pbxproj` and compared
-*that* against the kit's tags — a false PASS on a stale pin, which is worse than a false failure
-because it looks like the rule is protecting you. The anchor is tested on the pattern with its
-separators removed, so yahoo-keykey-2's `DRAGONKIT_TAG="v([0-9.]+)"` satisfies it exactly as
-`dragon-kit", from: "([0-9.]+)"` does.
+**`pin.pattern` must anchor on dragon-kit, and the checker reads the pattern to make sure it
+does.** The pattern is one search over the whole file, so an unanchored version regex matches
+whichever dependency appears first and reports a false PASS on a stale pin. The anchor is tested on
+the pattern with its separators removed, so yahoo-keykey-2's `DRAGONKIT_TAG="v([0-9.]+)"` satisfies
+it exactly as `dragon-kit", from: "([0-9.]+)"` does.
 
-`test_conformance.py` used to assert that false PASS as *expected behaviour* — an `expect_pass`
-named "the trap" — for the most-cited incident in this document.
+**Why:** a stale pin is how an app silently misses shared fixes.
 
-**Rationale:** a stale pin is how an app silently misses shared fixes. Every app sat on 1.3.0
-while the kit was at 1.4.0, so none had the shared menu at all.
-
-`"pin": {"kind": "path"}` used to satisfy this rule by construction, for the one app that
-depended on the kit by `path: ".."` because it lived inside it. That app owns its own repository
-now, so nothing qualifies — and the branch was an always-pass with no fixture behind it, which
-made it the cheapest way for any app to opt out of the staleness check. Declaring it is now
-itself an R10 violation, the same way §R0 makes deleting `.dragon-conformance.json` one.
+→ [Incidents §R10](docs/CONFORMANCE-INCIDENTS.md#r10--the-dragonkit-pin-is-current) — the Sparkle
+false-PASS trap, and the test that asserted it as expected behaviour.
 
 ## R11 — Exceptions are explicit, reasoned, and few
 
@@ -309,20 +284,6 @@ validated:**
 | `reason` | non-empty |
 | `sanctionedBy` | non-empty |
 
-`reason` and `sanctionedBy` were required in prose and checked nowhere, so an entry with neither
-suppressed its rule just as effectively while the run printed `NO REASON GIVEN` beside it and
-passed. Validating `rule` is this section's own history made machine-checkable — see the table
-below, where five sanctions sat for months naming rules that never fired.
-
-`path` is validated for exactly the same reason, one field along. §R5, §R8, §R9 and §R12 consult
-`excuses(rule, "")` and nothing else, so a path-scoped entry for one of them printed as a live,
-narrowly-scoped sanction on every run and suppressed nothing at all — the app still failed. §R15
-takes a path (dragon-sample-app's live exception is one) because it is consulted both ways.
-
-**§R2 reads its own key.** It was gated on §R1's, so an app needing an Uninstall exception had to
-declare `R1` — which also switched off every lifecycle-title check on that path — while this list
-told it `R2` was not suppressible, which was false in the way that mattered.
-
 ```jsonc
 "exceptions": [
   { "rule": "R15", "path": "Sources/DragonAppTemplate/AboutConfig.swift",
@@ -332,94 +293,48 @@ told it `R2` was not suppressible, which was false in the way that mattered.
 ```
 
 The checker prints every exception on each run, so they stay visible instead of becoming
-permanent. **The target is none at all, and as of 2026-08-12 exactly one is declared across all
-five apps** — the one above, dragon-sample-app's, which §R15 landed and which is reasoned below.
-Keep it there — an exception is the last resort, after a trait, a slot spelling, and changing the
-app.
+permanent. **The target is none at all.** An exception is the last resort, after a trait, a slot
+spelling, and changing the app.
 
 ### The registry is what the apps declare, and an empty one proves nothing
 
-**The current exception registry is the union of the entries in the five apps'
-`.dragon-conformance.json` files.** No prose example here, no historical note, and no memory adds
-an entry to it. The schema shown in §R0 is the empty-registry starting point for a new app, not a
-statement about the fleet.
+**The exception registry is the union of the entries in the five apps' `.dragon-conformance.json`
+files, and nothing else.** No prose here, no historical note, and no memory adds an entry to it.
+The schema shown in §R0 is the empty starting point for a new app, not a statement about the fleet.
 
 **An empty registry means only that no divergence is *declared*.** It does not mean the app was
 checked, and it does not mean the app conforms — the two are independent, and reading one off the
-other is the reasoning error that produced the table below. Where current source or a current
-checker run has not established a result, say **not currently verified** rather than "conforming".
+other is a reasoning error this section has made twice. Where current source or a current checker
+run has not established a result, say **not currently verified** rather than "conforming".
 
 Three things follow, and each has already been got wrong here:
 
 - **A prose-only reservation was never an exception.** If it was never declared in an app's
   config, it never suppressed anything, so it is historical context — not a live sanction, and not
   a "resolved" one either. Retiring it changes nothing about that app's conformance.
-- **The checker validates an entry's shape, not its necessity.** It now enforces all four fields
-  (above), but nothing checks that the rule would actually *fire* without the entry. That is still
-  a review step: reproduce the unsuppressed violation before treating an entry as load-bearing, or
-  it joins the phantom sanctions below.
-- **A sample or reference app is not a special case.** dragon-sample-app's §R15 entry is an
-  exception on exactly the same terms as a production app's would be: an applicable rule genuinely
-  fires, and the app declares it.
+- **The checker validates an entry's shape, not its necessity.** It enforces all four fields
+  above, but nothing checks that the rule would actually *fire* without the entry. That is still a
+  review step: reproduce the unsuppressed violation before treating an entry as load-bearing.
+- **A sample or reference app is not a special case.** It declares an exception on exactly the
+  same terms as a production app would.
 
-### What this table used to say
+**To learn what is currently sanctioned, read the five apps' config files** — or run the checker,
+which prints them:
 
-It listed five "currently sanctioned" exceptions, for months, while **not one of them was
-declared in any app** — the checker printed nothing on every run of all five. None was ever
-needed:
+```bash
+for r in clipmenu-2 ice-2 spectacle-2 yahoo-keykey-2 dragon-sample-app; do
+  git -C ~/git/$r fetch -q && git -C ~/git/$r show origin/main:.dragon-conformance.json
+done
+```
 
-| Was listed | Why it needed no exception |
-|---|---|
-| clipmenu-2, ice-2 — R3/R4, own folder backup pane | `SyncBackupPane` and `IceBackupSettingsPane` shadow no kit type and hand-roll no grouped `Form`, so R3 and R4 never fired on them. The deferral is real — `DragonBackup` snapshots a UserDefaults suite only — but §R9 carries it, by listing the app's spelling in the Backup slot. |
-| clipmenu-2 — R6, MAS links `DragonKit` only | R6 fires on `import Sparkle` in Swift sources. A *target* that omits a product gives it nothing to see. Declared as the `mac-app-store` trait. |
-| yahoo-keykey-2 — R1, `includeQuit: false` | A parameter of `DragonAppMenu.Config`. Using the kit's own knob is compliance, not divergence. |
-| yahoo-keykey-2 — R5, no Permissions pane | Carried by the `no-permissions` **trait**, which R5 reads directly. |
+This document deliberately keeps no copy of that list. A copy here would be a second registry, and
+[Incidents §R11](docs/CONFORMANCE-INCIDENTS.md#the-five-phantom-sanctions) records what happened
+the last time one existed: five sanctions sat in this section for months while not one of them was
+declared in any app.
 
-A row naming a rule the checker never fires is worse than no row: it reads as a live sanction,
-nothing contradicts it, and the next app copies the shape. Traits and slot spellings are how a
-*structural* difference gets declared; `exceptions` is only for a rule that genuinely fires and is
-genuinely allowed to. If a row cannot be traced to a violation the checker would otherwise print,
-it does not belong here.
-
-### The live one
-
-| App | Rule | Divergence | Declared | Lifts when |
-|---|---|---|---|---|
-| dragon-sample-app | R15 | About's Website row is `dragonapp.com`, not `dragonapp.com/dragon-sample-app/` | yes — `.dragon-conformance.json`, at `Sources/DragonAppTemplate/AboutConfig.swift` | the app gets a public page, if it ever does |
-
-One row, one app, one rule. It is the only exception declared anywhere across the five.
-
-**dragon-sample-app has no public-facing page, on purpose.** The site's only page for it is
-`/dragon-sample-app/licenses/`: there is no
-`docs/dragon-sample-app/index.html` and no card for it on the hub. The app exists to exercise
-DragonKit's modules — it ships no feature of its own — so it is a released, updatable, licence-
-carrying app without a product page. Pointing its Website row at the canonical path would ship a
-404, so it addresses the studio hub, and `AboutContent.websiteMatchesSupportRepo` is `false` for
-it and `true` for the other four. Every other rule applies to it unchanged.
-
-§R15 is that property, and the exception landed in **dragon-sample-app's** repo before the rule
-landed here: a rule merged here is live in five apps' CI the same day, so merging in the other
-order would have red-X'd the app for a divergence already agreed. In between it was inert — the
-checker matches exceptions by rule name, so it only added a printed line — which is what made
-landing it first safe.
-
-**ice-2's R13 row was a documented reservation, never an active exception.** It sat here from the
-day R13 landed: ice-2 shipped no localization at all — no `.lproj`, no String Catalog, no `L()`
-call site — so nothing on disk stated its coverage, and the sanction was written down in advance so
-it would already be agreed when the app adopted a picker. It never appeared in ice-2's
-`.dragon-conformance.json`, so it never suppressed a violation — which makes it historical context
-rather than a *resolved* exception; there was nothing to resolve. ice-2 PR #102 ships all seven
-locales and calls `LanguagePicker()` bare, which is what R13 asks of an app whose coverage matches
-the kit's. Verified against ice-2 v2.15.0 and the current checker: **all five apps satisfy R13
-outright.**
-
-Worth recording, because it is the second time this section has made the same point: the row was
-never load-bearing. R13 is silent for an app that constructs no `LanguagePicker`, so for the whole
-time it was listed there was no violation for it to sanction — and ice-2's `strings` glob matched
-no files either, which meant R8 had nothing to read as well. Both rules passed that app by doing
-no work. The fix was in the app (point the glob at real locale files; ship them), not here. A
-reserved row is still a row that reads as a live sanction to the next person, which is exactly
-what the table above records as the mistake.
+→ [Incidents §R11](docs/CONFORMANCE-INCIDENTS.md#r11--exceptions-are-explicit-reasoned-and-few) —
+the five phantom sanctions that sat here for months while none was declared anywhere, ice-2's
+reserved R13 row, and why dragon-sample-app's §R15 exception landed in its own repo first.
 
 ## R12 — The build stamps `DragonCommitDate`
 
@@ -442,19 +357,11 @@ Saying which spellings count and enforcing a *whitelist* are the same statement 
 descriptively while rejecting everything else would be a rule documented more broadly than it is
 enforced, which is the failure this document exists to prevent.
 
-It used to accept the key appearing *anywhere* in those files, so `# TODO: stamp DragonCommitDate`
-satisfied it while nothing wrote the key — and two of the five apps carry exactly such a comment,
-next to the real stamp that was doing the work. An empty `<key>DragonCommitDate</key>` placeholder
-is still accepted deliberately: ice-2 ships one and the release workflow fills it, which is a
-stamping route rather than a note about one.
+**Why:** About's version line has to fingerprint one commit. Without the stamp it renders no date
+at all — a silent fallback to the old, drifting meaning is exactly what this replaced, which is why
+*not* stamping it has to be a violation rather than a quietly shorter line.
 
-**Rationale:** About renders `v2.4.1 (756) · 2026-Aug-07 16:54:20 UTC`. The count came from the
-commit; the timestamp came from the *executable's* modification date — when CI linked and signed
-the binary. The two halves described different things and drifted: rebuild the same commit
-tomorrow and the count holds while the date moves. `DragonAbout` now reads `DragonCommitDate`, so
-the line fingerprints one commit. It shows no date at all when the key is absent — a silent
-fallback to the old meaning is exactly the drift this replaced — which is why *not* stamping it
-has to be a violation rather than a quietly shorter version line.
+→ [Incidents §R12](docs/CONFORMANCE-INCIDENTS.md#r12--the-build-stamps-dragoncommitdate)
 
 ## R13 — The language picker offers exactly the languages the app ships
 
@@ -465,44 +372,24 @@ literal `languages:` argument or, when there is none, the kit's default of
 `DragonLanguage.selectable`.
 
 So a bare `LanguagePicker()` is correct for an app whose coverage matches the kit's, and a
-violation for one whose coverage is narrower. clipmenu-2, spectacle-2 and dragon-sample-app all
-call it bare and all ship seven `.lproj`; a rule that simply demanded an explicit argument would
-fail three conforming apps.
+violation for one whose coverage is narrower. A rule that simply demanded an explicit argument
+would fail every conforming app that ships all seven.
 
 **Violation:** the offered set differs from the shipped set in either direction; a `languages:`
 argument that isn't a literal list, or that names something which is no `DragonLanguage` case; a
 `typealias` for `LanguagePicker`, which hides the call site the rule reads; or a picker in an app
-with no `.lproj` reachable through `strings` at all, where nothing can be compared and the rule
-would otherwise pass by having no work to do.
+with no `.lproj` reachable through `strings` at all, where nothing can be compared.
 
-`LanguagePicker.init()` is the same construction and counts. A call inside `/* … */` does **not**
-— that used to be a false violation with no compliant fix but deleting the comment, because only
-`//` was stripped.
+`LanguagePicker.init()` is the same construction and counts. A call inside `/* … */` does **not**.
 
-Compared as equality because the picker is the app's own statement of its coverage. Offering more
-than it ships is the shipping bug below; shipping more than it offers is translation work no user
-can select. A `.lproj` `DragonLanguage` has no case for is not counted — `Base.lproj` is not a
-language, and a `de.lproj` is one the picker physically cannot list, so counting either would
-leave the rule with no satisfiable form. The direction that matters is untouched: a locale the kit
-lacks can never enter the offered list either.
+A `.lproj` `DragonLanguage` has no case for is not counted — `Base.lproj` is not a language, and a
+`de.lproj` is one the picker physically cannot list.
 
-**Rationale:** yahoo-keykey-2 shipped through v2.11.4 calling `LanguagePicker()` bare while
-shipping only `App/en.lproj` and `App/zh-Hant.lproj`, so its Settings offered Español, Français,
-日本語, 한국어 and 简体中文 — and choosing one translated the kit's four panes while every KeyKey
-string fell back to English. ice-2 hit the same default first: PR #83 added Simplified Chinese
-alone, and its contributor hand-rolled a three-option picker in `GeneralSettingsPane`, the
-re-implementation §R4 forbids. DragonKit 3.4.0 added the `languages:` parameter for exactly this
-— and **the parameter existing did not stop it happening again.** Nothing failed on keykey's
-picker; it was found by eye while verifying an unrelated pin bump, which is the definition of a
-rule that needs machine-checking. Fixed in yahoo-keykey-2 PR #103 as
-`LanguagePicker(languages: [.en, .zhHant])`.
+**Why:** an app once offered five languages it had not translated a single string into, so choosing
+one translated the kit's four panes and left every app string in English.
 
-The checker reads the written argument rather than asserting through the type, because
-`LanguagePicker.languages` is `private` and `offeredLanguages` is `internal`, so a constructed
-picker reveals nothing to an app-side test. yahoo-keykey-2's
-`ConfigContentTests.testLanguagePickerOffersExactlyTheShippedLocalizations` is the app-local
-version of this comparison and stays as it is; this rule is what gives the other four apps the
-same signal.
+→ [Incidents §R13](docs/CONFORMANCE-INCIDENTS.md#r13--the-language-picker-offers-exactly-the-languages-the-app-ships)
+— including why it compares as equality, and why it reads the written argument rather than the type.
 
 ## R14 — The About copyright is kit-assembled and names one holder
 
@@ -511,53 +398,22 @@ copyright holder only.
 
 **The slot is checked positively: whatever fills it must *be* that call.** The checker rejects
 anything else — a string literal, a constant, a helper — plus two `©` on one line and the
-`original:` argument removed in DragonKit 4.0.0. It was a same-line search for `copyright: "`,
-which is a test of the one spelling nobody was going to use: `copyright: Self.notice` passed, and
-so did a literal wrapped onto the following line, which is how the slot reads as soon as the
-argument list is long enough to wrap. A rule that reads the written call site cannot follow an
-indirection to see what it names, so an indirection is a violation rather than a skip — §R13 and
-§R15 take the same line for the same reason.
+`original:` argument removed in DragonKit 4.0.0. A rule that reads the written call site cannot
+follow an indirection to see what it names, so an indirection is a violation rather than a skip;
+§R13 and §R15 take the same line for the same reason.
 
-**Rationale:** the rest of the About pane's slots are closed by the kit's own signature, and need
-no rule here. `licensesURL` is a required parameter; the upstream project's repository lives
-*inside* `OriginalWork`, so the `Original project` link and the `Based on` credit are one value.
-Both were separate optionals, and all four combinations shipped: clipmenu-2 and ice-2 credited an
-upstream project the pane never linked, while spectacle-2 and the sample app listed `Sparkle → MIT`
-in Credits with no notices page anywhere — found by putting five screenshots side by side, which
-is how About drift has been found every time. Under 4.0.0 each of those is a compile error, caught
-by the app's own build.
-
-`copyright` is a plain `String`, so no signature can close it — which is exactly why it gets the
-rule. The dual-holder line (`© 2008–2014 Naotaka Morimoto · © 2026 Teddy Chan`) was in two of five
-apps and not the other three.
-
-**The rule is about this slot, not about who holds the copyright.** An earlier draft of it argued
-that a Dragon app reimplements its upstream rather than reusing its source and therefore has no
-upstream copyright to assert. That is true of yahoo-keykey-2, which had reasoned its way to the
-single-holder form on exactly those grounds — and false of the two apps the rule actually touched.
-ice-2 is a **git fork** of Jordan Baird's Ice, 1371 commits from its `Initial commit`, GPL-3.0, and
-GPL §4 requires the upstream notice to travel with a derivative work; clipmenu-2's own `LICENSE`
-names both Naotaka Morimoto and Teddy Chan. Generalising from one app's situation to a legal claim
-about all five was wrong, and it was caught by an agent that refused the instruction and went and
-read the licences.
-
-So the reason is narrower and holds regardless of lineage: **the About header is a presentation
-slot in a settings pane, and it read one way in three apps and another in two.** The upstream
+**This is a rule about a presentation slot, not about who holds a copyright.** The upstream
 copyright is carried where it legally belongs — the `LICENSE` file and the licences page — neither
-of which this rule touches. ice-2's `LICENSE` fills in the GPL's own notice template with Jordan
-Baird's name and year, and its `Acknowledgements.rtf` states the fork inherits GPL-3.0; clipmenu-2's
-`LICENSE` names Naotaka Morimoto and Teddy Chan. Lineage in the pane is `OriginalWork`'s job, twice
-over: the `Original project` link and the `Based on` credit.
+of which this rule touches. Lineage inside the pane is `OriginalWork`'s job, twice over: the
+`Original project` link and the `Based on` credit. `NSHumanReadableCopyright` is out of scope;
+nothing here requires an app to set it, or to set it any particular way.
 
-**`NSHumanReadableCopyright` is not on that list, and all five apps set it to `© 2026 Teddy
-Chan`.** This document used to cite ice-2's dual-holder value as the example of an upstream notice
-travelling correctly outside the pane. ice-2 changed it in 2.14.7 and the reasoning is worth
-keeping: the key is an *optional* Apple one that no licence names — three of the five apps shipped
-without it at all — so it draws a line in Finder's Get Info panel rather than discharging an
-obligation, and having it disagree with About made the app state two different things about itself
-depending on where you looked. It is still out of scope for this rule; it simply is not where §4
-is satisfied. Nothing here requires an app to set it, or to set it any particular way — but if the
-five ever diverge there, that is a second presentation slot drifting, not a licence question.
+**Why:** `copyright` is a plain `String`, so no signature can close it — and the header read one
+way in three apps and another in two.
+
+→ [Incidents §R14](docs/CONFORMANCE-INCIDENTS.md#r14--the-about-copyright-is-kit-assembled-and-names-one-holder)
+— **read this before editing the rule above.** It records a legal justification that was written
+here once, was wrong on the facts for two of the five apps, and must not be reinstated.
 
 ## R15 — About's Website row addresses the app's canonical page
 
@@ -569,49 +425,34 @@ URLs to maintain.
 
 **Violation:** a Website row on any host but `dragonapp.com` or a subdomain of it; a Support row on
 any host but `github.com` or a subdomain of it; a path that does not equal the repository name.
-
-The host half was missing from the rule as it first shipped, and from
-`AboutContent.websiteMatchesSupportRepo` — the kit property §R15 exists to assert per app — so the
-two had the same hole and would have re-split if only one were fixed. Only the *path* was compared,
-which `https://evil-example.com/ice-2/` satisfies as readily as the real page; and a bare
-`hasSuffix("github.com")` is true of **`notgithub.com`**, which yielded an owner and a repo for the
-comparison to agree with. Both are now matched on the label boundary, so `www.` is a subdomain and
-`notgithub` is a different registrable name. §R15 already had three negative controls when this was
-found: all three tested wrong *paths*, none tested a wrong *host*, and the gap sat open underneath
-them.
+Hosts are matched on the label boundary, so `www.` is a subdomain and `notgithub.com` is not.
 
 This is the per-app assertion of `AboutContent.websiteMatchesSupportRepo`, which the kit has had
-since the About slots were fixed. The checker reads the written literals out of the app's
-sources — the way §R13 reads the `languages:` argument — because the property is only reachable
-from a *constructed* `AboutContent`, and constructing one means building the app. It follows one
-hop of indirection: clipmenu-2 and ice-2 both name their URLs in a `let` before passing them, and
-a rule that only understood a literal at the call site would read nothing at all for two of the
-five apps.
-
-**Rationale:** nothing checked this per app. clipmenu-2 and yahoo-keykey-2 assert it in their own
-test suites; spectacle-2, ice-2 and dragon-sample-app shipped the row on trust, and giving those
-three the signal is the point of the rule. The failure it catches is silent by construction — a
-wrong Website row still resolves in a browser. `dragonapp.com/clipmenu/` is a `<meta refresh>`
-stub whose `rel=canonical` points at `/clipmenu-2/`; it opens fine, and only this comparison
-distinguishes it from the page the app actually has.
+since the About slots were fixed. The checker reads the written literals out of the app's sources —
+the way §R13 reads the `languages:` argument — and follows one hop of indirection, because two apps
+name their URLs in a `let` before passing them.
 
 **Anything the rule cannot read is a violation, never a skip** — an argument that resolves to no
 literal, a support row that names no `github.com/owner/repo`, or no `AboutContent(…)` construction
-under `sources` at all. §R0, §R10 and §R13 all take the same line, for the same reason: a checker
-that goes quiet when an app restructures reports a pass on every app that stopped conforming.
+under `sources` at all.
 
-**dragon-sample-app is the one sanctioned divergence** (§R11) and it is declared in its own
-repository. It has no public page on purpose: the site hosts `/dragon-sample-app/licenses/` but
-no product page for the app, so the canonical path would be a 404 and the row addresses the
-studio hub. `websiteMatchesSupportRepo` is `false` for it and `true` for the other four.
+**Why:** a wrong Website row still resolves in a browser, so nothing but this comparison
+distinguishes a redirect stub from the page the app actually has.
+
+An app with no public page can sanction this rule under §R11, in its own repository.
+
+→ [Incidents §R15](docs/CONFORMANCE-INCIDENTS.md#r15--abouts-website-row-addresses-the-apps-canonical-page)
 
 ## Out of scope, deliberately
 
 - **Shipping localizations.** Not having `.strings` isn't re-implementing a kit module. The
   rule is that localization *goes through* `L()`/`LocalizationManager` — not that every app
-  must ship 7 languages. As of ice-2 PR #102 all five happen to, but an English-only app would
-  still be compliant, and no rule here should be read as requiring otherwise. §R13 doesn't change
-  this: it constrains what a picker *claims*, so an app with no `LanguagePicker` is outside it
-  entirely, and an app with one is only ever asked to agree with whatever it does ship.
+  must ship 7 languages. An English-only app is compliant, and no rule here should be read as
+  requiring otherwise. §R13 doesn't change this: it constrains what a picker *claims*, so an app
+  with no `LanguagePicker` is outside it entirely, and an app with one is only ever asked to agree
+  with whatever it does ship.
 - **App-domain code.** Hot-key recorders, window-management engines, clipboard capture,
   input-method engines: the kit has no such modules, so there is nothing to duplicate.
+- **Current fleet state.** This document states rules, not results. Which apps pass, which declare
+  an exception, and which pin what are answered by running the checker — not by reading a headcount
+  that was true on the day it was typed.

@@ -672,11 +672,11 @@ def rule_r11_exceptions(root: str, cfg: Config) -> list[Violation]:
     `NO REASON GIVEN` beside it without failing. It now guards a live exception —
     dragon-sample-app's R15 — so the schema is load-bearing rather than decorative.
 
-    The rule name is validated against the rules the checker can actually suppress, because §R11's
-    own table records that mistake: five sanctions sat here for months naming rules that never
-    fired on the apps they were written for, and "a row naming a rule the checker never fires is
-    worse than no row — it reads as a live sanction, nothing contradicts it, and the next app
-    copies the shape."
+    The rule name is validated against the rules the checker can actually suppress, because
+    docs/CONFORMANCE-INCIDENTS.md §R11 records that mistake: five sanctions sat in §R11 for months
+    naming rules that never fired on the apps they were written for, and "a row naming a rule the
+    checker never fires is worse than no row — it reads as a live sanction, nothing contradicts it,
+    and the next app copies the shape."
 
     The `path` is validated for the same reason. §R5, §R8, §R9 and §R12 are whole-app checks —
     each consults `excuses(rule, "")` and nothing else — so a path-scoped entry for one of them
@@ -864,8 +864,8 @@ def rule_r14_about_copyright(root: str, cfg: Config, files: list[str]) -> list[V
 
     **The rule is about this slot, not about who holds a copyright.** An earlier draft of this
     docstring argued that a Dragon app reimplements its upstream rather than reusing its source,
-    and therefore has no upstream copyright to assert. CONFORMANCE.md §R14 retracts that in full
-    and CLAUDE.md says not to reinstate it — it is also backwards on the facts, since `ice-2`'s
+    and therefore has no upstream copyright to assert. docs/CONFORMANCE-INCIDENTS.md §R14 retracts
+    that in full, under "The reasoning that was wrong, and must not be reinstated" — it is also backwards on the facts, since `ice-2`'s
     own `LICENSE` reads "Copyright (C) 2024 Jordan Baird (original Ice…)" and clipmenu-2's names
     Naotaka Morimoto. The notices *assert* the upstream holder; this rule must stay away from
     them. The narrow reason that does hold: **the About header is a presentation slot in a
@@ -1131,7 +1131,8 @@ def main() -> int:
     print(f"\nFAIL — {len(violations)} violation(s):")
     for violation in sorted(violations, key=lambda v: (v.rule, v.path, v.line)):
         print(violation.render(root))
-    print("\nSee CONFORMANCE.md for the rule and the history behind it.")
+    print("\nSee CONFORMANCE.md for the rule, and docs/CONFORMANCE-INCIDENTS.md for the "
+          "incident behind it.")
     return 1
 
 
