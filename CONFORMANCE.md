@@ -171,8 +171,8 @@ declare its own grouped-`Form` wrapper.
 **Violation:** a type declaration containing both `Form {` and `.formStyle(.grouped)`, or a
 type named `*Form`/`*Section`/`*GroupBox` that isn't from the kit.
 
-**Rationale:** the kit's primitives were *ported from* an app's own, and that app then kept its
-copy — so two identical implementations shipped, and only one received fixes.
+**Rationale:** `IceForm`/`IceSection` were line-for-line identical to the kit types — the kit
+was *ported from them* and ice-2 never adopted the port back.
 
 → [Incidents §R4](docs/CONFORMANCE-INCIDENTS.md#r4--no-re-implemented-design-primitives) — including
 a parked owner decision about this rule's prose. Do not act on it without the owner.
@@ -228,12 +228,17 @@ authoritative.
 ## R9 — Settings pane order matches the canon
 
 ```
-General → (the app's own panes) → Permissions (when applicable) → Backup & Restore → What's New → Updates → About → Uninstall
+General → (the app's own panes) → Permissions (when applicable) → Backup & Restore → What's New → Updates (when applicable) → About → Uninstall
 ```
 
 **This exact line is the canon**, and it is quoted from here by `CLAUDE.md`, `README.md`,
-`TechDebt.md` and the two guides. `Permissions (when applicable)` is part of it: §R5 makes that
-pane conditional on the `no-permissions` trait, and yahoo-keykey-2 ships without it.
+`TechDebt.md` and the two guides.
+
+**Two slots are conditional, and §R5 owns both conditions** — Permissions is omitted for an app
+declaring the `no-permissions` trait, Updates for an app without `sparkle`. Both carry the marker
+so neither reads as mandatory: annotating one and not the other is how a reader concludes the
+unmarked one is required, which for Updates would mean telling a Mac App Store target to ship a
+pane it cannot link. Every other slot is required, and the relative order never changes.
 
 The checker extracts kit pane identifiers in declaration order from the file named by
 `paneOrder` — a **required** key (§R0) — and requires their **relative** order to match.
@@ -314,8 +319,18 @@ Three things follow, and each has already been got wrong here:
   same terms as a production app would.
 
 **To learn what is currently sanctioned, read the five apps' config files** — or run the checker,
-which prints them. This document deliberately keeps no copy of that list: a copy here would be a
-second registry, and the section below is what happens when one exists.
+which prints them:
+
+```bash
+for r in clipmenu-2 ice-2 spectacle-2 yahoo-keykey-2 dragon-sample-app; do
+  git -C ~/git/$r fetch -q && git -C ~/git/$r show origin/main:.dragon-conformance.json
+done
+```
+
+This document deliberately keeps no copy of that list. A copy here would be a second registry, and
+[Incidents §R11](docs/CONFORMANCE-INCIDENTS.md#the-five-phantom-sanctions) records what happened
+the last time one existed: five sanctions sat in this section for months while not one of them was
+declared in any app.
 
 → [Incidents §R11](docs/CONFORMANCE-INCIDENTS.md#r11--exceptions-are-explicit-reasoned-and-few) —
 the five phantom sanctions that sat here for months while none was declared anywhere, ice-2's

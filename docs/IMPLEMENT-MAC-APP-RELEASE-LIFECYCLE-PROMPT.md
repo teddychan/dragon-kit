@@ -11,10 +11,10 @@ chat memory or historical release documents, is authoritative.
 > **Maintainers:** this prompt restates rules because it is pasted where this repository is absent.
 > The duplication is derived, never authoritative.
 >
-> <!-- MIRRORS: MAC-APP-RELEASE-LIFECYCLE (repository boundary, tag namespace, Debug identity, tag gate) -->
+> <!-- MIRRORS: MAC-APP-RELEASE-LIFECYCLE (repository boundary, tag namespace, Debug identity, the six tag-gate checks) -->
 >
-> A change to any mirrored rule must update this file and
-> [`ADOPT-DRAGONKIT-PROMPT.md`](ADOPT-DRAGONKIT-PROMPT.md) in the same PR.
+> The marker must be **exhaustive, not illustrative**. A change to any mirrored rule must update
+> this file and [`ADOPT-DRAGONKIT-PROMPT.md`](ADOPT-DRAGONKIT-PROMPT.md) in the same PR.
 
 ---
 

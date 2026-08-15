@@ -137,7 +137,7 @@ the order the app puts them in its `settingsPanes` list, so each app is responsi
 for following this convention:
 
 ```
-General → (the app's own panes) → Permissions (when applicable) → Backup & Restore → What's New → Updates → About → Uninstall
+General → (the app's own panes) → Permissions (when applicable) → Backup & Restore → What's New → Updates (when applicable) → About → Uninstall
 ```
 
 [Dragon Sample App](https://github.com/teddychan/dragon-sample-app) wires its panes up in this

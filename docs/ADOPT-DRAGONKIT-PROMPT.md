@@ -13,11 +13,12 @@ Paste the block below, then apply the per-app tweaks noted underneath.
 > *derived*, never authoritative. The block below names rules; it does not restate their content,
 > and where the two disagree `CONFORMANCE.md` wins.
 >
-> <!-- MIRRORS: CONFORMANCE §R1 §R2 §R3 §R5 §R9 §R10 §R11 · MAC-APP-RELEASE-LIFECYCLE (Debug, tags) -->
+> <!-- MIRRORS: CONFORMANCE §R0 §R1 §R2 §R3 §R5 §R6 §R7 §R9 §R10 §R11 §R12 §R13 · MAC-APP-RELEASE-LIFECYCLE (Debug identity, tag namespace) -->
 >
-> A change to any mirrored rule must update this file and
+> The marker must be **exhaustive, not illustrative** — it is the only enforcement these files
+> have. A change to any mirrored rule must update this file and
 > [`IMPLEMENT-MAC-APP-RELEASE-LIFECYCLE-PROMPT.md`](IMPLEMENT-MAC-APP-RELEASE-LIFECYCLE-PROMPT.md)
-> in the same PR. `.claude/skills/dragonkit-review/SKILL.md` checks for it.
+> in the same PR; `.claude/skills/dragonkit-review/SKILL.md` asks a reviewer to check that.
 
 ## Visual ownership guide
 
@@ -109,7 +110,7 @@ modules, supplying only this app's own content/config. Use:
 Settings pane (sidebar) order — list panes in settingsPanes in this order, so every
 Dragon app's Settings sidebar matches (the order is host-owned; the shell just renders
 what you give it):
-  General → (this app's own panes) → Permissions (when applicable) → Backup & Restore → What's New → Updates → About → Uninstall
+  General → (this app's own panes) → Permissions (when applicable) → Backup & Restore → What's New → Updates (when applicable) → About → Uninstall
 If the app declares `no-permissions`, omit only Permissions and preserve the relative order of
 every remaining pane. Yahoo KeyKey's current sidebar is General → Backup & Restore → What's New
 → Updates → About → Uninstall.

@@ -80,12 +80,14 @@ order, titles, casing, ellipses and SF Symbols. Uninstall is deliberately absent
 there is no flag to put it back. The settings sidebar order is:
 
 ```
-General → (the app's own panes) → Permissions (when applicable) → Backup & Restore → What's New → Updates → About → Uninstall
+General → (the app's own panes) → Permissions (when applicable) → Backup & Restore → What's New → Updates (when applicable) → About → Uninstall
 ```
 
-That string is canon and **`CONFORMANCE.md` §R9 owns it** — quote it, don't paraphrase it.
-`Permissions (when applicable)` is part of the canon: §R5 makes that pane conditional on the
-`no-permissions` trait, and yahoo-keykey-2 ships without it.
+That string is canon and **`CONFORMANCE.md` §R9 owns it** — quote it, don't paraphrase it. The two
+`(when applicable)` markers are part of the canon, and §R5 owns both conditions: Permissions is
+omitted for an app with the `no-permissions` trait (yahoo-keykey-2), Updates for an app without
+`sparkle` (clipmenu-2's Mac App Store target, which can't ship Sparkle at all). Every other slot is
+required, and the relative order never changes.
 
 Changing any of this changes the UI of every Dragon app simultaneously, so it moves together
 with `README.md`, `CONFORMANCE.md` and the tests — or not at all.

@@ -7,7 +7,7 @@
 The shared Settings information architecture is the canon owned by `CONFORMANCE.md` §R9:
 
 ```text
-General → (the app's own panes) → Permissions (when applicable) → Backup & Restore → What's New → Updates → About → Uninstall
+General → (the app's own panes) → Permissions (when applicable) → Backup & Restore → What's New → Updates (when applicable) → About → Uninstall
 ```
 
 The host controls its app-owned panes and whether its capabilities require

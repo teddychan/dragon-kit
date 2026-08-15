@@ -109,12 +109,15 @@ real exceptions.
 
 ## §R4 — No re-implemented design primitives
 
-`IceForm`/`IceSection` were line-for-line identical to the kit types — the kit was *ported from
-them* and ice-2 never adopted the port back.
+The incident is short enough to live in the rule itself, and does: the kit was ported *from* ice-2's
+own `IceForm`/`IceSection`, and ice-2 then kept its copy, so two line-for-line identical
+implementations shipped and only one received fixes.
 
 **§R4's prose is currently broader than its enforcement, on two axes, and the owner has parked the
 decision.** The facts are in [`TechDebt.md`](../TechDebt.md); do not act on them without the owner,
-and do not narrow or widen this rule while fixing something adjacent.
+and do not narrow or widen this rule while fixing something adjacent. That parking is also why
+§R4's wording in `CONFORMANCE.md` should be left exactly as it is — including its Rationale line,
+which is the only rule text here that was ever restated rather than relocated, and was restored.
 
 ## §R5 — Shared panes come from the kit
 
@@ -253,6 +256,12 @@ passed.
 `excuses(rule, "")` and nothing else, so a path-scoped entry for one of them printed as a live,
 narrowly-scoped sanction on every run and suppressed nothing at all — the app still failed.
 
+**§R15 does take a path, and the only live exception in the fleet is one.** That rule is consulted
+both ways — per construction site and once for the whole app — so a path there scopes a real
+suppression. Worth stating explicitly, because a reader who has just absorbed "a path-scoped entry
+suppressed nothing" can look at the one declared exception, see that it carries a `path`, and
+conclude it is another phantom. It is not.
+
 ### dragon-sample-app's §R15 exception
 
 **dragon-sample-app has no public-facing page, on purpose.** The site's only page for it is
@@ -264,6 +273,12 @@ the canonical path would ship a 404, so it addresses the studio hub, and
 
 **A sample or reference app is not a special case.** That entry is an exception on exactly the same
 terms as a production app's would be: an applicable rule genuinely fires, and the app declares it.
+
+**It lifts when the app gets a public page, if it ever does.** §R11's whole argument is that an
+exception must not become permanent, so the one that exists needs a written condition under which
+it ends — and this is it. If a `docs/dragon-sample-app/index.html` and a hub card are ever
+published, the Website row moves to the canonical path, `websiteMatchesSupportRepo` becomes `true`,
+and the entry is deleted from the app's config.
 
 **The exception landed in dragon-sample-app's repository before §R15 landed here.** A rule merged
 here is live in five apps' CI the same day, so merging in the other order would have red-X'd the app
