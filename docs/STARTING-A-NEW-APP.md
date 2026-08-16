@@ -518,9 +518,9 @@ private struct SettingsRoot: View {
 ```
 
 > Pane order matters: `General → (your panes) → Permissions (when applicable) → Backup & Restore →
-> What's New → Updates → About → Uninstall` is canon and §R9 checks it — that section owns the
-> string. The scaffold ships five of those slots in that relative order; slot Backup & Restore and
-> Updates in as you add them.
+> What's New → Updates (when applicable) → About → Uninstall` is canon and §R9 checks it — that
+> section owns the string. The scaffold ships five of those slots in that relative order; slot
+> Backup & Restore and Updates in as you add them.
 >
 > Swap `.accessibility()` for the permission your app actually needs. If it genuinely needs
 > none — an IME receives keystrokes via the IMK server, for instance — drop the pane and add

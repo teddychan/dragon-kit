@@ -290,6 +290,63 @@ let after = 1
                 print(f"  ok    {label}")
 
 
+# The settings-pane canon is one string that changes the UI of five apps at once, and it is quoted
+# in seven documents besides the one that owns it. It drifted into two spellings and sat that way
+# for months: one copy made the Permissions pane unconditional while §R5 gates it on the
+# `no-permissions` trait, and the same was true of Updates and `sparkle`. Nothing could catch that,
+# because no rule reads prose. This does.
+#
+# §R9 owns the line. Every other copy must be byte-identical to it, modulo the two substitutions a
+# guide legitimately makes: addressing the reader as "your"/"this app's" instead of "the app's".
+# A copy that describes a *particular app's* actual sidebar is not a copy of the canon and is
+# skipped — `ADOPT-DRAGONKIT-PROMPT.md` and `DOC-RULE-CONFLICT-CHANGELOG.md` each state KeyKey's
+# real order, which is deliberately shorter.
+CANON_OWNER = "CONFORMANCE.md"
+CANON_HEAD = "General → "
+CANON_READER_VARIANTS = [("(the app's own panes)", "(this app's own panes)"),
+                         ("(the app's own panes)", "(your panes)")]
+# Every document that quotes it today. Lowering this number is how the check stops checking.
+CANON_COPIES = 6
+
+
+def canon_line_from_owner() -> str:
+    for line in open(os.path.join(KIT, CANON_OWNER), encoding="utf-8"):
+        if line.startswith(CANON_HEAD):
+            return line.strip()
+    raise SystemExit(f"canon check: no line starting {CANON_HEAD!r} in {CANON_OWNER}")
+
+
+def check_canon_pane_order_is_quoted_not_paraphrased() -> None:
+    print("settings-pane canon is one string")
+    canon = canon_line_from_owner()
+    accepted = {canon} | {canon.replace(a, b) for a, b in CANON_READER_VARIANTS}
+    listing = subprocess.run(["git", "ls-files", "*.md"], cwd=KIT, check=True,
+                             capture_output=True, text=True).stdout.split()
+    checked = 0
+    for rel in listing:
+        raw = open(os.path.join(KIT, rel), encoding="utf-8").read()
+        # Normalize before matching. A copy may wrap across lines, sit inside a block quote, be
+        # indented in a fenced prompt, or be wrapped in backticks mid-sentence — STARTING-A-NEW-APP
+        # does three of those at once, and a line-prefix match missed it entirely.
+        flat = re.sub(r"[\s>`]+", " ", raw)
+        for found in re.findall(rf"{re.escape(CANON_HEAD)}.*?→ Uninstall", flat):
+            if "(" not in found:
+                continue  # a named app's real sidebar, not a copy of the canon
+            checked += 1
+            if found not in accepted:
+                FAILURES.append(
+                    f"{rel} paraphrases the settings-pane canon.\n"
+                    f"    owner ({CANON_OWNER} §R9): {canon}\n"
+                    f"    this copy:                 {found}\n"
+                    "    Quote §R9's line exactly; only 'the app's own panes' may become "
+                    "'this app's own panes' or 'your panes'.")
+    if checked < CANON_COPIES:
+        FAILURES.append(f"canon check found {checked} copies of the pane order, expected at least "
+                        f"{CANON_COPIES}. Either a document dropped it, or its wrapping changed "
+                        "and this check has stopped looking at something.")
+    print(f"  ok    {checked} copies match {CANON_OWNER} §R9 byte-for-byte")
+
+
 def main() -> int:
     print("mask_noncode invariants")
     check_masking_invariants()
@@ -1205,6 +1262,8 @@ extension AppMenuController {
         expect_pass("app-domain type named ...Section is fine outside settings", make_app(
             tmp, extra={"Sources/Engine.swift":
                         "struct MenuBarItemInfo {}\nstruct Snapshot {}\n"}))
+
+    check_canon_pane_order_is_quoted_not_paraphrased()
 
     print()
     if FAILURES:
