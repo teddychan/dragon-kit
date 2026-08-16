@@ -99,31 +99,29 @@ between the previous public release and the new public tag.
 
 ## Concrete examples
 
-### Bug-fix release
+If the latest public release is `v2.10.0`, the next candidate is `2.10.1` for a bug fix or
+`2.11.0` for backward-compatible features. Either way the candidate is chosen once and tested
+throughout, and the release does not renumber the tested build.
 
-If the latest public release is `v2.10.0` and the work fixes a bug:
+**The version column never contains `Debug`.** It is the numeric candidate at every stage,
+including the Debug build — which is why the signal that a build *is* a Debug build gets its own
+column here.
 
-| Stage | User-visible version | Bundle identifier | Public? |
-|---|---|---|---|
-| Currently installed release | `v2.10.0` | `com.example.app` | Yes |
-| Local development and testing | `v2.10.1 Debug` | `com.example.app.debug` | No |
-| Release after every test passes | `v2.10.1` | `com.example.app` | Yes |
+| Stage | `CFBundleShortVersionString` | How you can tell it is a Debug build | Bundle identifier | Public? |
+|---|---|---|---|---|
+| Currently installed release | `2.10.0` | — | `com.example.app` | Yes |
+| Local development and testing — bug fix | `2.10.1` | app named `<App Name> Debug`; `DragonBuildChannel = Debug` | `com.example.app.debug` | No |
+| Local development and testing — new feature | `2.11.0` | app named `<App Name> Debug`; `DragonBuildChannel = Debug` | `com.example.app.debug` | No |
+| Release after every test passes | `2.10.1` or `2.11.0` | — | `com.example.app` | Yes |
 
-The Debug bundle's `CFBundleShortVersionString` is the numeric candidate `2.10.1`. The word
-`Debug` is added by its build-channel presentation, not stored in that version field.
+`Debug` reaches a person through the app's name, the build-channel key, and the About line it
+renders — `v2.10.1 Debug (<build>)`. All three are presentation and build-channel metadata; none
+of them is the version field. The `v` prefix is formatting too, supplied by
+`DragonVersion.display(_:)`. See [Local Debug identity](#local-debug-identity) for the full field
+list, and [Public version rules](#public-version-rules) for why the version field stays numeric.
 
-### New-feature release
-
-If the latest public release is `v2.10.0` and the work adds backward-compatible features:
-
-| Stage | User-visible version | Bundle identifier | Public? |
-|---|---|---|---|
-| Currently installed release | `v2.10.0` | `com.example.app` | Yes |
-| Local development and testing | `v2.11.0 Debug` | `com.example.app.debug` | No |
-| Release after every test passes | `v2.11.0` | `com.example.app` | Yes |
-
-Again, `2.11.0` is selected once and tested throughout. The successful release removes the
-Debug label and uses the release bundle identifier; it does not renumber the tested build.
+The successful release changes two things and no others: it drops the Debug channel label and the
+`.debug` bundle-identifier suffix.
 
 ## Public version rules
 

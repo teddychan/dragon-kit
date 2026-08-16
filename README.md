@@ -221,6 +221,7 @@ Start here.
 | [`docs/CONFORMANCE-INCIDENTS.md`](docs/CONFORMANCE-INCIDENTS.md) | Why each rule exists. Non-normative; read before changing a rule. |
 | [`TechDebt.md`](TechDebt.md) | Sequenced work and parked decisions. |
 | [`docs/superpowers/`](docs/superpowers/) | Superseded plans and specs, kept as dated evidence. **Never implement from them.** |
+| [dragon-sample-app](https://github.com/teddychan/dragon-sample-app) | The reference wiring for every module, in its own repository. Read it with `STARTING-A-NEW-APP.md`; it is what that guide describes. |
 
 Where two documents disagree, the normative one wins — and please open an issue, because that
 disagreement is the failure mode this set is arranged to prevent.
@@ -228,19 +229,16 @@ disagreement is the failure mode this set is arranged to prevent.
 DragonKit is a **published SwiftPM package** — the one place the shared parts of every
 Dragon macOS app live. **Depend on it; never copy its code into your app.**
 
-1. Read [`docs/STARTING-A-NEW-APP.md`](docs/STARTING-A-NEW-APP.md) (self-contained) and
-   [dragon-sample-app](https://github.com/teddychan/dragon-sample-app) — the reference wiring for
-   every module.
-2. Detect the product-build entry point before prescribing a dependency form: inspect the repo
+1. Detect the product-build entry point before prescribing a dependency form: inspect the repo
    root for `Package.swift`, Xcode project/workspace files, build scripts, and the release workflow.
    For an ordinary SPM app, create an executable that depends on `dragon-kit` at the newest version
    tag (§R10 fails a stale pin). Link `DragonKit`; add `DragonKitUpdates` only for direct-download
    builds. For the existing KeyKey repo, retain its verified script build: `tools/build-app.sh`
    compiles the product with `swiftc` and vendor-builds the pinned kit with SwiftPM; the nested
    `Packages/*/Package.swift` files are test harnesses, not the product build.
-3. Build settings screens as `SettingsPane` conformers using `DragonForm` /
+2. Build settings screens as `SettingsPane` conformers using `DragonForm` /
    `DragonSection` / `.dragonAnnotation`.
-4. Supply your app's **content/config** — `AboutContent`, `WhatsNewContent`, a settings
+3. Supply your app's **content/config** — `AboutContent`, `WhatsNewContent`, a settings
    model (`DragonSettingsStore`), a `[DragonPermission]`, `BackupConfig`,
    `UninstallConfig`, `DragonUpdater` — and wire them into `ManagedSettingsShell` +
    `DragonSettingsWindowController`.
