@@ -47,6 +47,49 @@ app migrations are complete. Then, in one coordinated follow-up:
 This debt record does not authorize changing application code, conformance scripts, or tests as
 part of the Liquid Glass documentation repair.
 
+## Move every app's bundle inputs into `App/` (§R16)
+
+**Status:** rule accepted and implemented; enforcement gated until the apps migrate.
+
+`CONFORMANCE.md` §R16 places the `Info.plist`, the icon and the entitlements in `App/` at the repo
+root, with one directory per additional bundle. `Scripts/dragon-conformance.py` implements it and
+`Scripts/test_conformance.py` covers it, but `R16_ENFORCED` is `False`: four of the five apps keep
+these files elsewhere, and enforcing on merge would fail every open PR in four repositories over a
+layout none of them has moved to. Until the flip, findings print as `pending R16 …` and change no
+exit code.
+
+**This entry is what the checker's `TODO(R16)` names.** Nothing else records the sequence.
+
+Where the files are today (measured 2026-08-17 against each app's `origin/main`; re-measure before
+acting):
+
+| App | Move |
+|---|---|
+| yahoo-keykey-2 | none — already `App/Info.plist`, `App/AppIcon.icns`, `App/YahooKeyKey2.entitlements` |
+| clipmenu-2 | `app/{Info.plist,AppIcon.icns,ClipMenu.entitlements}` → `App/…` |
+| spectacle-2 | `{Info.plist,AppIcon.icns}` → `App/…` |
+| dragon-sample-app | `Info.plist` → `App/Info.plist` |
+| ice-2 | `Ice/Resources/Info.plist` → `App/Info.plist`; `MenuBarItemService/Resources/Info.plist` → `App/MenuBarItemService/Info.plist` (its icon is an asset catalog and stays there — §R16 places `.icns` files, and ice-2 has none) |
+
+Each move is a **path change in the app's build, not a file move on its own**, and three of them
+reach outside the app repository:
+
+1. `teddychan/dragon-release-ci`'s `release-macos.yml` assembles the SwiftPM bundle with
+   `working-directory: <swiftpm_working_directory>` and then reads a bare `Info.plist` and
+   `AppIcon.icns` — so it assumes the plist and `Package.swift` share one directory, which `App/`
+   ends. That needs an input (a bundle-inputs directory, defaulting to `.` so existing callers keep
+   working) before any SwiftPM app can move.
+2. `clipmenu-2/.github/workflows/release-mas.yml` does the same inline, under
+   `working-directory: app`.
+3. ice-2's `Ice.xcodeproj` names both plists in `INFOPLIST_FILE`; keykey's `tools/build-app.sh`
+   already reads `App/`; each app's local `scripts/run.sh` copies the plist by path.
+
+Order that avoids a broken release: land the reusable-workflow input first, then migrate one app
+per PR (verifying a real release build for each), then flip `R16_ENFORCED` in the same PR as the
+last app. Until then, do not declare an §R11 exception for §R16 anywhere — the gate already
+suppresses it, and a declared exception for a rule that cannot fire is the phantom sanction
+[Incidents §R11](docs/CONFORMANCE-INCIDENTS.md#the-five-phantom-sanctions) records.
+
 ## Parked: §R4's prose is broader than its enforcement
 
 **Status:** owner has parked the decision; do not act on it without them. Recorded here so the

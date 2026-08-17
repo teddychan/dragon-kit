@@ -1,7 +1,8 @@
 # Conformance incidents
 
 The record behind [`CONFORMANCE.md`](../CONFORMANCE.md). Every rule there is a failure that
-actually happened; this is where each failure is written down, one section per rule.
+actually happened — except §R16, which says plainly that it is a convention and not an incident —
+and this is where each failure is written down, one section per rule.
 
 **This file is not normative.** It changes no rule and suppresses nothing. Read it when you want
 to know *why* a rule is shaped the way it is, when you are tempted to relax one, or before writing
@@ -424,7 +425,94 @@ understood a literal at the call site would read nothing at all for two of the f
 
 ---
 
-## Before you write rule R16
+## §R16 — The app bundle's inputs live in `App/`
+
+**No incident forced this one, and it must not acquire one retroactively.** Item 7 of the
+checklist below is exactly this case: a rule with no incident behind it should say so rather than
+borrow one. What existed was ordinary divergence — five apps, four places, each internally
+consistent, nothing user-visible broken. Recording it as a shipped bug would be the §R7 mistake
+(a comment that invented an incident for an anchoring choice nothing had forced) and the §R14
+mistake (a justification that was wrong on the facts) in one.
+
+### Apple does not specify this, and the rule must not imply it does
+
+This was researched before the rule was written, because it is the question that will be asked
+again:
+
+- **Xcode 13 and later default to `GENERATE_INFOPLIST_FILE = YES`** and ship no `Info.plist` file
+  in the source tree at all — the build synthesizes it from `INFOPLIST_KEY_*` build settings.
+- **Where an Xcode template does declare a path it is `___PACKAGENAME___/Info.plist`**, and the
+  path is stated explicitly in `INFOPLIST_FILE`. There is no auto-discovery: Xcode never looks for
+  the file anywhere, it reads the setting.
+- **SwiftPM has no `Info.plist` concept for an executable.** A SwiftPM Dragon app has a plist only
+  because its packaging script copies one into the bundle it assembles.
+- **The Human Interface Guidelines cover interface design**, not repository structure.
+
+So the placement is a **fleet convention**, justified by what reads across the fleet rather than by
+a platform requirement: mechanical checkability here, one debug-build script template instead of
+four, and a new-app scaffold whose paths are the same on the day it is created as on the day it
+ships. Anyone stating this rule should state that too. Claiming Apple mandates it would be a
+justification that is wrong on the facts — the thing §R14's retraction exists to stop.
+
+### The layouts it replaces
+
+Measured 2026-08-17 against each app's `origin/main`. Re-measure rather than trusting this; it is
+evidence of the state that motivated the rule, not current fleet state.
+
+| App | Build | `Info.plist` | Icon | Entitlements |
+|---|---|---|---|---|
+| yahoo-keykey-2 | `swiftc` script | `App/Info.plist` | `App/AppIcon.icns` | `App/YahooKeyKey2.entitlements` |
+| clipmenu-2 | SwiftPM | `app/Info.plist` | `app/AppIcon.icns` | `app/ClipMenu.entitlements` |
+| spectacle-2 | SwiftPM | `Info.plist` | `AppIcon.icns` | none |
+| dragon-sample-app | SwiftPM | `Info.plist` | none | none |
+| ice-2 | Xcode | `Ice/Resources/Info.plist`, `MenuBarItemService/Resources/Info.plist` | `Assets.xcassets` | none |
+
+`App/` is the target because one app already uses it — adopting a fifth new location would have
+made all five apps migrate to satisfy a rule none of them had asked for.
+
+### Why the main bundle's plist is not `App/<MainBundle>/Info.plist`
+
+The symmetric shape reads better and was rejected anyway. To find the main bundle's plist under it,
+the checker would have to be told the main bundle's directory name — a new `.dragon-conformance.json`
+key, whose value it could not verify. §R10 is the record of what a rule built on a declared string
+it cannot check is worth: an unanchored `pin.pattern` reported PASS against Sparkle's version while
+the real pin was stale, and §R0 had said the pattern "MUST anchor on dragon-kit" the whole time.
+A fixed path needs no key and cannot be pointed at the wrong thing.
+
+The asymmetry costs one thing — `App/` holds files and directories side by side — and buys three:
+the four single-bundle apps stay flat, `App/Info.plist` is one unconditional assertion that holds
+whatever the bundle count, and a helper's directory name is the bundle's name rather than a mapping
+someone maintains.
+
+### Why the icon and the entitlements are positional rather than required
+
+ice-2's icon is an `AppIcon.appiconset` inside an asset catalog, which is how an Xcode app ships an
+icon; it has no `.icns` to place. Three apps sign with no entitlements file. A rule demanding all
+three files would have given those apps exactly one compliant path — fabricate the file — which is
+the `IceGroupBox` case in §R4: a rule you can only satisfy by gaming it is a bad rule.
+
+### Why it lands gated, and why gated is not skipped
+
+Four of five apps are non-conforming today, so enforcing it on merge would fail every open PR in
+four repositories over a layout none of them has moved to. The gate is a single constant,
+`R16_ENFORCED`, and the findings are still computed and printed on every run under `pending`.
+That distinction is the whole point: **a rule that goes quiet until someone remembers it is the
+silent-checker failure this spec exists to prevent**, and the migration would then land against a
+rule nobody had exercised in months. `Scripts/test_conformance.py` asserts both halves — that a
+non-conforming repo is reported, and that the same findings are violations with the gate flipped.
+
+### What the first run found, which no other rule could have
+
+§R16 is the first rule to walk the whole repository rather than the `sources` an app declares, so
+it is the first to meet the agent worktrees ice-2 and yahoo-keykey-2 keep at their roots (both
+`.gitignore` them as `*-worktree/`). Each holds a complete copy of the app's bundle inputs, and the
+first run reported keykey — which conforms exactly — six times for three files. A nested checkout
+is another working tree; it is detected by the `.git` entry `git worktree add` leaves, not by the
+directory's name, because the name is one repository's convention.
+
+---
+
+## Before you write the next rule
 
 Seven failure modes, each already shipped here at least once. This is an index, not a summary —
 follow the link for the case.
