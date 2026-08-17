@@ -102,23 +102,13 @@ COMMIT_DATE_STAMPS = [
 ]
 # The rules an §R11 exception can actually suppress, which is what makes one meaningful (R11).
 # Contiguous now that R2 reads its own key; R0, R10 and R11 are not suppressible by design.
-# R16 is deliberately absent while it is gated, and joins this list in the same PR that flips
-# `R16_ENFORCED`. Two reviewers disagreed about what an R16 exception does today — one called it
-# premature, the other a phantom sanction — and both readings are available because the entry is
-# accepted, suppresses the `pending` line, and suppresses no violation. Rejecting it outright ends
-# the ambiguity: while the rule cannot fail a run, an exception for it cannot be declared, so
-# nothing can read as a live sanction against a rule that fails nothing. §R11's own incident is
-# that a row nobody can contradict is worse than no row.
 EXCUSABLE_RULES = ["R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8", "R9",
-                   "R12", "R13", "R14", "R15"]
+                   "R12", "R13", "R14", "R15", "R16"]
 # …and of those, the ones only ever consulted app-wide. A `path` on one of these reads as a live,
 # scoped sanction and suppresses nothing — the same defect class as naming a rule that never
 # fires, which §R11 already rejects. R15 is deliberately absent: it is consulted both ways, and
 # dragon-sample-app's live exception is path-scoped.
-# R16 belongs here too — it consults `excuses("R16", "")` and nothing else — and goes in with the
-# flip, for the reason above. `rule_r16_bundle_inputs` still calls `excuses`, so the day R16 becomes
-# suppressible the plumbing is already correct and only these two lists move.
-APP_WIDE_ONLY_RULES = {"R5", "R8", "R9", "R12"}
+APP_WIDE_ONLY_RULES = {"R5", "R8", "R9", "R12", "R16"}
 
 # The bundle inputs §R16 places: the files that go INTO the .app and are not Swift source.
 # Matched on the shape of the filename rather than a fixed list of three, because the rule is
@@ -126,18 +116,6 @@ APP_WIDE_ONLY_RULES = {"R5", "R8", "R9", "R12"}
 # after a helper has still put a bundle input somewhere, and a file the rule cannot see is a file
 # it cannot place.
 BUNDLE_INPUT = re.compile(r"^(?:Info\.plist|.+\.entitlements|.+\.icns)$")
-# R16 is written, implemented and tested — and deliberately NOT enforced yet. Four of the five
-# apps keep these files somewhere else today (`app/`, `Ice/Resources/`, the repo root), so turning
-# it on here would fail every open PR in four repositories over a layout no app has migrated to.
-# The findings still print on every run, under `pending`, because the alternative — a rule that
-# goes quiet until someone remembers it — is the silent-checker failure this whole spec exists to
-# prevent. `Scripts/test_conformance.py` asserts both halves: that a non-conforming repo is still
-# reported, and that the same finding *is* a violation when the gate is flipped.
-# TODO(R16): set this to True in a dedicated PR here, opened once every app's migration has
-# MERGED — not in the last app's PR, which is in another repository and cannot change this file.
-# TechDebt.md, "Move every app's bundle inputs into `App/`", owns the sequence and states the
-# conditions that have to hold before the flip.
-R16_ENFORCED = False
 
 
 @dataclass
@@ -707,7 +685,7 @@ def rule_r11_exceptions(root: str, cfg: Config) -> list[Violation]:
     checker never fires is worse than no row — it reads as a live sanction, nothing contradicts it,
     and the next app copies the shape."
 
-    The `path` is validated for the same reason. §R5, §R8, §R9 and §R12 are whole-app checks —
+    The `path` is validated for the same reason. §R5, §R8, §R9, §R12 and §R16 are whole-app checks —
     each consults `excuses(rule, "")` and nothing else — so a path-scoped entry for one of them
     printed as a live, narrowly-scoped sanction on every run and suppressed nothing at all. That
     is the same defect the rule-name check closes, left open one field along.
@@ -1224,13 +1202,7 @@ def main() -> int:
     violations += rule_r13_language_picker(root, cfg, files, languages)
     violations += rule_r14_about_copyright(root, cfg, files)
     violations += rule_r15_website_page(root, cfg, files)
-    # R16 is gated (see R16_ENFORCED). Its findings are computed either way: a rule that is not
-    # yet enforced still has to be *visible*, or nothing distinguishes "the apps have not migrated
-    # yet" from "the rule stopped working months ago".
-    pending = rule_r16_bundle_inputs(root, cfg)
-    if R16_ENFORCED:
-        violations += pending
-        pending = []
+    violations += rule_r16_bundle_inputs(root, cfg)
 
     print(f"DragonKit conformance — {cfg.app} ({len(files)} Swift files, "
           f"{len(kit_types)} kit types, {len(languages)} kit languages)")
@@ -1238,11 +1210,6 @@ def main() -> int:
     for exc in cfg.exceptions:
         print(f"  exception  {exc.get('rule')}  {exc.get('path', '(app-wide)')} — "
               f"{exc.get('reason', 'NO REASON GIVEN')}")
-    for item in pending:
-        print(f"  pending  {item.render(root).strip()}")
-    if pending:
-        print(f"  ({len(pending)} pending R16 finding(s) — CONFORMANCE.md §R16 is documented and "
-              f"implemented but not yet enforced; the migration is TechDebt.md's)")
 
     if not violations:
         print("PASS — no violations.")

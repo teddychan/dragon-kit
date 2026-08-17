@@ -161,10 +161,11 @@ DONE means the conformance checker passes, not that it compiles:
       python3 ~/git/dragon-kit/Scripts/dragon-conformance.py --app . --kit ~/git/dragon-kit
   • Bundle inputs — the Info.plist, the icon and the entitlements — belong in `App/` at the repo
     root, capital A, whatever builds the app, with one directory per additional bundle
-    (`App/<BundleName>/Info.plist`). §R16. This is a fleet convention, not an Apple requirement:
-    Apple specifies no source-tree location for any of them. It is reported and NOT yet enforced
-    while the apps migrate, so the checker prints `pending R16 …` instead of failing — do not
-    read that as permission to add a sixth layout.
+    (`App/<BundleName>/Info.plist`). §R16, enforced: the checker fails a repo that puts them
+    anywhere else. This is a fleet convention, not an Apple requirement — Apple specifies no
+    source-tree location for any of them, and nothing here should imply otherwise. Only
+    `App/Info.plist` is required; the icon and the entitlements are checked positionally, so an
+    app that ships neither is not asked to invent them.
   • A genuine, sanctioned divergence goes in `exceptions` with a `reason` and a `sanctionedBy`
     — only when an applicable rule genuinely fires after supported parameters, traits and slot
     spellings have been used. A different host topology is not itself an exception.
