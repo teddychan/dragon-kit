@@ -102,13 +102,23 @@ COMMIT_DATE_STAMPS = [
 ]
 # The rules an §R11 exception can actually suppress, which is what makes one meaningful (R11).
 # Contiguous now that R2 reads its own key; R0, R10 and R11 are not suppressible by design.
+# R16 is deliberately absent while it is gated, and joins this list in the same PR that flips
+# `R16_ENFORCED`. Two reviewers disagreed about what an R16 exception does today — one called it
+# premature, the other a phantom sanction — and both readings are available because the entry is
+# accepted, suppresses the `pending` line, and suppresses no violation. Rejecting it outright ends
+# the ambiguity: while the rule cannot fail a run, an exception for it cannot be declared, so
+# nothing can read as a live sanction against a rule that fails nothing. §R11's own incident is
+# that a row nobody can contradict is worse than no row.
 EXCUSABLE_RULES = ["R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8", "R9",
-                   "R12", "R13", "R14", "R15", "R16"]
+                   "R12", "R13", "R14", "R15"]
 # …and of those, the ones only ever consulted app-wide. A `path` on one of these reads as a live,
 # scoped sanction and suppresses nothing — the same defect class as naming a rule that never
 # fires, which §R11 already rejects. R15 is deliberately absent: it is consulted both ways, and
 # dragon-sample-app's live exception is path-scoped.
-APP_WIDE_ONLY_RULES = {"R5", "R8", "R9", "R12", "R16"}
+# R16 belongs here too — it consults `excuses("R16", "")` and nothing else — and goes in with the
+# flip, for the reason above. `rule_r16_bundle_inputs` still calls `excuses`, so the day R16 becomes
+# suppressible the plumbing is already correct and only these two lists move.
+APP_WIDE_ONLY_RULES = {"R5", "R8", "R9", "R12"}
 
 # The bundle inputs §R16 places: the files that go INTO the .app and are not Swift source.
 # Matched on the shape of the filename rather than a fixed list of three, because the rule is
@@ -697,7 +707,7 @@ def rule_r11_exceptions(root: str, cfg: Config) -> list[Violation]:
     checker never fires is worse than no row — it reads as a live sanction, nothing contradicts it,
     and the next app copies the shape."
 
-    The `path` is validated for the same reason. §R5, §R8, §R9, §R12 and §R16 are whole-app checks —
+    The `path` is validated for the same reason. §R5, §R8, §R9 and §R12 are whole-app checks —
     each consults `excuses(rule, "")` and nothing else — so a path-scoped entry for one of them
     printed as a live, narrowly-scoped sanction on every run and suppressed nothing at all. That
     is the same defect the rule-name check closes, left open one field along.
@@ -1119,7 +1129,11 @@ def rule_r16_bundle_inputs(root: str, cfg: Config) -> list[Violation]:
         out.append(Violation("R16", f"no 'App/' directory at the repo root{near} — the app "
                              "bundle's Info.plist, icon and entitlements live there, capital A, "
                              "whatever builds the app"))
-    elif not os.path.isfile(os.path.join(root, "App", "Info.plist")):
+    # `os.listdir` again, not `os.path.isfile`, and for the same reason one level down: on a
+    # case-insensitive filesystem `isfile` says yes to `App/info.plist`, so a run here passed while
+    # the same tree on this workflow's `ubuntu-latest` runner reported the file missing. macOS
+    # passing and Linux failing is the safe direction of that split, and it is still a split.
+    elif "Info.plist" not in os.listdir(os.path.join(root, "App")):
         out.append(Violation("R16", "no 'App/Info.plist' — every Dragon app checks its main "
                              "bundle's plist in, as the source the packaging step copies and "
                              "stamps (§R12's DragonCommitDate goes through it). What that file "

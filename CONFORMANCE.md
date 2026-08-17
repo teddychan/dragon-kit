@@ -282,8 +282,8 @@ validated:**
 
 | Field | Rule |
 |---|---|
-| `rule` | must be one the checker can actually suppress: `R1`–`R9`, `R12`–`R16`. `R0`, `R10` and `R11` are not suppressible by design |
-| `path` | optional — but **not accepted on `R5`, `R8`, `R9`, `R12` or `R16`**, which are whole-app checks |
+| `rule` | must be one the checker can actually suppress: `R1`–`R9`, `R12`–`R15`. `R0`, `R10` and `R11` are not suppressible by design, and `R16` is not while it is gated — see its Status |
+| `path` | optional — but **not accepted on `R5`, `R8`, `R9` or `R12`**, which are whole-app checks |
 | `reason` | non-empty |
 | `sanctionedBy` | non-empty |
 
@@ -510,9 +510,13 @@ deterministic new-app onboarding — not an Apple requirement, and nothing here 
 claiming otherwise.** Five apps had picked four different places, each internally consistent, and
 no user-visible failure resulted; what it cost was paid by everything that reads across the fleet.
 
-**Status: reported, not yet enforced.** Four apps have not migrated, so `R16_ENFORCED` is `False`
-in `Scripts/dragon-conformance.py` and a finding prints as `pending R16 …` without failing the
-run. It is not a skip: the findings are computed and printed on every run, and
+**Status: reported, not yet enforced.** `R16_ENFORCED` is `False` in
+`Scripts/dragon-conformance.py`, so a finding prints as `pending R16 …` without failing the run —
+and while that holds, R16 is **not suppressible**: §R11 rejects any exception naming it, because an
+accepted one would read as a live sanction against a rule that fails nothing. Both move in the
+flip PR. No count of unmigrated apps is given here on purpose: it would be wrong from the moment
+the first app merged until the flip landed, and a number in prose is how §R11 acquired five
+phantom sanctions. It is not a skip: the findings are computed and printed on every run, and
 `Scripts/test_conformance.py` asserts both that they appear and that the same findings *are*
 violations with the gate flipped, so turning it on stays a one-line change.
 [TechDebt.md](TechDebt.md) owns the migration and is what the checker's `TODO(R16)` names.

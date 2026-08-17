@@ -1447,16 +1447,19 @@ extension AppMenuController {
             tmp, extra={"Sources/Engine.swift":
                         "struct MenuBarItemInfo {}\nstruct Snapshot {}\n"}))
 
-        # §R11 rejects a `path` on a whole-app rule, and R16 is one. Asserted for R16 by name:
-        # without this, removing R16 from APP_WIDE_ONLY_RULES would silently start accepting a
-        # path-scoped entry that suppresses nothing while printing as a live sanction — the
-        # phantom-sanction defect §R11 exists to stop, and the reason that set has a test at all.
-        expect_violation("a path-scoped R16 exception is rejected", make_app(
-            tmp, config_over={"exceptions": [{
-                "rule": "R16", "path": "App/Info.plist",
-                "reason": "vendored upstream layout",
-                "sanctionedBy": "CONFORMANCE.md §R11"}]}), "R11",
-            because="only ever checked for the app as a whole")
+        # While R16 is gated it is not suppressible at all, so ANY exception naming it is rejected —
+        # path-scoped or app-wide. The rule cannot fail a run yet, so an accepted entry would read as
+        # a live sanction against a rule that sanctions nothing, which is §R11's own incident. Both
+        # forms are asserted because they take different branches of rule_r11_exceptions.
+        # At the flip, R16 joins EXCUSABLE_RULES and APP_WIDE_ONLY_RULES and these two become one
+        # test: app-wide passes, path-scoped is rejected as "checked for the app as a whole".
+        for label, exc in (("a path-scoped", {"rule": "R16", "path": "App/Info.plist"}),
+                           ("an app-wide", {"rule": "R16"})):
+            expect_violation(f"{label} R16 exception is rejected while R16 is gated", make_app(
+                tmp, config_over={"exceptions": [dict(
+                    exc, reason="vendored upstream layout",
+                    sanctionedBy="CONFORMANCE.md §R11")]}), "R11",
+                because="not a rule this checker can suppress")
 
         # §R16 says the RULE is the level, not the helper directory's name — there is no source of
         # truth for the name (an Xcode target here, a SwiftPM product there, a shell variable in
@@ -1465,6 +1468,14 @@ extension AppMenuController {
         # fixture is what makes a future name check a test failure rather than a silent tightening.
         expect_pass("a helper directory named after nothing in particular still passes", make_app(
             tmp, extra={"App/NotABundleName/Info.plist": COMPLIANT_PLIST}))
+
+        # `App/info.plist` — the filename's case, which `os.path.isfile` accepts on macOS and
+        # `ubuntu-latest` does not. Found by review, not by this suite, and it is the directory
+        # check's incident one level down: the run passed locally while the same tree failed in the
+        # workflow that actually gates the apps.
+        expect_pending("a lowercase filename is not Info.plist", make_app(tmp, plist_path=None,
+                       extra={"App/info.plist": COMPLIANT_PLIST}),
+                       because="no 'App/Info.plist'")
 
         check_r16_gate_flips_the_exit_code(tmp)
 

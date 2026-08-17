@@ -105,15 +105,14 @@ which is why they are written down:
    yahoo-keykey-2 migrated nothing and has no such route to run, and clipmenu-2's Mac App Store
    workflow is self-contained and has none either. Whatever evidence stands in for the MAS
    assembler should be recorded rather than assumed.
-4. No app has declared an §R11 exception for §R16 — and note what such an entry does *now*, because
-   it is not nothing. R16 is computed while gated, so an app-wide exception suppresses the `pending`
-   line: `excuses("R16", "")` short-circuits the rule and the run goes quiet. That makes it
-   **premature rather than phantom** — the opposite of the
-   [five phantom sanctions](docs/CONFORMANCE-INCIDENTS.md#the-five-phantom-sanctions), which named
-   rules that never fired on the apps declaring them. An earlier draft of this line cited that
-   incident and had it backwards: the harm here is that the exception hides the one signal the
-   migration is steered by, not that it does nothing. Verified by declaring one against a
-   non-conforming fixture — the pending finding disappears.
+4. No app has declared an §R11 exception for §R16. This one the checker now answers by refusing the
+   entry: while R16 is gated it is absent from `EXCUSABLE_RULES`, so §R11 fails any exception naming
+   it. That was not the first attempt. The entry used to be *accepted*, and two reviewers read the
+   result in opposite ways — one called it premature because it does suppress the `pending` line,
+   the other a phantom sanction because it suppresses nothing that reaches an exit code. Both
+   readings were available, which was the actual defect: rejecting it outright leaves nothing to
+   interpret. The flip PR adds R16 to `EXCUSABLE_RULES` and `APP_WIDE_ONLY_RULES` together, and
+   `rule_r16_bundle_inputs` already calls `excuses`, so only those two lists move.
 
 `Scripts/test_conformance.py` covers the flip itself: it runs the CLI from a copy of the checker
 with the constant rewritten and requires the same fixture to pass gated off and fail gated on, so
