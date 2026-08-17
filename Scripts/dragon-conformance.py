@@ -123,8 +123,10 @@ BUNDLE_INPUT = re.compile(r"^(?:Info\.plist|.+\.entitlements|.+\.icns)$")
 # goes quiet until someone remembers it — is the silent-checker failure this whole spec exists to
 # prevent. `Scripts/test_conformance.py` asserts both halves: that a non-conforming repo is still
 # reported, and that the same finding *is* a violation when the gate is flipped.
-# TODO(R16): set this to True in the same PR that lands the last app's migration. TechDebt.md,
-# "Move every app's bundle inputs into `App/`", owns the sequence and names what has to move.
+# TODO(R16): set this to True in a dedicated PR here, opened once every app's migration has
+# MERGED — not in the last app's PR, which is in another repository and cannot change this file.
+# TechDebt.md, "Move every app's bundle inputs into `App/`", owns the sequence and states the
+# conditions that have to hold before the flip.
 R16_ENFORCED = False
 
 
@@ -695,7 +697,7 @@ def rule_r11_exceptions(root: str, cfg: Config) -> list[Violation]:
     checker never fires is worse than no row — it reads as a live sanction, nothing contradicts it,
     and the next app copies the shape."
 
-    The `path` is validated for the same reason. §R5, §R8, §R9 and §R12 are whole-app checks —
+    The `path` is validated for the same reason. §R5, §R8, §R9, §R12 and §R16 are whole-app checks —
     each consults `excuses(rule, "")` and nothing else — so a path-scoped entry for one of them
     printed as a live, narrowly-scoped sanction on every run and suppressed nothing at all. That
     is the same defect the rule-name check closes, left open one field along.
@@ -1118,10 +1120,12 @@ def rule_r16_bundle_inputs(root: str, cfg: Config) -> list[Violation]:
                              "bundle's Info.plist, icon and entitlements live there, capital A, "
                              "whatever builds the app"))
     elif not os.path.isfile(os.path.join(root, "App", "Info.plist")):
-        out.append(Violation("R16", "no 'App/Info.plist' — the main bundle's plist is checked in "
-                             "by every Dragon app: §R12's DragonCommitDate stamp writes through "
-                             "it, and the release gate asserts the tag against its "
-                             "CFBundleShortVersionString"))
+        out.append(Violation("R16", "no 'App/Info.plist' — every Dragon app checks its main "
+                             "bundle's plist in, as the source the packaging step copies and "
+                             "stamps (§R12's DragonCommitDate goes through it). What that file "
+                             "must contain is not this rule's business: ice-2's carries no "
+                             "version key at all, because Xcode supplies MARKETING_VERSION and "
+                             "the release gate reads the BUILT bundle"))
     for dirpath, dirnames, filenames in os.walk(root):
         # A nested checkout is another working tree, not this app's, and R16 is the first rule to
         # walk the whole repository rather than the declared `sources` — so it is the first to see

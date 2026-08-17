@@ -299,13 +299,54 @@ def expect_pending(name: str, app: str, because: str) -> None:
         print(f"  ok    {name}")
 
 
+def check_r16_gate_flips_the_exit_code(tmp: str) -> None:
+    """Run the CLI with `R16_ENFORCED = True` and require a non-conforming app to FAIL.
+
+    The rest of the R16 tests exercise the rule; this one exercises the *wiring*, which is a
+    different thing and the only thing the flip actually changes. `check_r16_enforces_when_flipped`
+    calls `rule_r16_bundle_inputs` directly, so it would stay green if `main()` stopped adding the
+    findings to `violations` — the driver could quietly drop them and every other test would pass,
+    which is the promise "flipping the constant is a one-line change" resting on nothing.
+
+    A copy of the checker with the constant rewritten, rather than an env var or a flag, because a
+    switch that exists only for the tests is a second code path nobody runs in CI: the thing under
+    test has to be the file that ships. Asserted in both directions, from one fixture, so the
+    difference in exit code can only come from the constant.
+    """
+    print("R16 — flipping the gate changes the exit code")
+    source = open(CHECKER, encoding="utf-8").read()
+    old, new = "R16_ENFORCED = False", "R16_ENFORCED = True"
+    if source.count(old) != 1:
+        FAILURES.append(f"expected exactly one {old!r} in the checker, found {source.count(old)} — "
+                        "the gate this test flips is not where it thinks it is")
+        print("  FAIL  the gate constant is not where this test expects")
+        return
+    enforcing = os.path.join(tmp, "dragon-conformance-enforcing.py")
+    open(enforcing, "w").write(source.replace(old, new))
+    app = make_app(tmp, plist_path="Info.plist")  # at the root, the shape three apps had
+
+    for label, script, want in (("gated off, the app passes", CHECKER, 0),
+                                ("gated on, the same app fails", enforcing, 1)):
+        proc = subprocess.run([sys.executable, script, "--app", app, "--kit", KIT],
+                              capture_output=True, text=True)
+        out = proc.stdout + proc.stderr
+        reported = "R16" in out
+        if proc.returncode != want or not reported:
+            FAILURES.append(f"R16 gate — {label}: expected exit {want} with R16 mentioned, got "
+                            f"exit {proc.returncode}:\n{out}")
+            print(f"  FAIL  {label}")
+        else:
+            print(f"  ok    {label}")
+
+
 def check_r16_enforces_when_flipped() -> None:
     """The same findings must be real violations when the gate is on, and none when it is off.
 
     Flipping `R16_ENFORCED` has to be a one-line change on the day the apps have migrated. That is
     only true if the rule underneath the gate is exercised now — otherwise the gate hides an
     unfinished rule and the flip is a rewrite. Called directly rather than through the CLI because
-    the CLI is exactly what the gate suppresses.
+    the CLI is exactly what the gate suppresses; `check_r16_gate_flips_the_exit_code` covers the
+    driver wiring that this one cannot see.
     """
     print("R16 — the gated rule is a real rule")
     checker = load_checker()
@@ -1405,6 +1446,19 @@ extension AppMenuController {
         expect_pass("app-domain type named ...Section is fine outside settings", make_app(
             tmp, extra={"Sources/Engine.swift":
                         "struct MenuBarItemInfo {}\nstruct Snapshot {}\n"}))
+
+        # §R11 rejects a `path` on a whole-app rule, and R16 is one. Asserted for R16 by name:
+        # without this, removing R16 from APP_WIDE_ONLY_RULES would silently start accepting a
+        # path-scoped entry that suppresses nothing while printing as a live sanction — the
+        # phantom-sanction defect §R11 exists to stop, and the reason that set has a test at all.
+        expect_violation("a path-scoped R16 exception is rejected", make_app(
+            tmp, config_over={"exceptions": [{
+                "rule": "R16", "path": "App/Info.plist",
+                "reason": "vendored upstream layout",
+                "sanctionedBy": "CONFORMANCE.md §R11"}]}), "R11",
+            because="only ever checked for the app as a whole")
+
+        check_r16_gate_flips_the_exit_code(tmp)
 
     check_r16_enforces_when_flipped()
     check_canon_pane_order_is_quoted_not_paraphrased()

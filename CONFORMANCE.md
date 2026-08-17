@@ -466,14 +466,21 @@ draws its icon from an `AppIcon.appiconset` in an asset catalog and three of the
 with no entitlements file, so requiring either would leave those apps one compliant path:
 fabricate the file. That is the `IceGroupBox` mistake §R4 records.
 
-**A multi-bundle app puts the main bundle's inputs directly in `App/`, and gives every additional
-bundle a directory named after it.** ice-2 ships `Ice` and `MenuBarItemService`, so it is
+**A multi-bundle app puts the main bundle's inputs directly in `App/`, and every additional bundle
+gets its own directory one level down.** ice-2 ships `Ice` and `MenuBarItemService`, so it is
 `App/Info.plist` plus `App/MenuBarItemService/Info.plist`. The symmetric alternative — a
 directory per bundle, the main one included — was considered and rejected: the checker would then
 have to be *told* which directory holds the main bundle, and a rule that trusts a declared name
 instead of reading a fixed path is the shape §R10's anchoring incident is about.
 [Incidents §R16](docs/CONFORMANCE-INCIDENTS.md#r16--the-app-bundles-inputs-live-in-app) records
 the comparison.
+
+**Name that directory after its bundle — but the rule is the level, not the name.** `App/Ice/` in
+place of `App/MenuBarItemService/` would be checked and would pass, because there is no source of
+truth the checker could compare a name against: the bundle's name is an Xcode target here, a
+SwiftPM product there, and a shell variable in KeyKey's script. This paragraph says so rather than
+stating a requirement the checker does not enforce — §R4's prose is broader than its enforcement
+on two axes and has been parked as debt for exactly that reason, and it is not a shape to copy.
 
 **Violation:** no `App/` directory at the repo root; no `App/Info.plist`; or an `Info.plist`,
 `*.entitlements` or `*.icns` anywhere else in the repo, including more than one directory deep

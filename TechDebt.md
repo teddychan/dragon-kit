@@ -77,18 +77,40 @@ reach outside the app repository:
 1. `teddychan/dragon-release-ci`'s `release-macos.yml` assembles the SwiftPM bundle with
    `working-directory: <swiftpm_working_directory>` and then reads a bare `Info.plist` and
    `AppIcon.icns` — so it assumes the plist and `Package.swift` share one directory, which `App/`
-   ends. That needs an input (a bundle-inputs directory, defaulting to `.` so existing callers keep
-   working) before any SwiftPM app can move.
+   ends. That needs an input (a bundle-inputs directory, defaulting to the empty string so an
+   unmigrated caller keeps reading from `swiftpm_working_directory` exactly as before) before any
+   SwiftPM app can move. Shipped as `swiftpm_bundle_inputs_directory` in dragon-release-ci v6.5.0.
 2. `clipmenu-2/.github/workflows/release-mas.yml` does the same inline, under
    `working-directory: app`.
 3. ice-2's `Ice.xcodeproj` names both plists in `INFOPLIST_FILE`; keykey's `tools/build-app.sh`
    already reads `App/`; each app's local `scripts/run.sh` copies the plist by path.
 
 Order that avoids a broken release: land the reusable-workflow input first, then migrate one app
-per PR (verifying a real release build for each), then flip `R16_ENFORCED` in the same PR as the
-last app. Until then, do not declare an §R11 exception for §R16 anywhere — the gate already
-suppresses it, and a declared exception for a rule that cannot fire is the phantom sanction
-[Incidents §R11](docs/CONFORMANCE-INCIDENTS.md#the-five-phantom-sanctions) records.
+per PR, then flip `R16_ENFORCED` here. **The flip is a dedicated PR in this repository, opened
+after the app migrations have merged** — it cannot ride the last app's PR, which is in another
+repository and cannot edit this file. An earlier draft of this paragraph said it could, which is
+the kind of sequencing instruction that reads fine and cannot be carried out.
+
+Conditions to check before opening that PR, none of which the checker can tell you:
+
+1. Every app's **default branch** enumerates a directory named exactly `App` — read it with
+   `os.listdir`, not `os.path.exists`, for the reason
+   [Incidents §R16](docs/CONFORMANCE-INCIDENTS.md#the-case-check-earned-its-keep-on-the-first-migration)
+   records.
+2. The checker reports no pending R16 finding against those default branches, not against the
+   migration branches.
+3. Each app's release path has been exercised without publishing — `verify_only: true` on the
+   reusable workflow, which is the only way to run it from a branch with no tag. clipmenu-2's Mac
+   App Store workflow is self-contained and has no such route; whatever evidence stands in for one
+   there should be recorded rather than assumed.
+4. No app has declared an §R11 exception for §R16. Until the flip, such an entry names a rule that
+   cannot fire — the phantom sanction
+   [Incidents §R11](docs/CONFORMANCE-INCIDENTS.md#the-five-phantom-sanctions) records — and after
+   it, one would need the reason and owner §R11 demands of any other.
+
+`Scripts/test_conformance.py` covers the flip itself: it runs the CLI from a copy of the checker
+with the constant rewritten and requires the same fixture to pass gated off and fail gated on, so
+the driver wiring is tested rather than promised.
 
 ## Parked: §R4's prose is broader than its enforcement
 

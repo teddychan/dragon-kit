@@ -253,7 +253,8 @@ still a row that reads as a live sanction to the next person.
 suppressed its rule just as effectively while the run printed `NO REASON GIVEN` beside it and
 passed.
 
-`path` is validated for exactly the same reason, one field along. §R5, §R8, §R9 and §R12 consult
+`path` is validated for exactly the same reason, one field along. §R5, §R8, §R9, §R12 and §R16
+consult
 `excuses(rule, "")` and nothing else, so a path-scoped entry for one of them printed as a live,
 narrowly-scoped sanction on every run and suppressed nothing at all — the app still failed.
 
