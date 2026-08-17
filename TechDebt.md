@@ -66,7 +66,7 @@ acting):
 | App | Move |
 |---|---|
 | yahoo-keykey-2 | none — already `App/Info.plist`, `App/AppIcon.icns`, `App/YahooKeyKey2.entitlements` |
-| clipmenu-2 | `app/{Info.plist,AppIcon.icns,ClipMenu.entitlements}` → `App/…` |
+| clipmenu-2 | the package directory `app/` is RENAMED to `App/`, bundle inputs and all — `App/` cannot sit beside `app/` on a case-insensitive filesystem, and moving the three files alone produces an index git is happy with and a working tree that does not match it ([Incidents §R16](docs/CONFORMANCE-INCIDENTS.md#the-case-check-earned-its-keep-on-the-first-migration)) |
 | spectacle-2 | `{Info.plist,AppIcon.icns}` → `App/…` |
 | dragon-sample-app | `Info.plist` → `App/Info.plist` |
 | ice-2 | `Ice/Resources/Info.plist` → `App/Info.plist`; `MenuBarItemService/Resources/Info.plist` → `App/MenuBarItemService/Info.plist` (its icon is an asset catalog and stays there — §R16 places `.icns` files, and ice-2 has none) |

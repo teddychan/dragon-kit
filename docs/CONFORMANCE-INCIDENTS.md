@@ -510,6 +510,50 @@ first run reported keykey — which conforms exactly — six times for three fil
 is another working tree; it is detected by the `.git` entry `git worktree add` leaves, not by the
 directory's name, because the name is one repository's convention.
 
+### The case check earned its keep on the first migration
+
+The rule has no origin incident, and one day later it had a migration one. It is recorded here
+because the finding generalizes past this rule and past this repo.
+
+clipmenu-2's move was written up as three files: `app/{Info.plist,AppIcon.icns,ClipMenu.entitlements}`
+→ `App/…`. Run as three `git mv`s, it reported three clean renames and `git ls-files` showed the new
+paths — **and nothing moved on disk.** macOS's filesystem is case-insensitive, so `app/` and `App/`
+are one directory; git's index is case-*sensitive*, so it recorded a layout the working tree did not
+have. A Linux CI checkout of that commit would have created two real directories and every Mac clone
+one merged one, building different things from the same commit, with `swiftpm_working_directory: app`
+and a bundle-inputs path of `App` silently naming the same place on one machine and different places
+on another.
+
+What caught it was §R16 reading `os.listdir` instead of `os.path.exists`:
+
+```
+pending  R16  no 'App/' directory at the repo root (found 'app/')
+```
+
+`os.path.exists(root/"App")` answers **True** on macOS for a directory really named `app`. A rule
+written the obvious way would have passed clipmenu-2 — the app that most needed to move — and gone
+on passing it after a migration that had not happened. This is failure mode 1 in a new costume: a
+check that cannot fail is worse than no check, and here the thing that could not fail was the
+*filesystem query*, not the loop.
+
+**The consequence for the fleet:** an app whose top-level package directory is lowercase `app/`
+cannot host `App/` beside it. clipmenu-2's migration therefore renamed the package directory itself,
+so `App/` holds `Package.swift`, `Sources/`, `Tests/`, `scripts/` **and** the three bundle inputs —
+which is yahoo-keykey-2's shape, the app that already conformed. §R16 permits that: it places three
+kinds of file and says nothing about what else the directory may contain.
+
+Two smaller things the same migration turned up, worth knowing before the next one:
+
+- **A stale build directory survives the rename and crashes the compiler.** `App/.build` and
+  `app/.build` are one directory with two spellings recorded inside it, so the module cache reported
+  `module '_DarwinFoundation1' is defined in both …/app/.build/… and …/App/.build/…` and
+  swift-frontend died on signal 11 — a crash backtrace, not a path error. `rm -rf App/.build` once
+  after pulling; CI checks out fresh and never sees it.
+- **`GENERATE_INFOPLIST_FILE = YES` can hide a broken `INFOPLIST_FILE`.** ice-2 sets both, so a
+  wrong path need not fail the build — it can silently ship a synthesized plist. Verify a moved
+  plist by looking in the *built* bundle for a key only the source file carries (`SUFeedURL` for
+  Ice, the `XPCService` dict for MenuBarItemService), never by the build succeeding.
+
 ---
 
 ## Before you write the next rule

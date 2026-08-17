@@ -486,6 +486,13 @@ checkout is another repository's working tree and is not read.
 rule places three kinds of file; it says nothing about what else `App/` may contain — KeyKey keeps
 its sources there — and nothing about where a bundle's *source* lives.
 
+**An app with a lowercase `app/` directory renames that directory rather than adding a second one.**
+On a case-insensitive filesystem the two are one directory, so `App/` cannot sit beside `app/`: git
+records the new paths, nothing moves on disk, and the commit then builds one way on a Mac and
+another on Linux CI. clipmenu-2 renamed its SwiftPM package directory, so `App/` holds
+`Package.swift`, `Sources/` and the bundle inputs together — the shape yahoo-keykey-2 already had,
+and one this rule permits, since it constrains only where those three kinds of file sit.
+
 **Why — and this one is not an incident.** Apple publishes no convention for where these files sit
 in a source tree. Xcode 13+ defaults to `GENERATE_INFOPLIST_FILE = YES` and ships no file at all;
 where a template does declare a path it is `___PACKAGENAME___/Info.plist`, named explicitly in
