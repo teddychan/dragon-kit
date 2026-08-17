@@ -17,7 +17,10 @@ from its own CI, so a violation fails the PR. Rules live here and only here — 
 workflow `@main`, so **a rule merged here is live in all five apps' CI the same day.** See "How to
 comply" below for why the pin is `@main` and not a tag.
 
-**Every rule below is a failure that actually happened.** The failure itself — which app, which
+**Every rule below is a failure that actually happened, with one stated exception.** §R16 is a
+convention adopted before the divergence it prevents cost anything, and it says so in its own
+text rather than borrowing an incident that did not happen — which is itself one of the mistakes
+[Incidents](docs/CONFORMANCE-INCIDENTS.md) collects. The failure itself — which app, which
 bug, which wrong first attempt at the rule — is recorded once, in
 [`docs/CONFORMANCE-INCIDENTS.md`](docs/CONFORMANCE-INCIDENTS.md), section by section. Read it
 before relaxing a rule or writing a new one. This file states the rules; that one says why they
@@ -279,7 +282,7 @@ validated:**
 
 | Field | Rule |
 |---|---|
-| `rule` | must be one the checker can actually suppress: `R1`–`R9`, `R12`–`R15`. `R0`, `R10` and `R11` are not suppressible by design |
+| `rule` | must be one the checker can actually suppress: `R1`–`R9`, `R12`–`R15`. `R0`, `R10` and `R11` are not suppressible by design, and `R16` is not while it is gated — see its Status |
 | `path` | optional — but **not accepted on `R5`, `R8`, `R9` or `R12`**, which are whole-app checks |
 | `reason` | non-empty |
 | `sanctionedBy` | non-empty |
@@ -442,6 +445,83 @@ distinguishes a redirect stub from the page the app actually has.
 An app with no public page can sanction this rule under §R11, in its own repository.
 
 → [Incidents §R15](docs/CONFORMANCE-INCIDENTS.md#r15--abouts-website-row-addresses-the-apps-canonical-page)
+
+## R16 — The app bundle's inputs live in `App/`
+
+The files that go **into** the `.app` and are not Swift source — the `Info.plist`, the icon and
+the entitlements — live in a directory called `App/` at the repo root. Capital A, at the root, in
+every Dragon app, whether it is built by `swiftc`, SwiftPM or an Xcode project:
+
+```
+App/
+  Info.plist
+  AppIcon.icns
+  <AppName>.entitlements
+  <BundleName>/Info.plist      # one directory per ADDITIONAL bundle the repo ships
+```
+
+**Only `App/Info.plist` is required.** The icon and the entitlements are checked *positionally* —
+an app that ships one keeps it here; an app that ships none is not asked to invent one. ice-2
+draws its icon from an `AppIcon.appiconset` in an asset catalog and three of the five apps sign
+with no entitlements file, so requiring either would leave those apps one compliant path:
+fabricate the file. That is the `IceGroupBox` mistake §R4 records.
+
+**A multi-bundle app puts the main bundle's inputs directly in `App/`, and every additional bundle
+gets its own directory one level down.** ice-2 ships `Ice` and `MenuBarItemService`, so it is
+`App/Info.plist` plus `App/MenuBarItemService/Info.plist`. The symmetric alternative — a
+directory per bundle, the main one included — was considered and rejected: the checker would then
+have to be *told* which directory holds the main bundle, and a rule that trusts a declared name
+instead of reading a fixed path is the shape §R10's anchoring incident is about.
+[Incidents §R16](docs/CONFORMANCE-INCIDENTS.md#r16--the-app-bundles-inputs-live-in-app) records
+the comparison.
+
+**Name that directory after its bundle — but the rule is the level, not the name.** `App/Ice/` in
+place of `App/MenuBarItemService/` would be checked and would pass, because there is no source of
+truth the checker could compare a name against: the bundle's name is an Xcode target here, a
+SwiftPM product there, and a shell variable in KeyKey's script. This paragraph says so rather than
+stating a requirement the checker does not enforce — §R4's prose is broader than its enforcement
+on two axes and has been parked as debt for exactly that reason, and it is not a shape to copy.
+
+**Violation:** no `App/` directory at the repo root; no `App/Info.plist`; or an `Info.plist`,
+`*.entitlements` or `*.icns` anywhere else in the repo, including more than one directory deep
+inside `App/`. `app/` is not `App/` — the check reads the directory listing rather than asking
+whether the path exists, because macOS's case-insensitive filesystem answers yes to both and a
+case-blind test would report the apps that still have to move as already conforming. A nested
+checkout is another repository's working tree and is not read.
+
+**Out of scope:** Swift sources, `.lproj` strings, asset catalogs and every other resource. This
+rule places three kinds of file; it says nothing about what else `App/` may contain — KeyKey keeps
+its sources there — and nothing about where a bundle's *source* lives.
+
+**An app with a lowercase `app/` directory renames that directory rather than adding a second one.**
+On a case-insensitive filesystem the two are one directory, so `App/` cannot sit beside `app/`: git
+records the new paths, nothing moves on disk, and the commit then builds one way on a Mac and
+another on Linux CI. clipmenu-2 renamed its SwiftPM package directory, so `App/` holds
+`Package.swift`, `Sources/` and the bundle inputs together — the shape yahoo-keykey-2 already had,
+and one this rule permits, since it constrains only where those three kinds of file sit.
+
+**Why — and this one is not an incident.** Apple publishes no convention for where these files sit
+in a source tree. Xcode 13+ defaults to `GENERATE_INFOPLIST_FILE = YES` and ships no file at all;
+where a template does declare a path it is `___PACKAGENAME___/Info.plist`, named explicitly in
+`INFOPLIST_FILE` with no auto-discovery; SwiftPM has no `Info.plist` concept for an executable;
+and the Human Interface Guidelines cover interface design, not repository structure. **This is a
+fleet convention, adopted for mechanical checkability, one debug-build script template and
+deterministic new-app onboarding — not an Apple requirement, and nothing here should be read as
+claiming otherwise.** Five apps had picked four different places, each internally consistent, and
+no user-visible failure resulted; what it cost was paid by everything that reads across the fleet.
+
+**Status: reported, not yet enforced.** `R16_ENFORCED` is `False` in
+`Scripts/dragon-conformance.py`, so a finding prints as `pending R16 …` without failing the run —
+and while that holds, R16 is **not suppressible**: §R11 rejects any exception naming it, because an
+accepted one would read as a live sanction against a rule that fails nothing. Both move in the
+flip PR. No count of unmigrated apps is given here on purpose: it would be wrong from the moment
+the first app merged until the flip landed, and a number in prose is how §R11 acquired five
+phantom sanctions. It is not a skip: the findings are computed and printed on every run, and
+`Scripts/test_conformance.py` asserts both that they appear and that the same findings *are*
+violations with the gate flipped, so turning it on stays a one-line change.
+[TechDebt.md](TechDebt.md) owns the migration and is what the checker's `TODO(R16)` names.
+
+→ [Incidents §R16](docs/CONFORMANCE-INCIDENTS.md#r16--the-app-bundles-inputs-live-in-app)
 
 ## Out of scope, deliberately
 

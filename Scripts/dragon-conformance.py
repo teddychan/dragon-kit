@@ -102,13 +102,42 @@ COMMIT_DATE_STAMPS = [
 ]
 # The rules an §R11 exception can actually suppress, which is what makes one meaningful (R11).
 # Contiguous now that R2 reads its own key; R0, R10 and R11 are not suppressible by design.
+# R16 is deliberately absent while it is gated, and joins this list in the same PR that flips
+# `R16_ENFORCED`. Two reviewers disagreed about what an R16 exception does today — one called it
+# premature, the other a phantom sanction — and both readings are available because the entry is
+# accepted, suppresses the `pending` line, and suppresses no violation. Rejecting it outright ends
+# the ambiguity: while the rule cannot fail a run, an exception for it cannot be declared, so
+# nothing can read as a live sanction against a rule that fails nothing. §R11's own incident is
+# that a row nobody can contradict is worse than no row.
 EXCUSABLE_RULES = ["R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8", "R9",
                    "R12", "R13", "R14", "R15"]
 # …and of those, the ones only ever consulted app-wide. A `path` on one of these reads as a live,
 # scoped sanction and suppresses nothing — the same defect class as naming a rule that never
 # fires, which §R11 already rejects. R15 is deliberately absent: it is consulted both ways, and
 # dragon-sample-app's live exception is path-scoped.
+# R16 belongs here too — it consults `excuses("R16", "")` and nothing else — and goes in with the
+# flip, for the reason above. `rule_r16_bundle_inputs` still calls `excuses`, so the day R16 becomes
+# suppressible the plumbing is already correct and only these two lists move.
 APP_WIDE_ONLY_RULES = {"R5", "R8", "R9", "R12"}
+
+# The bundle inputs §R16 places: the files that go INTO the .app and are not Swift source.
+# Matched on the shape of the filename rather than a fixed list of three, because the rule is
+# about where such a file lives — an app that ships a second `.icns` or names its entitlements
+# after a helper has still put a bundle input somewhere, and a file the rule cannot see is a file
+# it cannot place.
+BUNDLE_INPUT = re.compile(r"^(?:Info\.plist|.+\.entitlements|.+\.icns)$")
+# R16 is written, implemented and tested — and deliberately NOT enforced yet. Four of the five
+# apps keep these files somewhere else today (`app/`, `Ice/Resources/`, the repo root), so turning
+# it on here would fail every open PR in four repositories over a layout no app has migrated to.
+# The findings still print on every run, under `pending`, because the alternative — a rule that
+# goes quiet until someone remembers it — is the silent-checker failure this whole spec exists to
+# prevent. `Scripts/test_conformance.py` asserts both halves: that a non-conforming repo is still
+# reported, and that the same finding *is* a violation when the gate is flipped.
+# TODO(R16): set this to True in a dedicated PR here, opened once every app's migration has
+# MERGED — not in the last app's PR, which is in another repository and cannot change this file.
+# TechDebt.md, "Move every app's bundle inputs into `App/`", owns the sequence and states the
+# conditions that have to hold before the flip.
+R16_ENFORCED = False
 
 
 @dataclass
@@ -1061,6 +1090,84 @@ def rule_r15_website_page(root: str, cfg: Config, files: list[str]) -> list[Viol
     return out
 
 
+def rule_r16_bundle_inputs(root: str, cfg: Config) -> list[Violation]:
+    """The app bundle's non-source inputs live in `App/` at the repo root.
+
+    `Info.plist`, the icon and the entitlements are inputs to *packaging*, not to compilation, and
+    nothing outside this fleet says where they go. Apple publishes no convention for it: Xcode 13+
+    defaults to `GENERATE_INFOPLIST_FILE = YES` and ships no file at all, an Xcode target that does
+    use one names it explicitly in `INFOPLIST_FILE` with no auto-discovery, and SwiftPM has no
+    `Info.plist` concept for an executable. So five apps chose four places, which is drift of the
+    ordinary kind — each app is internally consistent and nothing user-visible broke.
+
+    What it costs is paid by everything that reads across the fleet: this checker (§R12's default
+    build surface is broad because the plist could be anywhere), the shared debug-build script
+    template, the release workflow's `swiftpm_working_directory`, and every new-app scaffold. One
+    location makes each of those a fixed path instead of a per-app question — see CONFORMANCE.md §R16
+    and docs/CONFORMANCE-INCIDENTS.md §R16, which records that no incident forced this rule rather
+    than borrowing one that did not happen.
+
+    Only `App/Info.plist` is required. The icon and the entitlements are checked *positionally*:
+    an app that has one must keep it here, and an app that has none — ice-2 draws its icon from an
+    asset catalog, three apps sign with no entitlements file — is not asked to invent one. A rule
+    demanding files half the fleet has no use for would have only one compliant path: fabricate
+    them, which is the `IceGroupBox` mistake (§R4).
+    """
+    if cfg.excuses("R16", ""):
+        return []
+    out: list[Violation] = []
+    # Read from the directory listing, not `os.path.exists(root/"App")`. macOS's filesystem is
+    # case-insensitive, so `exists()` answers True for clipmenu-2's `app/` — the very layout this
+    # rule moves — and a case-blind test would report the apps that still have to migrate as
+    # already conforming. On Linux CI the same listing is exact, so the two agree.
+    entries = sorted(os.listdir(root))
+    wrong_case = [name for name in entries
+                  if name != "App" and name.lower() == "app"
+                  and os.path.isdir(os.path.join(root, name))]
+    if "App" not in entries:
+        near = f" (found {', '.join(repr(name + '/') for name in wrong_case)})" if wrong_case else ""
+        out.append(Violation("R16", f"no 'App/' directory at the repo root{near} — the app "
+                             "bundle's Info.plist, icon and entitlements live there, capital A, "
+                             "whatever builds the app"))
+    # `os.listdir` again, not `os.path.isfile`, and for the same reason one level down: on a
+    # case-insensitive filesystem `isfile` says yes to `App/info.plist`, so a run here passed while
+    # the same tree on this workflow's `ubuntu-latest` runner reported the file missing. macOS
+    # passing and Linux failing is the safe direction of that split, and it is still a split.
+    elif "Info.plist" not in os.listdir(os.path.join(root, "App")):
+        out.append(Violation("R16", "no 'App/Info.plist' — every Dragon app checks its main "
+                             "bundle's plist in, as the source the packaging step copies and "
+                             "stamps (§R12's DragonCommitDate goes through it). What that file "
+                             "must contain is not this rule's business: ice-2's carries no "
+                             "version key at all, because Xcode supplies MARKETING_VERSION and "
+                             "the release gate reads the BUILT bundle"))
+    for dirpath, dirnames, filenames in os.walk(root):
+        # A nested checkout is another working tree, not this app's, and R16 is the first rule to
+        # walk the whole repository rather than the declared `sources` — so it is the first to see
+        # them. Both ice-2 and yahoo-keykey-2 keep agent worktrees at their root (`.gitignore`
+        # ends them `*-worktree/`), and each one carries a full copy of the app's bundle inputs:
+        # unpruned, keykey — which already conforms — reported six findings, all of them the same
+        # three files seen twice more. Detected by the `.git` entry `git worktree add` leaves
+        # rather than by name, because the name is one repo's convention and the file is what
+        # makes it a separate tree.
+        dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS
+                       and not d.endswith(".xcodeproj")
+                       and not os.path.exists(os.path.join(dirpath, d, ".git"))]
+        for name in sorted(filenames):
+            if not BUNDLE_INPUT.match(name):
+                continue
+            path = os.path.join(dirpath, name)
+            parts = os.path.relpath(path, root).split(os.sep)
+            # `App/<file>` for the main bundle, `App/<BundleName>/<file>` for each additional
+            # one — so at most one directory deep, and the depth is what makes the helper's
+            # directory name unambiguous rather than a path the checker has to be told about.
+            if parts[0] == "App" and len(parts) <= 3:
+                continue
+            out.append(Violation("R16", "bundle input outside 'App/' — the main bundle's inputs "
+                                 "are 'App/<file>' and each additional bundle owns "
+                                 "'App/<BundleName>/<file>'", path))
+    return out
+
+
 # --------------------------------------------------------------------------- driver
 
 def load_config(root: str, override: str | None = None) -> Config:
@@ -1117,6 +1224,13 @@ def main() -> int:
     violations += rule_r13_language_picker(root, cfg, files, languages)
     violations += rule_r14_about_copyright(root, cfg, files)
     violations += rule_r15_website_page(root, cfg, files)
+    # R16 is gated (see R16_ENFORCED). Its findings are computed either way: a rule that is not
+    # yet enforced still has to be *visible*, or nothing distinguishes "the apps have not migrated
+    # yet" from "the rule stopped working months ago".
+    pending = rule_r16_bundle_inputs(root, cfg)
+    if R16_ENFORCED:
+        violations += pending
+        pending = []
 
     print(f"DragonKit conformance — {cfg.app} ({len(files)} Swift files, "
           f"{len(kit_types)} kit types, {len(languages)} kit languages)")
@@ -1124,6 +1238,11 @@ def main() -> int:
     for exc in cfg.exceptions:
         print(f"  exception  {exc.get('rule')}  {exc.get('path', '(app-wide)')} — "
               f"{exc.get('reason', 'NO REASON GIVEN')}")
+    for item in pending:
+        print(f"  pending  {item.render(root).strip()}")
+    if pending:
+        print(f"  ({len(pending)} pending R16 finding(s) — CONFORMANCE.md §R16 is documented and "
+              f"implemented but not yet enforced; the migration is TechDebt.md's)")
 
     if not violations:
         print("PASS — no violations.")

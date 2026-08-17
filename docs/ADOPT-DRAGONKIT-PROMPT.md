@@ -13,7 +13,7 @@ Paste the block below, then apply the per-app tweaks noted underneath.
 > *derived*, never authoritative. The block below names rules; it does not restate their content,
 > and where the two disagree `CONFORMANCE.md` wins.
 >
-> <!-- MIRRORS: CONFORMANCE §R0 §R1 §R2 §R3 §R5 §R6 §R7 §R9 §R10 §R11 §R12 §R13 · MAC-APP-RELEASE-LIFECYCLE (Debug identity, tag namespace) -->
+> <!-- MIRRORS: CONFORMANCE §R0 §R1 §R2 §R3 §R5 §R6 §R7 §R9 §R10 §R11 §R12 §R13 §R16 · MAC-APP-RELEASE-LIFECYCLE (Debug identity, tag namespace) -->
 >
 > The marker must be **exhaustive, not illustrative** — it is the only enforcement these files
 > have. A change to any mirrored rule must update this file and
@@ -159,6 +159,12 @@ DONE means the conformance checker passes, not that it compiles:
     there is no floating v2 tag and the kit is read at its default branch anyway).
   • Run it locally until clean:
       python3 ~/git/dragon-kit/Scripts/dragon-conformance.py --app . --kit ~/git/dragon-kit
+  • Bundle inputs — the Info.plist, the icon and the entitlements — belong in `App/` at the repo
+    root, capital A, whatever builds the app, with one directory per additional bundle
+    (`App/<BundleName>/Info.plist`). §R16. This is a fleet convention, not an Apple requirement:
+    Apple specifies no source-tree location for any of them. It is reported and NOT yet enforced
+    while the apps migrate, so the checker prints `pending R16 …` instead of failing — do not
+    read that as permission to add a sixth layout.
   • A genuine, sanctioned divergence goes in `exceptions` with a `reason` and a `sanctionedBy`
     — only when an applicable rule genuinely fires after supported parameters, traits and slot
     spellings have been used. A different host topology is not itself an exception.

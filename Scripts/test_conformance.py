@@ -99,10 +99,20 @@ COMPLIANT_PACKAGE = ('// swift-tools-version: 6.1\n'
                      '.package(url: "https://github.com/teddychan/dragon-kit", from: "999.9.9"),\n')
 COMPLIANT_BUILD = (
     'BUILD="$(git rev-list --count HEAD)"\n'
-    'PlistBuddy -c "Set :CFBundleVersion $BUILD" Info.plist\n'
+    'PlistBuddy -c "Set :CFBundleVersion $BUILD" App/Info.plist\n'
     'COMMIT_DATE="$(git log -1 --format=%cI)"\n'
-    'PlistBuddy -c "Set :DragonCommitDate $COMMIT_DATE" Info.plist\n'
+    'PlistBuddy -c "Set :DragonCommitDate $COMMIT_DATE" App/Info.plist\n'
 )
+# The main bundle's plist, at the one place §R16 puts it. Contents are irrelevant to R16, which
+# is a rule about location; R12 reads the *build* surface for the stamp, not this file.
+COMPLIANT_PLIST = """<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0">
+<dict>
+	<key>CFBundleShortVersionString</key>
+	<string>0.1.0</string>
+</dict>
+</plist>
+"""
 
 
 def language_pane(argument: str = "") -> str:
@@ -123,6 +133,7 @@ struct LanguageSection: View {
 def make_app(tmp: str, *, menu: str = COMPLIANT_MENU, panes: str = COMPLIANT_PANES,
              strings: str = COMPLIANT_STRINGS, package: str = COMPLIANT_PACKAGE,
              build: str = COMPLIANT_BUILD, locales: tuple[str, ...] = ("en",),
+             plist_path: str | None = "App/Info.plist",
              extra: dict[str, str] | None = None, config_over: dict | None = None,
              write_config: bool = True) -> str:
     root = tempfile.mkdtemp(dir=tmp)
@@ -138,6 +149,13 @@ def make_app(tmp: str, *, menu: str = COMPLIANT_MENU, panes: str = COMPLIANT_PAN
                           "Localizable.strings"), "w").write(strings)
     open(os.path.join(root, "Package.swift"), "w").write(package)
     open(os.path.join(root, "scripts", "build.sh"), "w").write(build)
+    # Every fixture is R16-conforming by default, so the day R16_ENFORCED flips, the suite's
+    # existing fixtures do not all start failing on a layout none of them was written to test.
+    # `plist_path=None` is the shape of a repo that checks in no main-bundle plist at all.
+    if plist_path:
+        path = os.path.join(root, plist_path)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        open(path, "w").write(COMPLIANT_PLIST)
     open(os.path.join(root, "Sources", "AboutConfig.swift"), "w").write(COMPLIANT_ABOUT)
     for name, body in (extra or {}).items():
         path = os.path.join(root, name)
@@ -236,16 +254,15 @@ def expect_violation(name: str, app: str, rule: str, because: str) -> None:
     print(f"  ok    {name}")
 
 
-def check_masking_invariants() -> None:
-    """`mask_noncode` must preserve length AND line count, for every caller and every input.
+def load_checker():
+    """The checker as a module, for the two things a subprocess run cannot reach.
 
-    Asserted directly rather than only through fixtures, because the two properties are what let a
-    rule read one file through two views at one index space — and a break in either is silent.
-    Line count was the one that broke: `\\` at end of line is Swift's continuation inside a
-    multi-line string, and blanking the newline after it kept the length right while moving every
-    line number below. §R1 and §R15 number from the original body and never noticed; §R13 numbers
-    from the masked copy and misreported by up to 9 lines in ice-2's MenuBarItemManager.swift.
+    Most of this suite drives the CLI, deliberately: that is what CI runs. Two properties are not
+    observable from outside it — `mask_noncode`'s length/line invariants, and whether R16's gated
+    findings would be violations with `R16_ENFORCED` on.
     """
+    if "dragon_conformance" in sys.modules:
+        return sys.modules["dragon_conformance"]
     import importlib.util
 
     # Importing the checker makes CPython cache its bytecode next to the script. Harmless, but it
@@ -256,6 +273,130 @@ def check_masking_invariants() -> None:
     checker = importlib.util.module_from_spec(spec)
     sys.modules["dragon_conformance"] = checker
     spec.loader.exec_module(checker)
+    return checker
+
+
+def expect_pending(name: str, app: str, because: str) -> None:
+    """Assert R16 *reports* this app and still exits 0, because the rule is gated (R16_ENFORCED).
+
+    Both halves are the test. A gated rule that prints nothing is indistinguishable from one that
+    quietly stopped matching, which is the failure this spec exists to prevent — the migration
+    would then land against a rule nobody had exercised in months. And a gated rule that failed CI
+    would red-X every open PR in four repositories over a layout none of them has moved to yet.
+    """
+    code, out = run(app)
+    reported = [line.strip() for line in out.splitlines()
+                if line.strip().startswith("pending  R16")]
+    if code != 0:
+        FAILURES.append(f"{name}: R16 is not enforced yet, so the app must still pass. "
+                        f"Got exit {code}:\n{out}")
+        print(f"  FAIL  {name} (gate leaked into the exit code)")
+    elif not any(because in line for line in reported):
+        FAILURES.append(f"{name}: expected a pending R16 finding containing {because!r}; got:\n" +
+                        ("\n".join(f"  - {line}" for line in reported) or "  (nothing)"))
+        print(f"  FAIL  {name} (rule did not report)")
+    else:
+        print(f"  ok    {name}")
+
+
+def check_r16_gate_flips_the_exit_code(tmp: str) -> None:
+    """Run the CLI with `R16_ENFORCED = True` and require a non-conforming app to FAIL.
+
+    The rest of the R16 tests exercise the rule; this one exercises the *wiring*, which is a
+    different thing and the only thing the flip actually changes. `check_r16_enforces_when_flipped`
+    calls `rule_r16_bundle_inputs` directly, so it would stay green if `main()` stopped adding the
+    findings to `violations` — the driver could quietly drop them and every other test would pass,
+    which is the promise "flipping the constant is a one-line change" resting on nothing.
+
+    A copy of the checker with the constant rewritten, rather than an env var or a flag, because a
+    switch that exists only for the tests is a second code path nobody runs in CI: the thing under
+    test has to be the file that ships. Asserted in both directions, from one fixture, so the
+    difference in exit code can only come from the constant.
+    """
+    print("R16 — flipping the gate changes the exit code")
+    source = open(CHECKER, encoding="utf-8").read()
+    old, new = "R16_ENFORCED = False", "R16_ENFORCED = True"
+    if source.count(old) != 1:
+        FAILURES.append(f"expected exactly one {old!r} in the checker, found {source.count(old)} — "
+                        "the gate this test flips is not where it thinks it is")
+        print("  FAIL  the gate constant is not where this test expects")
+        return
+    enforcing = os.path.join(tmp, "dragon-conformance-enforcing.py")
+    open(enforcing, "w").write(source.replace(old, new))
+    app = make_app(tmp, plist_path="Info.plist")  # at the root, the shape three apps had
+
+    for label, script, want in (("gated off, the app passes", CHECKER, 0),
+                                ("gated on, the same app fails", enforcing, 1)):
+        proc = subprocess.run([sys.executable, script, "--app", app, "--kit", KIT],
+                              capture_output=True, text=True)
+        out = proc.stdout + proc.stderr
+        reported = "R16" in out
+        if proc.returncode != want or not reported:
+            FAILURES.append(f"R16 gate — {label}: expected exit {want} with R16 mentioned, got "
+                            f"exit {proc.returncode}:\n{out}")
+            print(f"  FAIL  {label}")
+        else:
+            print(f"  ok    {label}")
+
+
+def check_r16_enforces_when_flipped() -> None:
+    """The same findings must be real violations when the gate is on, and none when it is off.
+
+    Flipping `R16_ENFORCED` has to be a one-line change on the day the apps have migrated. That is
+    only true if the rule underneath the gate is exercised now — otherwise the gate hides an
+    unfinished rule and the flip is a rewrite. Called directly rather than through the CLI because
+    the CLI is exactly what the gate suppresses; `check_r16_gate_flips_the_exit_code` covers the
+    driver wiring that this one cannot see.
+    """
+    print("R16 — the gated rule is a real rule")
+    checker = load_checker()
+    with tempfile.TemporaryDirectory() as tmp:
+        conforming = make_app(tmp, extra={
+            "App/AppIcon.icns": "icns", "App/Fixture.entitlements": "<plist/>",
+            "App/MenuBarItemService/Info.plist": COMPLIANT_PLIST})
+        stray = make_app(tmp, extra={"Ice/Resources/Info.plist": COMPLIANT_PLIST})
+        # R16 is the first rule to walk the whole repository instead of the declared `sources`, so
+        # it is the first to meet the agent worktrees ice-2 and yahoo-keykey-2 keep at their roots.
+        # Each holds a full copy of the app's bundle inputs; unpruned, keykey — which conforms —
+        # reported its three files three times over. `git worktree add` leaves a `.git` file, and
+        # that, not the directory's name, is what makes it a separate working tree.
+        nested = make_app(tmp, extra={
+            "wt-branch/.git": "gitdir: /elsewhere/.git/worktrees/wt-branch\n",
+            "wt-branch/App/Info.plist": COMPLIANT_PLIST,
+            "wt-branch/Ice/Resources/Info.plist": COMPLIANT_PLIST})
+        cfg = checker.Config(app="Fixture App", sources=["Sources"])
+        for label, root, expected in (("main bundle + helper + icon + entitlements", conforming, 0),
+                                      ("a second plist outside App/", stray, 1),
+                                      ("a nested checkout is another working tree", nested, 0)):
+            found = checker.rule_r16_bundle_inputs(root, cfg)
+            if len(found) != expected or any(v.rule != "R16" for v in found):
+                FAILURES.append(f"R16 enforced-mode {label}: expected {expected} violation(s), "
+                                f"got {[(v.rule, v.message) for v in found]}")
+                print(f"  FAIL  {label}")
+            else:
+                print(f"  ok    {label}")
+        # An §R11 sanction must suppress it app-wide, the way it does for every other whole-app
+        # rule — checked here because the gate hides it from the CLI-driven fixtures.
+        excused = checker.Config(app="Fixture App", sources=["Sources"], exceptions=[
+            {"rule": "R16", "reason": "vendored upstream layout", "sanctionedBy": "§R11"}])
+        if checker.rule_r16_bundle_inputs(stray, excused):
+            FAILURES.append("R16 enforced-mode: an app-wide §R11 exception did not suppress it")
+            print("  FAIL  an app-wide exception suppresses it")
+        else:
+            print("  ok    an app-wide exception suppresses it")
+
+
+def check_masking_invariants() -> None:
+    """`mask_noncode` must preserve length AND line count, for every caller and every input.
+
+    Asserted directly rather than only through fixtures, because the two properties are what let a
+    rule read one file through two views at one index space — and a break in either is silent.
+    Line count was the one that broke: `\\` at end of line is Swift's continuation inside a
+    multi-line string, and blanking the newline after it kept the length right while moving every
+    line number below. §R1 and §R15 number from the original body and never noticed; §R13 numbers
+    from the masked copy and misreported by up to 9 lines in ice-2's MenuBarItemManager.swift.
+    """
+    checker = load_checker()
 
     cases = {
         "line continuation in a multi-line string": '''let s = """
@@ -1246,6 +1387,49 @@ enum AboutConfig { }
 """}), "R15",
             because="no AboutContent(…) construction is reachable")
 
+        print("R16 — bundle inputs live in App/ (reported, not yet enforced)")
+        # The four layouts that exist in the fleet today, as of 2026-08-17. Each is a real app's
+        # shape, so the migration cannot surprise the rule later: spectacle-2 and
+        # dragon-sample-app keep the plist at the repo root, clipmenu-2 in `app/`, ice-2 under
+        # `Ice/Resources/` with a second bundle beside it. yahoo-keykey-2 already conforms, which
+        # is why `App/` is the target rather than a fifth new place.
+        expect_pending("plist at the repo root", make_app(tmp, plist_path="Info.plist"),
+            because="no 'App/' directory at the repo root")
+        # macOS's filesystem is case-insensitive, so `os.path.exists("App")` is True for `app/`
+        # and a case-blind check would report clipmenu-2 — the app this rule most needs to move —
+        # as already conforming.
+        expect_pending("lowercase app/ is not App/", make_app(tmp, plist_path="app/Info.plist"),
+            because="found 'app/'")
+        expect_pending("a bundle input outside App/", make_app(
+            tmp, extra={"Ice/Resources/Info.plist": COMPLIANT_PLIST}),
+            because="bundle input outside 'App/'")
+        expect_pending("an icon outside App/", make_app(tmp, extra={"AppIcon.icns": "icns"}),
+            because="bundle input outside 'App/'")
+        # Not `app/…` here: this fixture keeps the default `App/Info.plist`, and on macOS's
+        # case-insensitive filesystem writing to `app/` puts the file in that same directory, so
+        # the fixture quietly became a conforming one. The lowercase case is covered above, where
+        # no `App/` exists to collide with.
+        expect_pending("entitlements outside App/", make_app(
+            tmp, extra={"Resources/ClipMenu.entitlements": "<plist/>"}),
+            because="bundle input outside 'App/'")
+        # One directory deep is a bundle; two is a path the rule would have to be told about.
+        expect_pending("a helper plist nested too deep", make_app(
+            tmp, extra={"App/Helpers/MenuBarItemService/Info.plist": COMPLIANT_PLIST}),
+            because="bundle input outside 'App/'")
+        expect_pending("no main-bundle plist at all", make_app(
+            tmp, plist_path=None, extra={"App/AppIcon.icns": "icns"}),
+            because="no 'App/Info.plist'")
+        # ice-2's shape, which is why the icon and the entitlements are positional rather than
+        # required: its icon is an `AppIcon.appiconset` in an asset catalog, so it ships no
+        # `.icns` at all, and three of the five apps sign with no entitlements file. Requiring
+        # either would leave those apps one compliant path — fabricate the file — which is the
+        # `IceGroupBox` mistake §R4 records.
+        expect_pass("an app whose icon is an asset catalog ships no .icns", make_app(
+            tmp, extra={"Ice/Resources/Assets.xcassets/AppIcon.appiconset/Contents.json": "{}"}))
+        expect_pass("the two-bundle shape conforms", make_app(
+            tmp, extra={"App/MenuBarItemService/Info.plist": COMPLIANT_PLIST,
+                        "App/AppIcon.icns": "icns", "App/Fixture.entitlements": "<plist/>"}))
+
         print("no-false-positive checks")
         expect_pass("app builds its own non-lifecycle menu items", make_app(
             tmp, menu=COMPLIANT_MENU + """
@@ -1263,6 +1447,39 @@ extension AppMenuController {
             tmp, extra={"Sources/Engine.swift":
                         "struct MenuBarItemInfo {}\nstruct Snapshot {}\n"}))
 
+        # While R16 is gated it is not suppressible at all, so ANY exception naming it is rejected —
+        # path-scoped or app-wide. The rule cannot fail a run yet, so an accepted entry would read as
+        # a live sanction against a rule that sanctions nothing, which is §R11's own incident. Both
+        # forms are asserted because they take different branches of rule_r11_exceptions.
+        # At the flip, R16 joins EXCUSABLE_RULES and APP_WIDE_ONLY_RULES and these two become one
+        # test: app-wide passes, path-scoped is rejected as "checked for the app as a whole".
+        for label, exc in (("a path-scoped", {"rule": "R16", "path": "App/Info.plist"}),
+                           ("an app-wide", {"rule": "R16"})):
+            expect_violation(f"{label} R16 exception is rejected while R16 is gated", make_app(
+                tmp, config_over={"exceptions": [dict(
+                    exc, reason="vendored upstream layout",
+                    sanctionedBy="CONFORMANCE.md §R11")]}), "R11",
+                because="not a rule this checker can suppress")
+
+        # §R16 says the RULE is the level, not the helper directory's name — there is no source of
+        # truth for the name (an Xcode target here, a SwiftPM product there, a shell variable in
+        # KeyKey's script), so the rule says so instead of pretending to check it. That sentence is a
+        # deliberate policy choice, and an unpinned policy choice is one somebody "fixes" later: this
+        # fixture is what makes a future name check a test failure rather than a silent tightening.
+        expect_pass("a helper directory named after nothing in particular still passes", make_app(
+            tmp, extra={"App/NotABundleName/Info.plist": COMPLIANT_PLIST}))
+
+        # `App/info.plist` — the filename's case, which `os.path.isfile` accepts on macOS and
+        # `ubuntu-latest` does not. Found by review, not by this suite, and it is the directory
+        # check's incident one level down: the run passed locally while the same tree failed in the
+        # workflow that actually gates the apps.
+        expect_pending("a lowercase filename is not Info.plist", make_app(tmp, plist_path=None,
+                       extra={"App/info.plist": COMPLIANT_PLIST}),
+                       because="no 'App/Info.plist'")
+
+        check_r16_gate_flips_the_exit_code(tmp)
+
+    check_r16_enforces_when_flipped()
     check_canon_pane_order_is_quoted_not_paraphrased()
 
     print()

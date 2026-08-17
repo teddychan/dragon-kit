@@ -306,7 +306,7 @@ Structure:
   Sources/<TARGET>/GeneralPane.swift
   Sources/<TARGET>/AboutConfig.swift
   Sources/<TARGET>/WhatsNewConfig.swift
-  Resources/Info.plist
+  App/Info.plist                         # bundle inputs live here — CONFORMANCE §R16
   scripts/run.sh
   .gitignore
   .dragon-conformance.json               # required by CONFORMANCE §R0 — see below
@@ -597,7 +597,18 @@ enum WhatsNewConfig {
 }
 ```
 
-### `Resources/Info.plist`
+### `App/Info.plist`
+
+**`App/` is where every Dragon app keeps its bundle inputs** — the `Info.plist`, the icon
+(`App/AppIcon.icns`) and the entitlements (`App/<AppName>.entitlements`), whatever builds the app,
+and one directory per additional bundle (`App/<BundleName>/Info.plist`) if it ships more than one.
+Capital A, at the repo root. That is CONFORMANCE §R16, and it is a fleet convention rather than an
+Apple requirement — Apple specifies no source-tree location for any of these files. A new app gets
+it for free by scaffolding from here; the existing apps are migrating to it.
+
+The scaffold below ships only the plist, because it has no icon or entitlements yet. Add them at
+those paths when it does.
+
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -660,7 +671,7 @@ fi
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN_DIR/$SOURCE_BIN_NAME" "$APP/Contents/MacOS/$DEBUG_BIN_NAME"
-cp Resources/Info.plist "$APP/Contents/Info.plist"
+cp App/Info.plist "$APP/Contents/Info.plist"
 
 PLIST="$APP/Contents/Info.plist"
 stamp() {  # Add-or-Set, because the key may or may not already be in the source plist
@@ -794,7 +805,7 @@ DEBUG_APP="$(swift build -c debug --show-bin-path)/<APP_DISPLAY> Debug.app"
   -c 'Print :CFBundleShortVersionString' -c 'Print :DragonBuildChannel' \
   "$DEBUG_APP/Contents/Info.plist"
 # expect: <BUNDLE_ID>.debug; <APP_DISPLAY> Debug for both names and the executable;
-#         numeric 0.1.0; Debug. The source Resources/Info.plist still contains the release values.
+#         numeric 0.1.0; Debug. The source App/Info.plist still contains the release values.
 ```
 ```bash
 python3 ~/git/dragon-kit/Scripts/dragon-conformance.py --app . --kit ~/git/dragon-kit
