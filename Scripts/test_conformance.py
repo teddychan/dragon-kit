@@ -1458,6 +1458,14 @@ extension AppMenuController {
                 "sanctionedBy": "CONFORMANCE.md §R11"}]}), "R11",
             because="only ever checked for the app as a whole")
 
+        # §R16 says the RULE is the level, not the helper directory's name — there is no source of
+        # truth for the name (an Xcode target here, a SwiftPM product there, a shell variable in
+        # KeyKey's script), so the rule says so instead of pretending to check it. That sentence is a
+        # deliberate policy choice, and an unpinned policy choice is one somebody "fixes" later: this
+        # fixture is what makes a future name check a test failure rather than a silent tightening.
+        expect_pass("a helper directory named after nothing in particular still passes", make_app(
+            tmp, extra={"App/NotABundleName/Info.plist": COMPLIANT_PLIST}))
+
         check_r16_gate_flips_the_exit_code(tmp)
 
     check_r16_enforces_when_flipped()

@@ -91,22 +91,29 @@ after the app migrations have merged** — it cannot ride the last app's PR, whi
 repository and cannot edit this file. An earlier draft of this paragraph said it could, which is
 the kind of sequencing instruction that reads fine and cannot be carried out.
 
-Conditions to check before opening that PR, none of which the checker can tell you:
+Conditions to check before opening that PR. The checker answers 2 and 4; nothing answers 1 or 3,
+which is why they are written down:
 
 1. Every app's **default branch** enumerates a directory named exactly `App` — read it with
    `os.listdir`, not `os.path.exists`, for the reason
    [Incidents §R16](docs/CONFORMANCE-INCIDENTS.md#the-case-check-earned-its-keep-on-the-first-migration)
-   records.
+   records. A migration branch passing proves nothing about the branch the apps' CI reads.
 2. The checker reports no pending R16 finding against those default branches, not against the
    migration branches.
-3. Each app's release path has been exercised without publishing — `verify_only: true` on the
-   reusable workflow, which is the only way to run it from a branch with no tag. clipmenu-2's Mac
-   App Store workflow is self-contained and has no such route; whatever evidence stands in for one
-   there should be recorded rather than assumed.
-4. No app has declared an §R11 exception for §R16. Until the flip, such an entry names a rule that
-   cannot fire — the phantom sanction
-   [Incidents §R11](docs/CONFORMANCE-INCIDENTS.md#the-five-phantom-sanctions) records — and after
-   it, one would need the reason and owner §R11 demands of any other.
+3. Every **migrated** release path has been exercised without publishing — `verify_only: true` on
+   the reusable workflow, the only way to run it from a branch with no tag. Two carve-outs:
+   yahoo-keykey-2 migrated nothing and has no such route to run, and clipmenu-2's Mac App Store
+   workflow is self-contained and has none either. Whatever evidence stands in for the MAS
+   assembler should be recorded rather than assumed.
+4. No app has declared an §R11 exception for §R16 — and note what such an entry does *now*, because
+   it is not nothing. R16 is computed while gated, so an app-wide exception suppresses the `pending`
+   line: `excuses("R16", "")` short-circuits the rule and the run goes quiet. That makes it
+   **premature rather than phantom** — the opposite of the
+   [five phantom sanctions](docs/CONFORMANCE-INCIDENTS.md#the-five-phantom-sanctions), which named
+   rules that never fired on the apps declaring them. An earlier draft of this line cited that
+   incident and had it backwards: the harm here is that the exception hides the one signal the
+   migration is steered by, not that it does nothing. Verified by declaring one against a
+   non-conforming fixture — the pending finding disappears.
 
 `Scripts/test_conformance.py` covers the flip itself: it runs the CLI from a copy of the checker
 with the constant rewritten and requires the same fixture to pass gated off and fail gated on, so
