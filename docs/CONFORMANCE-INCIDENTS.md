@@ -253,7 +253,8 @@ still a row that reads as a live sanction to the next person.
 suppressed its rule just as effectively while the run printed `NO REASON GIVEN` beside it and
 passed.
 
-`path` is validated for exactly the same reason, one field along. §R5, §R8, §R9 and §R12 consult
+`path` is validated for exactly the same reason, one field along. §R5, §R8, §R9, §R12 and §R16
+consult
 `excuses(rule, "")` and nothing else, so a path-scoped entry for one of them printed as a live,
 narrowly-scoped sanction on every run and suppressed nothing at all — the app still failed.
 
@@ -509,6 +510,31 @@ it is the first to meet the agent worktrees ice-2 and yahoo-keykey-2 keep at the
 first run reported keykey — which conforms exactly — six times for three files. A nested checkout
 is another working tree; it is detected by the `.git` entry `git worktree add` leaves, not by the
 directory's name, because the name is one repository's convention.
+
+### What the gated period was for, and what it cost
+
+The rule shipped reported-only, behind an `R16_ENFORCED` constant: findings printed as
+`pending R16 …` and changed no exit code. Four apps were non-conforming the day it merged, so
+enforcing on merge would have failed every open PR in four repositories over a layout none of them
+had. The alternative — merge the rule silently and switch it on later — is the failure this file
+exists to record, so the findings printed on every run instead, and the suite asserted both that
+they appeared and that the same findings *were* violations with the constant flipped.
+
+It held for one day. All five apps conformed on their default branches on 2026-08-17 and the gate
+came out rather than being set to `True`, because a switch nobody will flip again is dead
+configuration. Two things are worth keeping from it:
+
+- **The gate needed its own test, and the obvious one was insufficient.** The first version called
+  `rule_r16_bundle_inputs` directly, which proves the rule finds violations and says nothing about
+  whether `main()` still puts them in the exit code — the driver could have dropped them silently
+  with the whole suite green. Review caught it; a driver-level test replaced it, and deleting
+  `violations += pending` turned that one red and nothing else. If a rule is ever gated again,
+  test the wiring, not the rule.
+- **A gated rule cannot be excused.** While R16 could not fail a run, two reviewers read an §R11
+  exception for it in opposite ways — premature, or a phantom sanction — and both readings were
+  available, because the entry was accepted and suppressed only the `pending` line. Holding R16 out
+  of `EXCUSABLE_RULES` until the flip ended the ambiguity. Same lesson: an exception must either
+  suppress something real or be rejected.
 
 ### The case check earned its keep on the first migration
 
