@@ -697,8 +697,20 @@ private func world(_ existing: [URL: URL]) -> (URL) -> URL? {
 
             let rendered = String(format: format, appName)
             #expect(rendered.contains(appName), "\(language): the app name did not land")
-            #expect(Self.conversionDirectives(in: rendered).isEmpty, "\(language): a directive survived")
             #expect(!rendered.isEmpty)
+
+            // Checked as literal text, NOT by re-scanning. Rendered output is plain text, not a
+            // format string, and `conversionDirectives` is a printf parser: given the perfectly
+            // legitimate source `100%% certain, %1$@` it renders `100% certain, …`, in which the
+            // parser then reads `% c` — space flag, `c` conversion — as a directive and fails a
+            // string that is entirely correct. Feeding output back through an input parser is the
+            // bug; looking for the specifier's own spelling is what this ever meant to check.
+            for specifier in ["%1$@", "%2$@", "%@"] {
+                #expect(
+                    !rendered.contains(specifier),
+                    "\(language): \(specifier) was not consumed by formatting"
+                )
+            }
         }
     }
 
@@ -731,6 +743,36 @@ private func world(_ existing: [URL: URL]) -> (URL) -> URL? {
         #expect(scan("%%%1$@") == ["%1$@"], "an escape immediately before a directive")
         #expect(scan("%%%%") .isEmpty, "two escapes, no directives")
         #expect(scan("trailing %") == ["%"], "a lone trailing % is malformed, not absent")
+    }
+
+    /// `%%` end to end: accepted by the contract, and rendered as one literal percent.
+    ///
+    /// The scanner's `%%` support was previously only half true. It correctly declined to report
+    /// `%%` as a directive, so a translation containing `100%%` passed the contract — and then the
+    /// render test re-scanned the *output* and choked on it, so the support did not actually work
+    /// end to end. Both halves are asserted here.
+    @Test func anEscapedPercentIsAcceptedAndRendersAsOneLiteralPercent() {
+        let format = "100%% certain, %1$@"
+
+        #expect(
+            BlockedDuplicatesFormatTests.conversionDirectives(in: format).sorted()
+                == BlockedDuplicatesFormatTests.permitted,
+            "an escaped percent must not count against the one-directive contract"
+        )
+        #expect(String(format: format, "Dragon Sample App") == "100% certain, Dragon Sample App")
+    }
+
+    /// Why rendered output is never fed back through the scanner, pinned so nobody reintroduces
+    /// it: in plain text a literal percent followed by a space and a letter is indistinguishable
+    /// from a directive to any printf parser, and this one duly reads `% c`.
+    @Test func renderedTextMustNotBeReparsedAsAFormatString() {
+        let rendered = String(format: "100%% certain, %1$@", "Dragon Sample App")
+
+        #expect(rendered == "100% certain, Dragon Sample App")
+        #expect(
+            BlockedDuplicatesFormatTests.conversionDirectives(in: rendered) == ["% c"],
+            "this is exactly the false positive that makes re-scanning output wrong"
+        )
     }
 
     /// The mutation the reviewer used, asserted as a permanent guard: a stray directive fails the
