@@ -119,6 +119,14 @@ public enum DragonUninstaller {
     /// `canonicalize` returns the resolved URL for a bundle that exists and `nil` for one that
     /// does not, which is what makes dead LaunchServices records — this machine held 19 for a
     /// single live copy — incapable of blocking an uninstall.
+    ///
+    /// **What this covers, exactly.** The candidates are the running bundle, the copies
+    /// LaunchServices has registered, and the copies currently running. It cannot prove that no
+    /// unlaunched, unregistered same-identity bundle exists somewhere on disk: a copy that was
+    /// built and never opened, restored from a backup, or unpacked into a folder macOS has not
+    /// indexed is invisible to every API here, and only a whole-disk scan would see it — which
+    /// is not a thing an uninstall may do. So this closes the reachable cases, not the set of
+    /// all conceivable ones.
     nonisolated static func preflight(
         configBundleID: String,
         actualBundleID: String?,
@@ -134,12 +142,21 @@ public enum DragonUninstaller {
             return .identityUnverified
         }
 
-        // The running bundle first and unconditionally: discovery can omit a copy that was
-        // launched directly by path, and "discovery returned nothing" must never read as
-        // "there are no copies".
-        var seen = Set<URL>()
-        var copies: [URL] = []
-        for url in [currentBundleURL] + discoveredCopies {
+        // The running bundle is resolved separately and is mandatory. Folding it in with the
+        // discovered URLs let a failure to canonicalize it be *skipped* like any other dead
+        // path, and the count could then reach zero — a fail-open branch inside a decision
+        // whose whole purpose is failing closed. A bundle that cannot be resolved to a path on
+        // disk cannot be compared against anything, so it authorises nothing.
+        guard let current = canonicalize(currentBundleURL) else {
+            return .identityUnverified
+        }
+
+        // Seeded with the current bundle, so "discovery returned nothing" can never read as
+        // "there are no copies" — discovery legitimately omits copies, which is why it is not
+        // trusted as the whole picture.
+        var seen: Set<URL> = [current]
+        var copies: [URL] = [current]
+        for url in discoveredCopies {
             guard let canonical = canonicalize(url) else { continue }
             if seen.insert(canonical).inserted { copies.append(canonical) }
         }
@@ -150,6 +167,43 @@ public enum DragonUninstaller {
             return .duplicateCopies(copies.sorted { $0.path < $1.path })
         }
         return .proceed
+    }
+
+    /// The production canonicalization behind ``preflight(…)``: one bundle reachable by several
+    /// names resolves to one path, and a path that no longer exists resolves to nothing.
+    ///
+    /// Finder alias files are resolved explicitly, before symlinks. An alias is not a symlink —
+    /// it is a regular file whose contents are a bookmark — so `resolvingSymlinksInPath()` does
+    /// not follow one, and alone it would have counted an alias pointing at the running bundle
+    /// as a *second* copy and blocked a legitimate uninstall.
+    ///
+    /// Existence is checked last, on the fully resolved path, because that is what demotes a
+    /// dead LaunchServices record to something incapable of blocking an uninstall.
+    nonisolated static func canonicalBundleURL(_ url: URL) -> URL? {
+        let dealiased = (try? URL(resolvingAliasFileAt: url, options: [.withoutUI])) ?? url
+        let resolved = dealiased.resolvingSymlinksInPath().standardizedFileURL
+        return FileManager.default.fileExists(atPath: resolved.path) ? resolved : nil
+    }
+
+    /// Every same-identity bundle the system will admit to, from both directories that know.
+    ///
+    /// LaunchServices is not sufficient on its own: a copy built independently under `.build`
+    /// was absent from `urlsForApplications(withBundleIdentifier:)` *while it was running*, and
+    /// `NSRunningApplication` found it. A running duplicate is the case that matters most — it
+    /// is the one actively holding the shared defaults open — so missing it would have left the
+    /// hazard in place exactly when it is realest.
+    /// Both sources are parameters so the case that motivated the second one — registered comes
+    /// back empty, running does not — is reachable from a test without launching an app.
+    nonisolated static func discoverBundleCopies(
+        withIdentifier identifier: String,
+        registered: (String) -> [URL] = {
+            NSWorkspace.shared.urlsForApplications(withBundleIdentifier: $0)
+        },
+        running: (String) -> [URL] = {
+            NSRunningApplication.runningApplications(withBundleIdentifier: $0).compactMap(\.bundleURL)
+        }
+    ) -> [URL] {
+        registered(identifier) + running(identifier)
     }
 
     private static let logger = Logger(subsystem: "com.dragonapp.DragonKit", category: "Uninstall")
@@ -180,17 +234,8 @@ public enum DragonUninstaller {
                     // disagreeing is itself a stop, and querying the configured id would search
                     // for copies of a bundle this process has not shown itself to be. An absent
                     // id short-circuits to `.identityUnverified` without a query at all.
-                    discoveredCopies: actual.map {
-                        NSWorkspace.shared.urlsForApplications(withBundleIdentifier: $0)
-                    } ?? [],
-                    canonicalize: { url in
-                        // Resolving symlinks collapses the Caskroom's staged symlink and any
-                        // alias onto one path, so a single bundle reachable by several names
-                        // counts once. Existence is what demotes a dead LaunchServices record
-                        // to something that cannot block an uninstall.
-                        let resolved = url.resolvingSymlinksInPath().standardizedFileURL
-                        return FileManager.default.fileExists(atPath: resolved.path) ? resolved : nil
-                    }
+                    discoveredCopies: actual.map { discoverBundleCopies(withIdentifier: $0) } ?? [],
+                    canonicalize: canonicalBundleURL
                 )
             },
             reportBlocked: { decision in
@@ -218,7 +263,12 @@ public enum DragonUninstaller {
         scheduleCleanup: @escaping @MainActor ([URL], String?) -> Void,
         reportFailure: @escaping @MainActor (_ appName: String, _ reason: String) -> Void,
         preflight: @MainActor () -> UninstallPreflight,
-        reportBlocked: @MainActor (UninstallPreflight) -> Void
+        reportBlocked: @MainActor (UninstallPreflight) -> Void,
+        // Defaulted rather than threaded through every call site: the only reason it is a
+        // parameter at all is that disabling the login item is the *first* destructive step, so
+        // "a blocked run does not reach it" is the assertion that proves the gate is genuinely
+        // in front of the teardown rather than merely in front of the parts that were injected.
+        setLoginItemEnabled: (Bool) -> Void = LoginItem.setEnabled
     ) {
         // First, and before anything that cannot be undone. Every step below this line is keyed
         // on the bundle identity rather than on this bundle's path, so they are only correct
@@ -230,7 +280,7 @@ public enum DragonUninstaller {
             return
         }
 
-        LoginItem.setEnabled(false)
+        setLoginItemEnabled(false)
 
         let fileManager = FileManager.default
 
@@ -328,9 +378,10 @@ public enum DragonUninstaller {
         case .proceed:
             return
         case .identityUnverified:
+            // Identifiers are public; the bundle path is not — see the duplicate case below.
             logger.error(
                 """
-                Uninstall blocked: running bundle \(Bundle.main.bundleURL.path, privacy: .public) \
+                Uninstall blocked: running bundle \(Bundle.main.bundleURL.path, privacy: .private) \
                 reports id \(Bundle.main.bundleIdentifier ?? "<none>", privacy: .public), \
                 configured id is \(config.bundleID, privacy: .public)
                 """
@@ -340,24 +391,86 @@ public enum DragonUninstaller {
                 format: L("DragonKit.uninstall.blockedIdentityMessage"), config.appName
             )
         case .duplicateCopies(let urls):
+            // The count is public; the paths are not. A full bundle path contains the account
+            // name and whatever the user called their folders, and OSLog `.public` is what puts
+            // a string into sysdiagnose archives and anything else collecting the log.
             logger.error(
                 """
                 Uninstall blocked: \(urls.count, privacy: .public) bundles share id \
                 \(config.bundleID, privacy: .public) — \
-                \(urls.map(\.path).joined(separator: ", "), privacy: .public)
+                \(urls.map(\.path).joined(separator: ", "), privacy: .private)
                 """
             )
             alert.messageText = L("DragonKit.uninstall.blockedDuplicatesTitle")
             alert.informativeText = String(
-                format: L("DragonKit.uninstall.blockedDuplicatesMessage"),
-                config.appName,
-                urls.map(\.path).joined(separator: "\n")
+                format: L("DragonKit.uninstall.blockedDuplicatesMessage"), config.appName
             )
+            // The paths go in a bounded, scrollable accessory rather than in `informativeText`.
+            // NSAlert grows to fit its text without limit: 42 paths measured 1640pt tall and 100
+            // measured 3496pt, which is an alert taller than the display with its buttons off
+            // screen — unusable exactly when the user most needs to read it. Nothing is dropped;
+            // the list scrolls and stays selectable so it can be copied.
+            alert.accessoryView = duplicateCopyAccessory(urls)
         }
 
         alert.addButton(withTitle: L("DragonKit.ok"))
         if let icon = NSApp.applicationIconImage { alert.icon = icon }
         alert.runModal()
+    }
+
+    /// How a discovered copy's path is shown: the user's home abbreviated to `~`.
+    ///
+    /// Every row of this list starts `/Users/<account name>/` otherwise, which is both the least
+    /// informative part of the path and the part that pushes the part that distinguishes one
+    /// copy from another off the readable width.
+    nonisolated static func displayPath(_ url: URL) -> String {
+        (url.path as NSString).abbreviatingWithTildeInPath
+    }
+
+    /// The complete list, one path per line. Never truncated — the accessory scrolls instead,
+    /// because a user told "there is another copy" cannot act on it without being told which.
+    nonisolated static func duplicateCopyList(_ urls: [URL]) -> String {
+        urls.map(displayPath).joined(separator: "\n")
+    }
+
+    /// Height of the path list, bounded regardless of how many copies were found.
+    ///
+    /// The bound is the whole point: an unbounded NSAlert with 100 paths measured 3496pt, taller
+    /// than any display, with its buttons off screen. Small lists still shrink to fit, so the
+    /// ordinary two-copy case does not get a mostly-empty scroll box.
+    nonisolated static func duplicateCopyListHeight(lineCount: Int) -> CGFloat {
+        let lineHeight: CGFloat = 15
+        let padding: CGFloat = 8
+        let natural = CGFloat(max(lineCount, 1)) * lineHeight + padding
+        return min(max(natural, 34), 150)
+    }
+
+    /// Internal rather than private so a test can assert the assembled view is actually bounded,
+    /// not merely that the arithmetic feeding it is.
+    static func duplicateCopyAccessory(_ urls: [URL]) -> NSScrollView {
+        let width: CGFloat = 380
+        let height = duplicateCopyListHeight(lineCount: urls.count)
+
+        let textView = NSTextView(frame: NSRect(x: 0, y: 0, width: width, height: height))
+        textView.string = duplicateCopyList(urls)
+        textView.isEditable = false
+        // Selectable on purpose: the actionable next step is to go and move one of these, and
+        // retyping a path by hand off an alert is how the wrong one gets moved.
+        textView.isSelectable = true
+        textView.drawsBackground = false
+        textView.font = .monospacedSystemFont(ofSize: NSFont.smallSystemFontSize, weight: .regular)
+        textView.textContainerInset = NSSize(width: 4, height: 4)
+        textView.isVerticallyResizable = true
+        textView.isHorizontallyResizable = false
+        textView.textContainer?.widthTracksTextView = true
+
+        let scrollView = NSScrollView(frame: NSRect(x: 0, y: 0, width: width, height: height))
+        scrollView.documentView = textView
+        scrollView.hasVerticalScroller = true
+        scrollView.autohidesScrollers = true
+        scrollView.borderType = .bezelBorder
+        scrollView.drawsBackground = false
+        return scrollView
     }
 
     /// Preference plists (one per wiped domain — the bundle id and each settings suite) plus

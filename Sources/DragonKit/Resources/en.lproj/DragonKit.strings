@@ -57,7 +57,7 @@
 "DragonKit.uninstall.failedTitle" = "Uninstall Incomplete";
 "DragonKit.uninstall.failedMessage" = "%@ could not be moved to the Trash. Its settings and login item have been removed, but the app is still installed — move it to the Trash yourself.";
 "DragonKit.uninstall.blockedDuplicatesTitle" = "More Than One Copy Installed";
-"DragonKit.uninstall.blockedDuplicatesMessage" = "Nothing was removed. More than one copy of %1$@ is installed, and they share the same settings, login item and support files — so uninstalling from here could delete the other copy's data too.\n\nMove the copies you don't want to the Trash, leave only the one you mean to uninstall, then try again. Quitting the other copy is not enough.\n\nCopies found:\n%2$@";
+"DragonKit.uninstall.blockedDuplicatesMessage" = "Nothing was removed. More than one copy of %1$@ is installed, and they share the same settings, login item and support files — so uninstalling from here could delete the other copy's data too.\n\nMove the copies you don't want to the Trash, leave only the one you mean to uninstall, then try again. Quitting the other copy is not enough.\n\nCopies found:";
 "DragonKit.uninstall.blockedIdentityTitle" = "Uninstall Unavailable";
 "DragonKit.uninstall.blockedIdentityMessage" = "Nothing was removed. %@ could not safely confirm its own identity, so it will not delete settings or files that may belong to another copy. Reinstall the app from its original source and try again.";
 

@@ -57,7 +57,7 @@
 "DragonKit.uninstall.failedTitle" = "제거가 완료되지 않음";
 "DragonKit.uninstall.failedMessage" = "%@을(를) 휴지통으로 옮기지 못했습니다. 설정과 로그인 항목은 삭제되었지만 앱은 아직 설치되어 있습니다. 직접 휴지통으로 옮기세요.";
 "DragonKit.uninstall.blockedDuplicatesTitle" = "복사본이 여러 개 설치되어 있습니다";
-"DragonKit.uninstall.blockedDuplicatesMessage" = "아무것도 삭제되지 않았습니다. %1$@ 복사본이 여러 개 설치되어 있으며 설정, 로그인 항목, 지원 파일을 공유합니다. 여기서 제거하면 다른 복사본의 데이터까지 지워질 수 있습니다.\n\n필요 없는 복사본을 휴지통으로 옮기고 제거하려는 것만 남긴 다음 다시 시도하십시오. 다른 복사본을 종료하는 것만으로는 충분하지 않습니다.\n\n발견된 복사본:\n%2$@";
+"DragonKit.uninstall.blockedDuplicatesMessage" = "아무것도 삭제되지 않았습니다. %1$@ 복사본이 여러 개 설치되어 있으며 설정, 로그인 항목, 지원 파일을 공유합니다. 여기서 제거하면 다른 복사본의 데이터까지 지워질 수 있습니다.\n\n필요 없는 복사본을 휴지통으로 옮기고 제거하려는 것만 남긴 다음 다시 시도하십시오. 다른 복사본을 종료하는 것만으로는 충분하지 않습니다.\n\n발견된 복사본:";
 "DragonKit.uninstall.blockedIdentityTitle" = "제거할 수 없음";
 "DragonKit.uninstall.blockedIdentityMessage" = "아무것도 삭제되지 않았습니다. %@이(가) 자신의 식별 정보를 안전하게 확인할 수 없어 다른 복사본에 속할 수 있는 설정이나 파일을 삭제하지 않습니다. 원래 출처에서 다시 설치한 후 시도하십시오.";
 

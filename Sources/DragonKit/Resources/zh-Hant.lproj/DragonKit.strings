@@ -57,7 +57,7 @@
 "DragonKit.uninstall.failedTitle" = "解除安裝未完成";
 "DragonKit.uninstall.failedMessage" = "無法將 %@ 移到垃圾桶。它的設定和登入項目已被移除，但 App 本身仍未刪除——請你自行將它移到垃圾桶。";
 "DragonKit.uninstall.blockedDuplicatesTitle" = "已安裝多個副本";
-"DragonKit.uninstall.blockedDuplicatesMessage" = "未移除任何項目。你的電腦上安裝了多個 %1$@ 副本，它們共用同一套設定、登入項目和支援檔案——從這裡解除安裝可能會連同另一個副本的資料一起刪除。\n\n請把不需要的副本移到垃圾桶，只保留你要解除安裝的那一個，然後再試一次。只是結束另一個副本並不足夠。\n\n找到的副本：\n%2$@";
+"DragonKit.uninstall.blockedDuplicatesMessage" = "未移除任何項目。你的電腦上安裝了多個 %1$@ 副本，它們共用同一套設定、登入項目和支援檔案——從這裡解除安裝可能會連同另一個副本的資料一起刪除。\n\n請把不需要的副本移到垃圾桶，只保留你要解除安裝的那一個，然後再試一次。只是結束另一個副本並不足夠。\n\n找到的副本：";
 "DragonKit.uninstall.blockedIdentityTitle" = "無法解除安裝";
 "DragonKit.uninstall.blockedIdentityMessage" = "未移除任何項目。%@ 無法安全確認自身的身分，因此不會刪除可能屬於其他副本的設定或檔案。請從原始來源重新安裝後再試。";
 
