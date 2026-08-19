@@ -56,6 +56,10 @@
 "DragonKit.uninstall.confirm" = "Désinstaller";
 "DragonKit.uninstall.failedTitle" = "Désinstallation incomplète";
 "DragonKit.uninstall.failedMessage" = "Impossible de placer %@ dans la Corbeille. Ses réglages et son élément d’ouverture ont été supprimés, mais l’app est toujours installée : placez-la vous-même dans la Corbeille.";
+"DragonKit.uninstall.blockedDuplicatesTitle" = "Plusieurs copies sont installées";
+"DragonKit.uninstall.blockedDuplicatesMessage" = "Rien n'a été supprimé. Plusieurs copies de %1$@ sont installées et partagent les mêmes réglages, le même élément d'ouverture et les mêmes fichiers de support : désinstaller ici risquerait d'effacer aussi les données de l'autre copie.\n\nPlacez dans la corbeille les copies dont vous ne voulez pas, ne gardez que celle à désinstaller, puis réessayez. Quitter l'autre copie ne suffit pas.\n\nCopies trouvées :";
+"DragonKit.uninstall.blockedIdentityTitle" = "Désinstallation indisponible";
+"DragonKit.uninstall.blockedIdentityMessage" = "Rien n'a été supprimé. %@ n'a pas pu confirmer son identité de manière sûre et ne supprimera donc ni réglages ni fichiers susceptibles d'appartenir à une autre copie. Réinstallez l'app depuis sa source d'origine, puis réessayez.";
 
 "DragonKit.updates.upToDate.title" = "%@ est à jour";
 "DragonKit.updates.upToDate.message" = "%@ est actuellement la version la plus récente disponible.";

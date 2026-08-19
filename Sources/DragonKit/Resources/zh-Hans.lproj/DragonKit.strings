@@ -56,6 +56,10 @@
 "DragonKit.uninstall.confirm" = "卸载";
 "DragonKit.uninstall.failedTitle" = "卸载未完成";
 "DragonKit.uninstall.failedMessage" = "无法将 %@ 移到废纸篓。它的设置和登录项已被移除，但应用本身仍未删除——请你自行将它移到废纸篓。";
+"DragonKit.uninstall.blockedDuplicatesTitle" = "已安装多个副本";
+"DragonKit.uninstall.blockedDuplicatesMessage" = "未删除任何内容。你的电脑上安装了多个 %1$@ 副本，它们共用同一套设置、登录项和支持文件——从这里卸载可能会连同另一个副本的数据一起删掉。\n\n请把不需要的副本移到废纸篓，只保留你要卸载的那一个，然后重试。仅仅退出另一个副本是不够的。\n\n找到的副本：";
+"DragonKit.uninstall.blockedIdentityTitle" = "无法卸载";
+"DragonKit.uninstall.blockedIdentityMessage" = "未删除任何内容。%@ 无法安全确认自身身份，因此不会删除可能属于其他副本的设置或文件。请从原始来源重新安装后再试。";
 
 "DragonKit.updates.upToDate.title" = "%@ 已是最新版本";
 "DragonKit.updates.upToDate.message" = "%@ 是当前可用的最新版本。";

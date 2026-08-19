@@ -223,7 +223,12 @@ import Foundation
             reportFailure: { _, reason in
                 effects.order.append("failure")
                 effects.failureReason = reason
-            }
+            },
+            // These suites are about what happens once an uninstall is allowed to run, so the
+            // gate is held open. It is recorded rather than ignored: were it ever to close here,
+            // every ordering assertion below would otherwise pass vacuously on an empty run.
+            preflight: { .proceed },
+            reportBlocked: { _ in effects.order.append("blocked") }
         )
         await effects.settle()
         return effects

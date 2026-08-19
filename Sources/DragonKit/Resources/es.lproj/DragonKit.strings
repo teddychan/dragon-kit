@@ -56,6 +56,10 @@
 "DragonKit.uninstall.confirm" = "Desinstalar";
 "DragonKit.uninstall.failedTitle" = "Desinstalación incompleta";
 "DragonKit.uninstall.failedMessage" = "No se ha podido mover %@ a la Papelera. Se han eliminado sus ajustes y su ítem de inicio de sesión, pero la app sigue instalada; muévela tú a la Papelera.";
+"DragonKit.uninstall.blockedDuplicatesTitle" = "Hay más de una copia instalada";
+"DragonKit.uninstall.blockedDuplicatesMessage" = "No se eliminó nada. Hay más de una copia de %1$@ instalada y todas comparten los mismos ajustes, el mismo elemento de inicio y los mismos archivos de soporte, así que desinstalar desde aquí podría borrar también los datos de la otra copia.\n\nMueve a la Papelera las copias que no quieras, deja solo la que quieres desinstalar y vuelve a intentarlo. No basta con cerrar la otra copia.\n\nCopias encontradas:";
+"DragonKit.uninstall.blockedIdentityTitle" = "Desinstalación no disponible";
+"DragonKit.uninstall.blockedIdentityMessage" = "No se eliminó nada. %@ no pudo confirmar su propia identidad de forma segura, así que no eliminará ajustes ni archivos que podrían pertenecer a otra copia. Vuelve a instalar la app desde su origen original e inténtalo de nuevo.";
 
 "DragonKit.updates.upToDate.title" = "%@ está actualizado";
 "DragonKit.updates.upToDate.message" = "%@ es actualmente la versión más reciente disponible.";

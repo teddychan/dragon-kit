@@ -56,6 +56,10 @@
 "DragonKit.uninstall.confirm" = "アンインストール";
 "DragonKit.uninstall.failedTitle" = "アンインストールが完了しませんでした";
 "DragonKit.uninstall.failedMessage" = "%@をゴミ箱に移動できませんでした。設定とログイン項目は削除されましたが、アプリはまだインストールされています。ご自身でゴミ箱に移動してください。";
+"DragonKit.uninstall.blockedDuplicatesTitle" = "コピーが複数インストールされています";
+"DragonKit.uninstall.blockedDuplicatesMessage" = "何も削除されていません。%1$@ のコピーが複数インストールされており、設定・ログイン項目・サポートファイルを共有しています。ここからアンインストールすると、別のコピーのデータまで消えるおそれがあります。\n\n不要なコピーをゴミ箱に移動し、アンインストールしたいものだけを残してから、もう一度お試しください。別のコピーを終了するだけでは足りません。\n\n見つかったコピー：";
+"DragonKit.uninstall.blockedIdentityTitle" = "アンインストールできません";
+"DragonKit.uninstall.blockedIdentityMessage" = "何も削除されていません。%@は自身の識別情報を安全に確認できなかったため、別のコピーに属する可能性のある設定やファイルを削除しません。元の入手元からインストールし直してからお試しください。";
 
 "DragonKit.updates.upToDate.title" = "%@ は最新です";
 "DragonKit.updates.upToDate.message" = "%@ が現在利用可能な最新バージョンです。";
