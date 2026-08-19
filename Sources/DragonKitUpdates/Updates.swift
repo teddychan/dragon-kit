@@ -118,19 +118,32 @@ private final class DragonUserDriverDelegate: NSObject, SPUStandardUserDriverDel
 /// ad-hoc dev build may not embed; deferring keeps launch safe. Ported from ice-2's
 /// `UpdatesController`, extended to expose the settings the pane binds and to reskin the
 /// "no update found" alert via ``DragonUpdaterUserDriver``.
+///
+/// A bundle stamped `DragonBuildChannel = Debug` never gets an `SPUUpdater` at all — see
+/// ``updatingIsAvailable``.
 @MainActor
 public final class DragonUpdater: ObservableObject {
     private var updaterInstance: SPUUpdater?
     private var userDriver: DragonUpdaterUserDriver?
     private let config: DragonUpdaterConfig
+    /// Whether this build may run Sparkle at all; false for a local Debug build.
+    private let updatingIsAllowed: Bool
     /// Retained for the updater's lifetime — Sparkle holds the delegate weakly.
     private var driverDelegate: DragonUserDriverDelegate?
     /// Retained so the KVO registration lives as long as the updater does; releasing it
     /// invalidates the observation.
     private var lastCheckObservation: NSKeyValueObservation?
 
-    public init(config: DragonUpdaterConfig = DragonUpdaterConfig()) {
+    public convenience init(config: DragonUpdaterConfig = DragonUpdaterConfig()) {
+        self.init(config: config, updatingIsAllowed: !DragonAbout.isDebugBuild())
+    }
+
+    /// The test seam for the Debug-build gate: `isDebugBuild()` reads `Bundle.main`, which under
+    /// `swift test` is the test runner and can never carry a build channel, so the disallowed
+    /// path is unreachable from a test unless the decision itself is injectable.
+    init(config: DragonUpdaterConfig, updatingIsAllowed: Bool) {
         self.config = config
+        self.updatingIsAllowed = updatingIsAllowed
     }
 
     /// Force Sparkle to initialize and begin its scheduled-check timer. Without this the
@@ -142,6 +155,7 @@ public final class DragonUpdater: ObservableObject {
     }
 
     private var updater: SPUUpdater? {
+        guard updatingIsAllowed else { return nil }
         guard Bundle.main.bundleIdentifier != nil else { return nil }
         if updaterInstance == nil {
             let delegate = DragonUserDriverDelegate(config: config)
@@ -179,6 +193,25 @@ public final class DragonUpdater: ObservableObject {
                 MainActor.assumeIsolated { self?.objectWillChange.send() }
             }
     }
+
+    /// Whether this build has a working updater at all — false in a local Debug build, and false
+    /// when Sparkle refuses to start (no bundle identifier, XPC services missing from the
+    /// framework). ``UpdatesSettingsPane`` disables its whole form on this.
+    ///
+    /// The Debug half of that is kit-side rather than app-side because the pane is kit-owned and
+    /// binds this object directly: ice-2 and clipmenu-2 each wrote their own `updatingIsDisabled`
+    /// / `isSupported` guard, and the pane's first read of ``canCheckForUpdates`` walked straight
+    /// past both and started Sparkle anyway. Measured 2026-08-18 at 4.1.0: all three debug builds
+    /// that had been launched — spectacle-2, clipmenu-2, ice-2 — had `SUHasLaunchedBefore = 1` in
+    /// their `.debug` domain, and the pane's button was live. Deleting `SUFeedURL` from the debug
+    /// bundle does not disable it: `-[SPUUpdater startUpdater:]` passes `requireFeedURL:NO` and
+    /// has since Sparkle 2.0.0, so the check ran and raised Sparkle's raw developer error
+    /// ("You must specify the URL of the appcast as the SUFeedURL key…") at the user. Four repos'
+    /// debug scripts documented the opposite mechanism for months.
+    ///
+    /// The pane goes inert rather than absent: CONFORMANCE §R9 owns its place in the sidebar, and
+    /// a Debug build whose sidebar differs from the release build's is the one build nobody tests.
+    public var updatingIsAvailable: Bool { updater != nil }
 
     /// Whether an update check can currently run.
     public var canCheckForUpdates: Bool { updater?.canCheckForUpdates ?? false }
@@ -256,6 +289,11 @@ private struct UpdatesPaneView: View {
                 }
             }
         }
+        // One modifier for the whole form, not per control: with no updater the toggles read
+        // false and their setters no-op, so an enabled toggle would flip under the pointer and
+        // snap back. The button keeps its own `.disabled` above for the narrower case — an
+        // updater that exists but is mid-check.
+        .disabled(!updater.updatingIsAvailable)
     }
 
     private var lastCheckedText: String {
