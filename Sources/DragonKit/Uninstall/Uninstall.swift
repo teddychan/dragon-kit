@@ -177,10 +177,27 @@ public enum DragonUninstaller {
     /// not follow one, and alone it would have counted an alias pointing at the running bundle
     /// as a *second* copy and blocked a legitimate uninstall.
     ///
+    /// Whether the URL *is* an alias is asked first, rather than inferred from resolution
+    /// failing. `(try? URL(resolvingAliasFileAt:)) ?? url` cannot tell "not an alias, keep the
+    /// original" from "an alias whose target is gone", and it answered the first for both: a
+    /// stale alias fell back to the alias file, which still exists, passed the check below and
+    /// counted as a live copy. One forgotten alias in a folder would then block a legitimate
+    /// single-copy uninstall permanently — the exact failure this gate exists to prevent, caused
+    /// by the gate. So a stale alias resolves to nothing, like any other dead record.
+    ///
     /// Existence is checked last, on the fully resolved path, because that is what demotes a
     /// dead LaunchServices record to something incapable of blocking an uninstall.
     nonisolated static func canonicalBundleURL(_ url: URL) -> URL? {
-        let dealiased = (try? URL(resolvingAliasFileAt: url, options: [.withoutUI])) ?? url
+        let dealiased: URL
+        if (try? url.resourceValues(forKeys: [.isAliasFileKey]))?.isAliasFile == true {
+            guard let target = try? URL(resolvingAliasFileAt: url, options: [.withoutUI]) else {
+                return nil
+            }
+            dealiased = target
+        } else {
+            dealiased = url
+        }
+
         let resolved = dealiased.resolvingSymlinksInPath().standardizedFileURL
         return FileManager.default.fileExists(atPath: resolved.path) ? resolved : nil
     }

@@ -398,6 +398,52 @@ private func world(_ existing: [URL: URL]) -> (URL) -> URL? {
         }
     }
 
+    /// A symlink in a *parent* directory, not on the bundle itself. `/var` → `/private/var` is
+    /// this shape and every temporary directory on macOS sits under it, so the counting has to
+    /// fold both spellings together or every scratch-built copy would look like two.
+    @Test func aSymlinkedParentDirectoryResolvesToTheSameBundle() throws {
+        try withScratch { scratch, bundle in
+            let realParent = scratch.appending(path: "real")
+            let movedBundle = realParent.appending(path: "Dragon Sample App.app")
+            try FileManager.default.createDirectory(at: movedBundle, withIntermediateDirectories: true)
+
+            let linkedParent = scratch.appending(path: "linked")
+            try FileManager.default.createSymbolicLink(at: linkedParent, withDestinationURL: realParent)
+            let viaLinkedParent = linkedParent.appending(path: "Dragon Sample App.app")
+
+            let direct = try #require(DragonUninstaller.canonicalBundleURL(movedBundle))
+            let indirect = try #require(DragonUninstaller.canonicalBundleURL(viaLinkedParent))
+            #expect(indirect == direct)
+            _ = bundle
+        }
+    }
+
+    /// An alias whose target is gone is a dead application record and must resolve to nothing.
+    ///
+    /// The first version of the helper could not tell the two failure shapes apart. It did
+    /// `(try? URL(resolvingAliasFileAt:)) ?? url`, so a *stale* alias — resolution fails, the
+    /// alias file itself still exists — fell back to the alias file, passed the existence check,
+    /// and counted as a live copy. One forgotten alias left behind in a folder would then have
+    /// blocked a legitimate single-copy uninstall for good, which is the opposite of the failure
+    /// this whole gate exists to prevent.
+    @Test func anAliasWhoseTargetIsGoneResolvesToNothing() throws {
+        try withScratch { scratch, bundle in
+            let alias = scratch.appending(path: "Alias To App.app")
+            let bookmark = try bundle.bookmarkData(
+                options: .suitableForBookmarkFile,
+                includingResourceValuesForKeys: nil,
+                relativeTo: nil
+            )
+            try URL.writeBookmarkData(bookmark, to: alias)
+
+            // The target goes; the alias file stays. That gap is the whole bug.
+            try FileManager.default.removeItem(at: bundle)
+            #expect(FileManager.default.fileExists(atPath: alias.path), "the alias file itself remains")
+
+            #expect(DragonUninstaller.canonicalBundleURL(alias) == nil)
+        }
+    }
+
     @Test func aPathThatDoesNotExistResolvesToNothing() throws {
         try withScratch { scratch, _ in
             let missing = scratch.appending(path: "Never Existed.app")
@@ -540,5 +586,62 @@ private func world(_ existing: [URL: URL]) -> (URL) -> URL? {
     @MainActor @Test func theOrdinaryTwoCopyCaseIsCompact() {
         let accessory = DragonUninstaller.duplicateCopyAccessory([installed, localBuild])
         #expect(accessory.frame.height < 150)
+    }
+}
+
+/// The format contract of the blocked-duplicates message, in every shipped locale.
+///
+/// The message took two arguments until the path list moved into a scrollable accessory; the
+/// trailing `%2$@` was then removed from all seven files. Nothing committed protected the new
+/// one-argument shape, and the failure it guards against is silent in the worst way: `String`
+/// formatting with a specifier that has no matching argument does not throw, it renders garbage
+/// or drops the text, and only in the locale that still carries the stale specifier — so it
+/// would ship to exactly the users least able to report it.
+@Suite struct BlockedDuplicatesFormatTests {
+    private static let key = "DragonKit.uninstall.blockedDuplicatesMessage"
+    private static let languages = ["en", "es", "fr", "ja", "ko", "zh-Hans", "zh-Hant"]
+
+    /// Same loading path as `LocalizationTests.allLanguagesDefineTheSameKeys`, so this reads the
+    /// shipped `.strings` rather than whatever the test host's language happens to be.
+    @MainActor private func message(_ language: String) throws -> String {
+        let bundle = try #require(
+            LocalizationManager.lprojBundle(language, in: .module),
+            "missing \(language).lproj"
+        )
+        let url = try #require(bundle.url(forResource: "DragonKit", withExtension: "strings"))
+        let dict = try #require(NSDictionary(contentsOf: url) as? [String: String])
+        return try #require(dict[Self.key], "\(language) is missing \(Self.key)")
+    }
+
+    @MainActor @Test func everyLocaleTakesExactlyOneArgument() throws {
+        for language in Self.languages {
+            let format = try message(language)
+
+            #expect(
+                format.components(separatedBy: "%1$@").count - 1 == 1,
+                "\(language): expected exactly one %1$@"
+            )
+            #expect(
+                !format.contains("%2$@"),
+                "\(language): %2$@ is stale — the paths are rendered by the alert's accessory now"
+            )
+            // A bare `%@` alongside a positional one would consume the argument twice over.
+            #expect(
+                format.replacingOccurrences(of: "%1$@", with: "").range(of: "%@") == nil,
+                "\(language): no bare %@ may be mixed in with the positional specifier"
+            )
+        }
+    }
+
+    @MainActor @Test func everyLocaleRendersCleanlyWithOneAppName() throws {
+        let appName = "Dragon Sample App"
+        for language in Self.languages {
+            let rendered = String(format: try message(language), appName)
+
+            #expect(rendered.contains(appName), "\(language): the app name did not land")
+            #expect(!rendered.contains("%1$@"), "\(language): an unconsumed specifier survived")
+            #expect(!rendered.contains("%2$@"), "\(language): an unconsumed specifier survived")
+            #expect(!rendered.isEmpty)
+        }
     }
 }
