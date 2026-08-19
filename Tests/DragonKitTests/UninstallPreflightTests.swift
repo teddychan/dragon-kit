@@ -613,22 +613,71 @@ private func world(_ existing: [URL: URL]) -> (URL) -> URL? {
         return try #require(dict[Self.key], "\(language) is missing \(Self.key)")
     }
 
-    @MainActor @Test func everyLocaleTakesExactlyOneArgument() throws {
-        for language in Self.languages {
-            let format = try message(language)
+    /// The one shape this message is allowed to have: a single positional object argument.
+    private static let permitted = ["%1$@"]
 
+    /// Every printf conversion directive in `format`, in the order they appear, with `%%`
+    /// escapes consumed rather than reported.
+    ///
+    /// A scanner rather than a set of `contains` checks, because the checks this replaced were a
+    /// deny-list: they rejected `%2$@` and a bare `%@` and silently accepted everything else, so
+    /// `%2$d` passed. Enumerating what *is* there and comparing against the permitted multiset
+    /// cannot have that hole — anything unlisted fails by default.
+    ///
+    /// A malformed trailing `%` is reported as `"%"` rather than skipped, so it fails the
+    /// contract instead of looking like a string with no directives at all.
+    static func conversionDirectives(in format: String) -> [String] {
+        let characters = Array(format)
+        var directives: [String] = []
+        var index = 0
+
+        while index < characters.count {
+            guard characters[index] == "%" else {
+                index += 1
+                continue
+            }
+            var cursor = index + 1
+            guard cursor < characters.count else {
+                directives.append("%")
+                break
+            }
+            // `%%` is a literal percent, not a directive.
+            if characters[cursor] == "%" {
+                index = cursor + 1
+                continue
+            }
+            // Argument position, only when the digits are actually followed by `$` — otherwise
+            // they are a field width and the width loop below consumes them.
+            var lookahead = cursor
+            while lookahead < characters.count, characters[lookahead].isNumber { lookahead += 1 }
+            if lookahead > cursor, lookahead < characters.count, characters[lookahead] == "$" {
+                cursor = lookahead + 1
+            }
+            while cursor < characters.count, "-+ #0'".contains(characters[cursor]) { cursor += 1 }
+            while cursor < characters.count, characters[cursor].isNumber { cursor += 1 }
+            if cursor < characters.count, characters[cursor] == "." {
+                cursor += 1
+                while cursor < characters.count, characters[cursor].isNumber { cursor += 1 }
+            }
+            while cursor < characters.count, "hlLqjzt".contains(characters[cursor]) { cursor += 1 }
+
+            guard cursor < characters.count else {
+                directives.append(String(characters[index...]))
+                break
+            }
+            directives.append(String(characters[index...cursor]))
+            index = cursor + 1
+        }
+
+        return directives
+    }
+
+    @MainActor @Test func everyLocaleDeclaresExactlyTheOnePermittedDirective() throws {
+        for language in Self.languages {
+            let found = Self.conversionDirectives(in: try message(language)).sorted()
             #expect(
-                format.components(separatedBy: "%1$@").count - 1 == 1,
-                "\(language): expected exactly one %1$@"
-            )
-            #expect(
-                !format.contains("%2$@"),
-                "\(language): %2$@ is stale — the paths are rendered by the alert's accessory now"
-            )
-            // A bare `%@` alongside a positional one would consume the argument twice over.
-            #expect(
-                format.replacingOccurrences(of: "%1$@", with: "").range(of: "%@") == nil,
-                "\(language): no bare %@ may be mixed in with the positional specifier"
+                found == Self.permitted,
+                "\(language): directives were \(found), expected exactly \(Self.permitted)"
             )
         }
     }
@@ -636,12 +685,62 @@ private func world(_ existing: [URL: URL]) -> (URL) -> URL? {
     @MainActor @Test func everyLocaleRendersCleanlyWithOneAppName() throws {
         let appName = "Dragon Sample App"
         for language in Self.languages {
-            let rendered = String(format: try message(language), appName)
+            let format = try message(language)
 
+            // Validated *before* formatting, and with `#require` so a violation stops this test
+            // rather than continuing. `String(format:)` with a directive that has no matching
+            // argument reads whatever is next in the argument list and can crash Foundation, so
+            // this test must never hand it a string it has not first checked — it cannot rely on
+            // the contract test above having run, since the two may execute concurrently.
+            let found = Self.conversionDirectives(in: format).sorted()
+            try #require(found == Self.permitted, "\(language): refusing to format \(found)")
+
+            let rendered = String(format: format, appName)
             #expect(rendered.contains(appName), "\(language): the app name did not land")
-            #expect(!rendered.contains("%1$@"), "\(language): an unconsumed specifier survived")
-            #expect(!rendered.contains("%2$@"), "\(language): an unconsumed specifier survived")
+            #expect(Self.conversionDirectives(in: rendered).isEmpty, "\(language): a directive survived")
             #expect(!rendered.isEmpty)
         }
+    }
+
+    // MARK: - The scanner itself
+
+    /// The deny-list this replaced passed a mutation that inserted `%2$d`. These are the cases it
+    /// missed, asserted directly against the scanner so the contract above cannot regress into
+    /// another list of things someone happened to think of.
+    @Test func theScannerReportsEveryUnintendedDirective() {
+        let scan = BlockedDuplicatesFormatTests.conversionDirectives(in:)
+
+        #expect(scan("Nothing was removed. %1$@ then %2$d") == ["%1$@", "%2$d"])
+        #expect(scan("%3$s") == ["%3$s"])
+        #expect(scan("%p") == ["%p"])
+        #expect(scan("%2$@") == ["%2$@"])
+        #expect(scan("%@ and %@") == ["%@", "%@"], "a repeated bare directive is two directives")
+        #expect(scan("%1$@") == ["%1$@"])
+        #expect(scan("%-8.3f") == ["%-8.3f"], "flags, width and precision belong to one directive")
+        #expect(scan("%lld") == ["%lld"], "so do length modifiers")
+        #expect(scan("nothing here at all").isEmpty)
+    }
+
+    /// `%%` is a literal percent and must not be mistaken for a directive — otherwise a
+    /// translation that legitimately writes "100%%" could never satisfy the contract.
+    @Test func escapedPercentsAreLiteralsNotDirectives() {
+        let scan = BlockedDuplicatesFormatTests.conversionDirectives(in:)
+
+        #expect(scan("100%% certain").isEmpty)
+        #expect(scan("100%% certain, %1$@") == ["%1$@"])
+        #expect(scan("%%%1$@") == ["%1$@"], "an escape immediately before a directive")
+        #expect(scan("%%%%") .isEmpty, "two escapes, no directives")
+        #expect(scan("trailing %") == ["%"], "a lone trailing % is malformed, not absent")
+    }
+
+    /// The mutation the reviewer used, asserted as a permanent guard: a stray directive fails the
+    /// contract even though it is neither `%2$@` nor a bare `%@`, which is exactly what the
+    /// previous check let through.
+    @Test func aStrayDirectiveFailsTheContract() {
+        let mutated = "Nothing was removed. More than one copy of %1$@ is installed. %2$d"
+        let found = BlockedDuplicatesFormatTests.conversionDirectives(in: mutated).sorted()
+
+        #expect(found == ["%1$@", "%2$d"])
+        #expect(found != BlockedDuplicatesFormatTests.permitted, "the contract must reject this")
     }
 }
