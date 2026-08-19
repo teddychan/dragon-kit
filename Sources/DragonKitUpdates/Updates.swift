@@ -135,7 +135,20 @@ public final class DragonUpdater: ObservableObject {
     private var lastCheckObservation: NSKeyValueObservation?
 
     public convenience init(config: DragonUpdaterConfig = DragonUpdaterConfig()) {
-        self.init(config: config, updatingIsAllowed: !DragonAbout.isDebugBuild())
+        self.init(
+            config: config,
+            updatingIsAllowed: Self.updatingIsAllowed(inDebugBuild: DragonAbout.isDebugBuild())
+        )
+    }
+
+    /// The Debug policy itself, as a pure expression rather than an inline `!`.
+    ///
+    /// Inline, this inversion was the one part of the gate no test could reach: the tests inject
+    /// `updatingIsAllowed` directly, so they prove the *downstream* guard while stepping over the
+    /// expression that decides it, and dropping or flipping the `!` — shipping Sparkle to every
+    /// Debug build, or disabling updates in every release — would have kept them all green.
+    nonisolated static func updatingIsAllowed(inDebugBuild isDebugBuild: Bool) -> Bool {
+        !isDebugBuild
     }
 
     /// The test seam for the Debug-build gate: `isDebugBuild()` reads `Bundle.main`, which under
@@ -206,8 +219,9 @@ public final class DragonUpdater: ObservableObject {
     /// their `.debug` domain, and the pane's button was live. Deleting `SUFeedURL` from the debug
     /// bundle does not disable it: `-[SPUUpdater startUpdater:]` passes `requireFeedURL:NO` and
     /// has since Sparkle 2.0.0, so the check ran and raised Sparkle's raw developer error
-    /// ("You must specify the URL of the appcast as the SUFeedURL key…") at the user. Four repos'
-    /// debug scripts documented the opposite mechanism for months.
+    /// ("You must specify the URL of the appcast as the SUFeedURL key…") at the user. All five
+    /// hosts' debug scripts documented the opposite mechanism for months — ice-2 and
+    /// dragon-sample-app in their own wording, the other three nearly verbatim.
     ///
     /// The pane goes inert rather than absent: CONFORMANCE §R9 owns its place in the sidebar, and
     /// a Debug build whose sidebar differs from the release build's is the one build nobody tests.

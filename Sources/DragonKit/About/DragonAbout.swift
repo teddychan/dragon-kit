@@ -93,7 +93,18 @@ public enum DragonAbout {
     /// apps that had written an app-side guard. An app's guard covers its own call sites; the
     /// kit's covers the kit's.
     public static func isDebugBuild(bundle: Bundle = .main) -> Bool {
-        buildChannel(bundle: bundle)?.caseInsensitiveCompare("Debug") == .orderedSame
+        isDebugChannel(bundle.object(forInfoDictionaryKey: "DragonBuildChannel") as? String)
+    }
+
+    /// Whether a raw channel value means Debug, as a pure function of the string.
+    ///
+    /// Split out from ``isDebugBuild(bundle:)`` because that reads `Bundle.main`, which under
+    /// `swift test` is the test runner and can never carry a build channel — so only the
+    /// *non*-Debug answer was ever reachable from a test, and a mapping that had stopped
+    /// recognising `Debug` would have looked exactly the same. Everything that turns on this
+    /// predicate is a safety gate, so the gate's input deserves both directions tested.
+    static func isDebugChannel(_ raw: String?) -> Bool {
+        normalizedChannel(raw)?.caseInsensitiveCompare("Debug") == .orderedSame
     }
 
     /// Pure normalization of the raw plist value, so blank-vs-absent is testable without a bundle.
