@@ -84,11 +84,74 @@ public extension UninstallConfig {
     }
 }
 
+/// Whether a complete uninstall may run at all, decided before anything destructive happens.
+enum UninstallPreflight: Equatable {
+    case proceed
+    /// The running bundle cannot state an identity, or states one the configuration disagrees
+    /// with. Nothing may be authorised on a guess about which of the two is right.
+    case identityUnverified
+    /// More than one bundle carrying this exact identity exists on disk, so the state keyed on
+    /// that identity cannot be attributed to the copy being uninstalled.
+    case duplicateCopies([URL])
+}
+
 /// Performs a complete self-uninstall: disable the login item, wipe the app's defaults
 /// domains, delete leftover preference/saved-state files, move the app to the Trash, then
 /// quit. Ported from ice-2's uninstall flow, generalized to any bundle id / suites.
 @MainActor
 public enum DragonUninstaller {
+    /// Whether this uninstall may touch anything, decided from identity alone — no filesystem
+    /// and no LaunchServices access of its own, so the whole decision is testable against a
+    /// fixed world.
+    ///
+    /// `recycle()` moves the *running* bundle and is path-scoped, which is safe. Everything
+    /// either side of it is keyed on the bundle *identity*: the login item, the defaults
+    /// domains, the preference and saved-state plists, the configured cleanup paths, and the
+    /// Homebrew token. Two bundles sharing an identity share every one of those, and nothing in
+    /// them records which copy they belong to — so with a second copy present there is no
+    /// answer to "whose settings are these", only a guess. This refuses to guess.
+    ///
+    /// ``UninstallConfig/caskToken(_:ifBundleIs:actual:)`` already fails closed on the *wrong*
+    /// identity, and that is a different question from this one: it asks who you are, not
+    /// whether you are the only one. A local Release-configuration build carries the release
+    /// identity honestly and passes it.
+    ///
+    /// `canonicalize` returns the resolved URL for a bundle that exists and `nil` for one that
+    /// does not, which is what makes dead LaunchServices records — this machine held 19 for a
+    /// single live copy — incapable of blocking an uninstall.
+    nonisolated static func preflight(
+        configBundleID: String,
+        actualBundleID: String?,
+        currentBundleURL: URL,
+        discoveredCopies: [URL],
+        canonicalize: (URL) -> URL?
+    ) -> UninstallPreflight {
+        // No fallback from a missing id to the configured one. That fallback is exactly how the
+        // sample app leaked a cask token: it answered the release id for the one build that
+        // could not name itself, which is the build with the least business authorising a
+        // delete. A disagreement is a stop, not a hint about which to believe.
+        guard let actualBundleID, !actualBundleID.isEmpty, actualBundleID == configBundleID else {
+            return .identityUnverified
+        }
+
+        // The running bundle first and unconditionally: discovery can omit a copy that was
+        // launched directly by path, and "discovery returned nothing" must never read as
+        // "there are no copies".
+        var seen = Set<URL>()
+        var copies: [URL] = []
+        for url in [currentBundleURL] + discoveredCopies {
+            guard let canonical = canonicalize(url) else { continue }
+            if seen.insert(canonical).inserted { copies.append(canonical) }
+        }
+
+        guard copies.count <= 1 else {
+            // Sorted by path so the order the user is shown does not depend on the order
+            // LaunchServices happened to answer in.
+            return .duplicateCopies(copies.sorted { $0.path < $1.path })
+        }
+        return .proceed
+    }
+
     private static let logger = Logger(subsystem: "com.dragonapp.DragonKit", category: "Uninstall")
 
     public static func run(
@@ -106,6 +169,32 @@ public enum DragonUninstaller {
             scheduleCleanup: { urls, cask in schedulePostExitCleanup(of: urls, cask: cask) },
             reportFailure: { appName, reason in
                 reportBundleRemovalFailure(appName: appName, reason: reason)
+            },
+            preflight: {
+                let actual = Bundle.main.bundleIdentifier
+                return preflight(
+                    configBundleID: config.bundleID,
+                    actualBundleID: actual,
+                    currentBundleURL: Bundle.main.bundleURL,
+                    // Asked for the *actual* running identity, never the configured one: the two
+                    // disagreeing is itself a stop, and querying the configured id would search
+                    // for copies of a bundle this process has not shown itself to be. An absent
+                    // id short-circuits to `.identityUnverified` without a query at all.
+                    discoveredCopies: actual.map {
+                        NSWorkspace.shared.urlsForApplications(withBundleIdentifier: $0)
+                    } ?? [],
+                    canonicalize: { url in
+                        // Resolving symlinks collapses the Caskroom's staged symlink and any
+                        // alias onto one path, so a single bundle reachable by several names
+                        // counts once. Existence is what demotes a dead LaunchServices record
+                        // to something that cannot block an uninstall.
+                        let resolved = url.resolvingSymlinksInPath().standardizedFileURL
+                        return FileManager.default.fileExists(atPath: resolved.path) ? resolved : nil
+                    }
+                )
+            },
+            reportBlocked: { decision in
+                reportUninstallBlocked(config: config, decision: decision)
             }
         )
     }
@@ -127,8 +216,20 @@ public enum DragonUninstaller {
         onComplete: @escaping @MainActor () -> Void,
         recycle: @escaping @MainActor (URL, @escaping @Sendable (String?) -> Void) -> Void,
         scheduleCleanup: @escaping @MainActor ([URL], String?) -> Void,
-        reportFailure: @escaping @MainActor (_ appName: String, _ reason: String) -> Void
+        reportFailure: @escaping @MainActor (_ appName: String, _ reason: String) -> Void,
+        preflight: @MainActor () -> UninstallPreflight,
+        reportBlocked: @MainActor (UninstallPreflight) -> Void
     ) {
+        // First, and before anything that cannot be undone. Every step below this line is keyed
+        // on the bundle identity rather than on this bundle's path, so they are only correct
+        // while this is the sole bundle carrying that identity — see ``preflight(…)``. Telling
+        // the user is the one thing a blocked uninstall may do.
+        let decision = preflight()
+        guard decision == .proceed else {
+            reportBlocked(decision)
+            return
+        }
+
         LoginItem.setEnabled(false)
 
         let fileManager = FileManager.default
@@ -207,6 +308,53 @@ public enum DragonUninstaller {
         alert.alertStyle = .warning
         alert.messageText = L("DragonKit.uninstall.failedTitle")
         alert.informativeText = String(format: L("DragonKit.uninstall.failedMessage"), appName)
+        alert.addButton(withTitle: L("DragonKit.ok"))
+        if let icon = NSApp.applicationIconImage { alert.icon = icon }
+        alert.runModal()
+    }
+
+    /// Tells the user why nothing was removed, and does *not* run `onComplete` — quitting here
+    /// would look exactly like the successful uninstall that did not happen.
+    ///
+    /// Both messages say plainly that no data was removed, because the alert arrives after the
+    /// user pressed a confirmed, irreversible-sounding button and the honest answer is that it
+    /// did nothing. The paths go in the duplicate message rather than the log alone: the user
+    /// cannot act on "there is another copy" without being told where it is.
+    private static func reportUninstallBlocked(config: UninstallConfig, decision: UninstallPreflight) {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+
+        switch decision {
+        case .proceed:
+            return
+        case .identityUnverified:
+            logger.error(
+                """
+                Uninstall blocked: running bundle \(Bundle.main.bundleURL.path, privacy: .public) \
+                reports id \(Bundle.main.bundleIdentifier ?? "<none>", privacy: .public), \
+                configured id is \(config.bundleID, privacy: .public)
+                """
+            )
+            alert.messageText = L("DragonKit.uninstall.blockedIdentityTitle")
+            alert.informativeText = String(
+                format: L("DragonKit.uninstall.blockedIdentityMessage"), config.appName
+            )
+        case .duplicateCopies(let urls):
+            logger.error(
+                """
+                Uninstall blocked: \(urls.count, privacy: .public) bundles share id \
+                \(config.bundleID, privacy: .public) — \
+                \(urls.map(\.path).joined(separator: ", "), privacy: .public)
+                """
+            )
+            alert.messageText = L("DragonKit.uninstall.blockedDuplicatesTitle")
+            alert.informativeText = String(
+                format: L("DragonKit.uninstall.blockedDuplicatesMessage"),
+                config.appName,
+                urls.map(\.path).joined(separator: "\n")
+            )
+        }
+
         alert.addButton(withTitle: L("DragonKit.ok"))
         if let icon = NSApp.applicationIconImage { alert.icon = icon }
         alert.runModal()
