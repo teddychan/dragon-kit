@@ -146,3 +146,31 @@ import Foundation
         #expect(line.filter { $0 == "©" }.count == 1)
     }
 }
+
+/// The channel-to-Debug mapping that every safety gate in the kit turns on.
+///
+/// `isDebugBuild(bundle:)` reads a bundle, and under `swift test` `Bundle.main` is the test runner
+/// and can never carry a build channel — so only the *non*-Debug answer was reachable, and a
+/// mapping that had quietly stopped recognising `Debug` would have looked identical. This tests
+/// the pure predicate underneath it in both directions.
+@Suite struct DebugChannelRecognitionTests {
+    @Test func debugIsRecognisedHoweverItIsSpelled() {
+        #expect(DragonAbout.isDebugChannel("Debug"))
+        #expect(DragonAbout.isDebugChannel("debug"), "the comparison is case-insensitive")
+        #expect(DragonAbout.isDebugChannel("DEBUG"))
+        #expect(DragonAbout.isDebugChannel("  Debug  "), "normalization trims before comparing")
+    }
+
+    @Test func everythingElseIsNotDebug() {
+        #expect(!DragonAbout.isDebugChannel(nil), "an unstamped release build")
+        #expect(!DragonAbout.isDebugChannel(""))
+        #expect(!DragonAbout.isDebugChannel("   "))
+        #expect(!DragonAbout.isDebugChannel("Release"))
+        #expect(!DragonAbout.isDebugChannel("Debugging"), "a prefix match is not a channel")
+    }
+
+    /// And the bundle-reading entry point still agrees for the case a test can observe.
+    @Test func theBundleEntryPointAgrees() {
+        #expect(DragonAbout.isDebugBuild(bundle: .module) == false)
+    }
+}
