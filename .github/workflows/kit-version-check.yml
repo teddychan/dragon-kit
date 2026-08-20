@@ -1,22 +1,51 @@
 name: Kit version check
 
-# The library's `vX.Y.Z` tags still trigger no build and no release — they are version markers
-# the apps pin against. This job only asserts one thing: that `DragonKitVersion.current` agrees
-# with the tag.
+# A `vX.Y.Z` tag here triggers no build and ships no artifact — DragonKit is a SwiftPM library,
+# not an app. It does two things: assert that `DragonKitVersion.current` agrees with the tag, and
+# publish a GitHub Release carrying that version's changelog entry.
 #
-# Every app's About pane shows "Built with · DragonKit vX.Y.Z" from that constant, and a SwiftPM
-# library has no Info.plist to read it from, so the constant is hand-bumped. A constant nobody
-# checks is a constant that eventually lies about which kit a binary compiled against.
+# Why the Release, given SwiftPM resolves by TAG and ignores Releases entirely: the repo sidebar
+# shows Releases, not tags, so a tagged-but-unreleased version reads as "this package is five
+# versions behind" to anyone glancing at it. Releases were created by hand up to v3.2.0 and then
+# stopped, which is exactly what a manual step does. This makes it automatic instead.
+#
+# Deliberately absent, and not an oversight: no Sparkle appcast, no Homebrew cask, no marketing
+# site dispatch. Those deliver an app to users. A library has no app to deliver, no zip to
+# download and nobody polling it for updates — the Release is a readable version marker only.
+#
+# The version constant: every app's About pane shows "Built with · DragonKit vX.Y.Z" from it, and
+# a SwiftPM library has no Info.plist to read it from, so the constant is hand-bumped. A constant
+# nobody checks is a constant that eventually lies about which kit a binary compiled against.
 on:
   push:
     tags:
       - 'v*'
+
+# The publish step creates a Release on this repo.
+permissions:
+  contents: write
 
 jobs:
   version-matches-tag:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      # Anchored at both ends. The trigger is the broad `v*` because refs cannot be matched by
+      # regex, so a prerelease (`v4.1.1-beta1`) or any other prefixed shape reaches this job and
+      # has to be rejected here rather than silently published as a version.
+      - name: Tag is an exact public vX.Y.Z
+        run: |
+          set -euo pipefail
+          case "$GITHUB_REF_NAME" in
+            v[0-9]*.[0-9]*.[0-9]*)
+              printf '%s' "$GITHUB_REF_NAME" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$' || {
+                echo "::error::${GITHUB_REF_NAME} is not an exact public vX.Y.Z tag"; exit 1; }
+              ;;
+            *)
+              echo "::error::${GITHUB_REF_NAME} is not an exact public vX.Y.Z tag"; exit 1 ;;
+          esac
+          echo "$GITHUB_REF_NAME is an exact public tag"
 
       - name: DragonKitVersion.current matches the tag
         run: |
@@ -34,3 +63,43 @@ jobs:
             exit 1
           fi
           echo "DragonKitVersion.current = $FOUND matches tag $GITHUB_REF_NAME"
+
+      # Runs only after both gates pass, so a Release can never describe a version whose constant
+      # disagrees with its tag.
+      - name: Publish the GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG="$GITHUB_REF_NAME"
+          VERSION="${TAG#v}"
+
+          # Idempotent: re-running the workflow on an existing tag must not fail. Editing the
+          # notes of an already-published Release is deliberately NOT done — the entry a consumer
+          # already read stays as they read it.
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists — nothing to do."
+            exit 0
+          fi
+
+          # The changelog section for exactly this version: from its own `## X.Y.Z` heading up to
+          # the next `## `, heading excluded. Fails when absent rather than publishing an empty
+          # Release, which is the same reasoning as the version gate above — a release with no
+          # notes is a release nobody can evaluate.
+          NOTES="$RUNNER_TEMP/notes.md"
+          awk -v v="## ${VERSION} " '
+            index($0, v) == 1 { found = 1; next }
+            found && /^## / { exit }
+            found { print }
+          ' CHANGELOG.md > "$NOTES"
+
+          if ! grep -q '[^[:space:]]' "$NOTES"; then
+            echo "::error file=CHANGELOG.md::no changelog entry for ${VERSION} — add a"\
+                 "\"## ${VERSION} — <date>\" section before tagging"
+            exit 1
+          fi
+
+          gh release create "$TAG" \
+            --title "DragonKit $VERSION" \
+            --notes-file "$NOTES"
+          echo "Published Release $TAG."
