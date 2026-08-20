@@ -254,10 +254,11 @@ correct the problem, assign a fresh public version, and use a fresh tag.
 The marketing site has no authority over whether an app ships. It owns its repository, build,
 tests, deployment revision, changelog cache, and recovery process.
 
-After a public app release succeeds, the release workflow sends a fire-and-forget webhook or
-`repository_dispatch`. The site then reads published GitHub Releases and updates itself. The
-notification must never make a successful app release fail, and a scheduled site-side refresh
-provides a backstop for a missed event.
+After a public app release succeeds, the release workflow sends a fire-and-forget
+`repository_dispatch` event. It is skipped when the app has no page on the site, and it can
+never make the already-published release fail. The site then reads published GitHub Releases,
+regenerates its pages, and opens a pull request for review; merging that pull request is what
+publishes the changelog. A scheduled site-side refresh provides a backstop for a missed event.
 
 The site must ignore drafts and prereleases. Its automation may fail, retry, or deploy later
 without affecting the signed app, GitHub Release, Homebrew distribution, or Sparkle updates.
@@ -274,6 +275,7 @@ mirroring the old and new locations until installed versions have moved to the a
 | DragonKit repository | Shared package code, lifecycle and conformance contracts, conformance guidance, reusable release conventions |
 | App repository | Source, tests, bundle version, What's New content, build and packaging scripts, workflows (including reusable-workflow callers), signing/notarization configuration, tag gate, public tags and releases, publication, downloadable artifacts, production appcast, app-side website/download notification integration, app-specific operational configuration and state |
 | Marketing-site repository | Receive notifications, fetch published releases, generate changelog pages, test and deploy the site |
+| Homebrew tap repository (`teddychan/homebrew-tap`) | Cask definitions for all apps, including their uninstall/zap lists; each app's release automation bumps its own cask here via a pull request it merges itself |
 
 A centrally maintained reusable workflow may perform build, signing, notarization, or publication
 steps, but it is an implementation dependency, not a separate release owner. The app repository

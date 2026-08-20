@@ -254,9 +254,9 @@ One public tag series lives in this repo:
 
 This repository builds and publishes no app. Dragon Sample App is a normal app, so it uses exact
 `vX.Y.Z` tags too — and two release products cannot share one `vX.Y.Z` namespace, so it releases
-from `teddychan/dragon-sample-app`, which owns its source, appcast, artifacts and Homebrew cask.
-The `sample-v*` tags left here are historical migration data: they stay for provenance, and no new
-one is ever created.
+from `teddychan/dragon-sample-app`, which owns its source, appcast, and artifacts; its release
+automation bumps its cask in the shared `teddychan/homebrew-tap` repository. The `sample-v*` tags
+left here are historical migration data: they stay for provenance, and no new one is ever created.
 
 Never delete and re-push a release tag to retry — GitHub turns the published Release into a
 draft whose asset 404s. Bump the plist version and push a fresh tag.
