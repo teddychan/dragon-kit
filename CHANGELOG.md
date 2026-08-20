@@ -12,6 +12,47 @@ nothing that already worked was taken away.
 
 ---
 
+## 4.1.1 — 2026-08-20
+
+**Would anyone using the apps notice? Only if something was already wrong.** Nothing was
+redesigned and nothing was added. Two safety problems were fixed — one that could have deleted
+the wrong app's settings, and one that showed a developer error message to anyone who opened
+Settings in a local test build.
+
+### Fixed
+
+- **Uninstall now refuses to run when there is more than one copy of the app on your Mac.**
+  "Uninstall" moves the copy you are running to the Trash, which was always safe. But the rest
+  of it — your settings, your login item, the app's support files, and the Homebrew record —
+  is stored under the app's *identity*, not its location, and two copies of the same app share
+  every bit of that. There is no way to tell whose settings are whose.
+
+  So uninstalling a spare copy could wipe the settings belonging to the one you actually use,
+  and where Homebrew was involved it could delete that installed copy outright. This was
+  reachable in practice: building an app yourself leaves a second copy behind, and nothing
+  warned anybody.
+
+  Uninstall now checks first. If it finds another copy, it stops before removing anything, says
+  plainly that nothing was removed, and lists where the copies are so you can move the ones you
+  do not want to the Trash and try again. Quitting the other copy is not enough — the copies
+  are files on disk, not running programs. It also stops if the app cannot confirm its own
+  identity, rather than guessing.
+
+  For anyone with one copy of an app, which is nearly everyone, nothing changes.
+
+- **Local test builds no longer reach the real update checker.** A test build is deliberately
+  cut off from updates, and the "Check for Updates" menu item was correctly hidden. The button
+  in Settings ▸ Updates was not: pressing it produced a raw developer error, the kind of text
+  that is never meant to reach a person. Two of the apps had tried to fix this on their own side
+  and could not, because that screen belongs to this shared toolkit rather than to them. It is
+  fixed here, so all five get it: in a test build the whole Updates form is switched off.
+
+  Released apps are unaffected — they update exactly as before.
+
+### Internal
+
+- Every app's About screen now reads `Built with · DragonKit v4.1.1`.
+
 ## 4.1.0 — 2026-08-16
 
 **Would anyone using the apps notice? Almost nothing.** No screen was redesigned and no feature
