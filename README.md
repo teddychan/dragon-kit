@@ -202,8 +202,9 @@ git clone https://github.com/teddychan/dragon-sample-app && cd dragon-sample-app
 It lives in [its own repository](https://github.com/teddychan/dragon-sample-app), not in this one.
 It is a normal app, so its public tag is exactly `vX.Y.Z` — and a repository owns only one public
 `vX.Y.Z` series, which here belongs to the Swift package. So the app owns its source, appcast,
-artifacts and cask, and this repository builds no app at all. The `sample-v*` tags left here are
-historical migration data.
+and artifacts, and its release automation bumps its cask in the shared `teddychan/homebrew-tap`
+repository; this repository builds no app at all. The `sample-v*` tags left here are historical
+migration data.
 
 ## Start a new app on DragonKit
 See [`docs/STARTING-A-NEW-APP.md`](docs/STARTING-A-NEW-APP.md) — a self-contained guide
