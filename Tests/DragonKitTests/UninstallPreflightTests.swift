@@ -21,6 +21,22 @@ private func world(_ existing: [URL: URL]) -> (URL) -> URL? {
     { existing[$0] }
 }
 
+private let applications = URL(fileURLWithPath: "/Applications", isDirectory: true)
+private let allUsersFolder = URL(fileURLWithPath: "/Library/Input Methods", isDirectory: true)
+private let installedForAllUsers = URL(fileURLWithPath: "/Library/Input Methods/Dragon Sample App.app", isDirectory: true)
+
+/// Writability over a fixed world, for the same reason: a folder or bundle is writable by this
+/// user only when the test says so.
+private func writable(_ urls: Set<URL>) -> (URL) -> Bool {
+    { urls.contains($0) }
+}
+
+/// For the tests about identity and copies, which are not about removability: everything is
+/// writable, so the only thing that can block them is what they test. Spelled out at every call
+/// rather than defaulted in the kit, because a default of "writable" would be a fail-open path
+/// in production.
+private let everythingWritable: @Sendable (URL) -> Bool = { _ in true }
+
 /// The gate in front of a complete uninstall.
 ///
 /// `DragonUninstaller` moves *the running bundle* to the Trash, which is path-scoped and safe.
@@ -50,7 +66,8 @@ private func world(_ existing: [URL: URL]) -> (URL) -> URL? {
                 actualBundleID: missing,
                 currentBundleURL: installed,
                 discoveredCopies: [],
-                canonicalize: world([installed: installed])
+                canonicalize: world([installed: installed]),
+                isWritable: everythingWritable
             )
             #expect(decision == .identityUnverified)
         }
@@ -65,7 +82,8 @@ private func world(_ existing: [URL: URL]) -> (URL) -> URL? {
             actualBundleID: debugID,
             currentBundleURL: installed,
             discoveredCopies: [],
-            canonicalize: world([installed: installed])
+            canonicalize: world([installed: installed]),
+            isWritable: everythingWritable
         )
         #expect(decision == .identityUnverified)
     }
@@ -83,7 +101,8 @@ private func world(_ existing: [URL: URL]) -> (URL) -> URL? {
             actualBundleID: releaseID,
             currentBundleURL: installed,
             discoveredCopies: [],
-            canonicalize: world([:])
+            canonicalize: world([:]),
+            isWritable: everythingWritable
         )
         #expect(decision == .identityUnverified)
     }
@@ -97,7 +116,8 @@ private func world(_ existing: [URL: URL]) -> (URL) -> URL? {
             actualBundleID: releaseID,
             currentBundleURL: localBuild,
             discoveredCopies: [installed],
-            canonicalize: world([installed: installed])
+            canonicalize: world([installed: installed]),
+            isWritable: everythingWritable
         )
         #expect(decision == .identityUnverified)
     }
@@ -112,7 +132,8 @@ private func world(_ existing: [URL: URL]) -> (URL) -> URL? {
             actualBundleID: releaseID,
             currentBundleURL: installed,
             discoveredCopies: [installed, localBuild],
-            canonicalize: world([installed: installed, localBuild: localBuild])
+            canonicalize: world([installed: installed, localBuild: localBuild]),
+            isWritable: everythingWritable
         )
         #expect(decision == .duplicateCopies([installed, localBuild]))
     }
@@ -126,7 +147,8 @@ private func world(_ existing: [URL: URL]) -> (URL) -> URL? {
             actualBundleID: releaseID,
             currentBundleURL: installed,
             discoveredCopies: [installed, aliasOfInstalled],
-            canonicalize: world([installed: installed, aliasOfInstalled: installed])
+            canonicalize: world([installed: installed, aliasOfInstalled: installed]),
+            isWritable: everythingWritable
         )
         #expect(decision == .proceed)
     }
@@ -140,7 +162,8 @@ private func world(_ existing: [URL: URL]) -> (URL) -> URL? {
             actualBundleID: releaseID,
             currentBundleURL: installed,
             discoveredCopies: [installed, deleted],
-            canonicalize: world([installed: installed])
+            canonicalize: world([installed: installed]),
+            isWritable: everythingWritable
         )
         #expect(decision == .proceed)
     }
@@ -153,7 +176,8 @@ private func world(_ existing: [URL: URL]) -> (URL) -> URL? {
             actualBundleID: releaseID,
             currentBundleURL: localBuild,
             discoveredCopies: [installed],
-            canonicalize: world([installed: installed, localBuild: localBuild])
+            canonicalize: world([installed: installed, localBuild: localBuild]),
+            isWritable: everythingWritable
         )
         #expect(decision == .duplicateCopies([installed, localBuild]))
     }
@@ -165,7 +189,8 @@ private func world(_ existing: [URL: URL]) -> (URL) -> URL? {
             actualBundleID: releaseID,
             currentBundleURL: installed,
             discoveredCopies: [installed],
-            canonicalize: world([installed: installed])
+            canonicalize: world([installed: installed]),
+            isWritable: everythingWritable
         )
         #expect(decision == .proceed)
     }
@@ -181,7 +206,8 @@ private func world(_ existing: [URL: URL]) -> (URL) -> URL? {
             actualBundleID: releaseID,
             currentBundleURL: installed,
             discoveredCopies: [installed],
-            canonicalize: world([installed: installed, debugBuild: debugBuild])
+            canonicalize: world([installed: installed, debugBuild: debugBuild]),
+            isWritable: everythingWritable
         )
         #expect(release == .proceed)
 
@@ -190,9 +216,89 @@ private func world(_ existing: [URL: URL]) -> (URL) -> URL? {
             actualBundleID: debugID,
             currentBundleURL: debugBuild,
             discoveredCopies: [debugBuild],
-            canonicalize: world([installed: installed, debugBuild: debugBuild])
+            canonicalize: world([installed: installed, debugBuild: debugBuild]),
+            isWritable: everythingWritable
         )
         #expect(debug == .proceed)
+    }
+
+    // MARK: - This user must be able to move the bundle
+
+    /// The case this was written for. Yahoo! KeyKey 2 installed for all users is root:wheel inside
+    /// root:wheel 755 /Library/Input Methods, and `NSWorkspace.recycle` asks for no password — it
+    /// just fails. The teardown used to run first, so the user lost their settings and learning data
+    /// and then read "Uninstall Incomplete" with the app still installed.
+    @Test func aBundleInAFolderThisUserCannotWriteIsRefused() {
+        let decision = DragonUninstaller.preflight(
+            configBundleID: releaseID,
+            actualBundleID: releaseID,
+            currentBundleURL: installedForAllUsers,
+            discoveredCopies: [installedForAllUsers],
+            canonicalize: world([installedForAllUsers: installedForAllUsers]),
+            // The bundle alone, so it is the folder that decides.
+            isWritable: writable([installedForAllUsers])
+        )
+        #expect(decision == .bundleNotRemovable(installedForAllUsers))
+    }
+
+    /// The folder alone is not enough. Moving a directory into the Trash also rewrites its own
+    /// `..`, so the bundle must be writable too — and a root-owned bundle in admin-writable
+    /// /Applications, which is what the Mac App Store and every .pkg installer leave behind, is not.
+    @Test func aBundleThisUserCannotWriteIsRefusedEvenInAWritableFolder() {
+        let decision = DragonUninstaller.preflight(
+            configBundleID: releaseID,
+            actualBundleID: releaseID,
+            currentBundleURL: installed,
+            discoveredCopies: [installed],
+            canonicalize: world([installed: installed]),
+            isWritable: writable([applications])
+        )
+        #expect(decision == .bundleNotRemovable(installed))
+    }
+
+    /// The positive control, asked of exactly the right two things: the *resolved* bundle and its
+    /// resolved folder, which are what the Trash move acts on — not the spelling the process
+    /// happened to be launched through, whose parent here is `/Applications/../Applications`.
+    @Test func removabilityIsAskedOfTheResolvedBundleAndItsFolder() {
+        let decision = DragonUninstaller.preflight(
+            configBundleID: releaseID,
+            actualBundleID: releaseID,
+            currentBundleURL: aliasOfInstalled,
+            discoveredCopies: [installed],
+            canonicalize: world([aliasOfInstalled: installed, installed: installed]),
+            isWritable: writable([installed, applications])
+        )
+        #expect(decision == .proceed)
+    }
+
+    /// Identity stays the first question. A build that cannot vouch for itself is refused as that,
+    /// wherever it happens to be installed.
+    @Test func identityIsDecidedBeforeRemovability() {
+        let decision = DragonUninstaller.preflight(
+            configBundleID: releaseID,
+            actualBundleID: debugID,
+            currentBundleURL: installedForAllUsers,
+            discoveredCopies: [],
+            canonicalize: world([installedForAllUsers: installedForAllUsers]),
+            isWritable: writable([])
+        )
+        #expect(decision == .identityUnverified)
+    }
+
+    /// Removability is decided before the copies are counted, because it settles the question on
+    /// its own: a bundle this user cannot move cannot be uninstalled from here whether or not it is
+    /// alone, and the way out it is given — Finder, or brew — touches nothing the copies share. The
+    /// duplicate advice would only send the user round a second time to reach the same answer.
+    @Test func anUnremovableBundleIsReportedBeforeAnyDuplicates() {
+        let decision = DragonUninstaller.preflight(
+            configBundleID: releaseID,
+            actualBundleID: releaseID,
+            currentBundleURL: installedForAllUsers,
+            discoveredCopies: [installedForAllUsers, localBuild],
+            canonicalize: world([installedForAllUsers: installedForAllUsers, localBuild: localBuild]),
+            isWritable: writable([installedForAllUsers, localBuild])
+        )
+        #expect(decision == .bundleNotRemovable(installedForAllUsers))
     }
 
     // MARK: - What a blocked decision is allowed to do
@@ -202,10 +308,19 @@ private func world(_ existing: [URL: URL]) -> (URL) -> URL? {
     /// never invoked, and the two uninjected ones — the configured cleanup paths and the
     /// defaults domains — are still there afterwards.
     ///
+    /// Run for every blocking decision, not only the one it was written for. The gate is a single
+    /// `!= .proceed`, and the not-removable case is the one whose whole bug was the teardown
+    /// running in front of a Trash move that could not work — so it is asserted here, not assumed.
+    ///
     /// `bundleID` is a per-run fake. `leftoverPaths` builds real `~/Library` paths from it, and a
     /// real fleet id would aim this test's `removeItem` calls at the preferences of an app
     /// actually installed on the machine running it.
-    @MainActor @Test func aBlockedPreflightReportsAndTouchesNothing() throws {
+    @MainActor @Test(arguments: [
+        UninstallPreflight.duplicateCopies([installed, localBuild]),
+        .bundleNotRemovable(installedForAllUsers),
+        .identityUnverified,
+    ])
+    func aBlockedPreflightReportsAndTouchesNothing(_ decision: UninstallPreflight) throws {
         let fileManager = FileManager.default
         let scratch = fileManager.temporaryDirectory.appending(path: "dk-preflight-\(UUID().uuidString)")
         try fileManager.createDirectory(at: scratch, withIntermediateDirectories: true)
@@ -237,12 +352,12 @@ private func world(_ existing: [URL: URL]) -> (URL) -> URL? {
             recycle: { _, _ in recycled = true },
             scheduleCleanup: { _, _ in scheduled = true },
             reportFailure: { _, _ in failed = true },
-            preflight: { .duplicateCopies([installed, localBuild]) },
+            preflight: { decision },
             reportBlocked: { reported = $0 },
             setLoginItemEnabled: { loginItemWrites.append($0) }
         )
 
-        #expect(reported == .duplicateCopies([installed, localBuild]))
+        #expect(reported == decision)
         // The first destructive step of all, and the one that is not undone by reinstalling:
         // proving the gate precedes *this* is what proves it precedes the teardown rather than
         // merely the injected tail of it.
@@ -338,7 +453,8 @@ private func world(_ existing: [URL: URL]) -> (URL) -> URL? {
             actualBundleID: releaseID,
             currentBundleURL: installed,
             discoveredCopies: discovered,
-            canonicalize: world([installed: installed, localBuild: localBuild])
+            canonicalize: world([installed: installed, localBuild: localBuild]),
+            isWritable: everythingWritable
         )
         #expect(decision == .duplicateCopies([installed, localBuild]))
     }
@@ -485,7 +601,8 @@ private func world(_ existing: [URL: URL]) -> (URL) -> URL? {
                 actualBundleID: releaseID,
                 currentBundleURL: bundle,
                 discoveredCopies: [link, awkward, bundle],
-                canonicalize: DragonUninstaller.canonicalBundleURL
+                canonicalize: DragonUninstaller.canonicalBundleURL,
+                isWritable: DragonUninstaller.isWritableByThisUser
             )
             #expect(decision == .proceed)
         }
@@ -503,7 +620,8 @@ private func world(_ existing: [URL: URL]) -> (URL) -> URL? {
                 actualBundleID: releaseID,
                 currentBundleURL: bundle,
                 discoveredCopies: [second],
-                canonicalize: DragonUninstaller.canonicalBundleURL
+                canonicalize: DragonUninstaller.canonicalBundleURL,
+                isWritable: DragonUninstaller.isWritableByThisUser
             )
             guard case .duplicateCopies(let urls) = decision else {
                 Issue.record("expected a block, got \(decision)")
@@ -511,6 +629,112 @@ private func world(_ existing: [URL: URL]) -> (URL) -> URL? {
             }
             #expect(urls.count == 2)
         }
+    }
+}
+
+/// The production writability test behind the removability half of the preflight, against real
+/// directories rather than a fixture map.
+///
+/// Disabled as root, which permission bits do not bind: every lock below would be ignored and the
+/// refusals would read as failures. `swift test` runs as an ordinary user locally and on CI.
+@Suite(.enabled(if: geteuid() != 0, "root is not bound by permission bits"))
+struct UninstallRemovabilityTests {
+    /// A scratch folder whose contents the test may lock. ``removeScratch(_:)`` restores write
+    /// access to all of it first, because a 555 directory cannot be emptied and the folder would
+    /// otherwise outlive the test.
+    private func makeScratch() throws -> URL {
+        let scratch = FileManager.default.temporaryDirectory
+            .appending(path: "dk-removable-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: scratch, withIntermediateDirectories: true)
+        return scratch
+    }
+
+    private func removeScratch(_ scratch: URL) {
+        let fileManager = FileManager.default
+        let contents = fileManager.enumerator(at: scratch, includingPropertiesForKeys: nil)?
+            .allObjects as? [URL] ?? []
+        for url in [scratch] + contents {
+            try? fileManager.setAttributes([.posixPermissions: 0o755], ofItemAtPath: url.path)
+        }
+        try? fileManager.removeItem(at: scratch)
+    }
+
+    private func makeBundle(in folder: URL) throws -> URL {
+        let bundle = folder.appending(path: "Dragon Sample App.app")
+        try FileManager.default.createDirectory(
+            at: bundle.appending(path: "Contents"), withIntermediateDirectories: true
+        )
+        return bundle
+    }
+
+    private func lock(_ url: URL) throws {
+        try FileManager.default.setAttributes([.posixPermissions: 0o555], ofItemAtPath: url.path)
+    }
+
+    /// Everything production, nothing injected: the decision a real uninstall of `bundle` gets.
+    private func productionDecision(for bundle: URL) -> UninstallPreflight {
+        DragonUninstaller.preflight(
+            configBundleID: releaseID,
+            actualBundleID: releaseID,
+            currentBundleURL: bundle,
+            discoveredCopies: [bundle],
+            canonicalize: DragonUninstaller.canonicalBundleURL,
+            isWritable: DragonUninstaller.isWritableByThisUser
+        )
+    }
+
+    /// The all-users shape: a folder this user cannot write.
+    @Test func aBundleInAFolderThisUserCannotWriteIsRefused() throws {
+        let scratch = try makeScratch()
+        defer { removeScratch(scratch) }
+        let folder = scratch.appending(path: "Input Methods")
+        let bundle = try makeBundle(in: folder)
+        try lock(folder)
+
+        let resolved = try #require(DragonUninstaller.canonicalBundleURL(bundle))
+        #expect(productionDecision(for: bundle) == .bundleNotRemovable(resolved))
+    }
+
+    /// The Mac App Store and .pkg shape: a bundle this user cannot write, in a folder they can.
+    @Test func aBundleThisUserCannotWriteIsRefusedEvenInAWritableFolder() throws {
+        let scratch = try makeScratch()
+        defer { removeScratch(scratch) }
+        let bundle = try makeBundle(in: scratch)
+        try lock(bundle)
+
+        let resolved = try #require(DragonUninstaller.canonicalBundleURL(bundle))
+        #expect(productionDecision(for: bundle) == .bundleNotRemovable(resolved))
+    }
+
+    /// The ordinary shape — a bundle the user owns, in a folder they can write — still proceeds.
+    @Test func aBundleThisUserCanMoveProceeds() throws {
+        let scratch = try makeScratch()
+        defer { removeScratch(scratch) }
+        let bundle = try makeBundle(in: scratch)
+        #expect(productionDecision(for: bundle) == .proceed)
+    }
+
+    /// The premise behind both refusals, pinned against the call the uninstaller actually makes so
+    /// it is re-checked rather than remembered. `NSWorkspace.recycle` asks for no administrator
+    /// password: in either shape it fails with a permission error and leaves the bundle where it is.
+    /// If a future macOS starts prompting, or starts moving such a bundle, these refusals are
+    /// turning away uninstalls that would have worked, and this test is what says so.
+    @MainActor @Test(arguments: ["folder", "bundle"])
+    func theTrashMoveReallyFailsInBothShapes(_ locked: String) async throws {
+        let scratch = try makeScratch()
+        defer { removeScratch(scratch) }
+        let folder = scratch.appending(path: "Installed")
+        let bundle = try makeBundle(in: folder)
+        try lock(locked == "folder" ? folder : bundle)
+
+        let error: (domain: String, code: Int)? = await withCheckedContinuation { done in
+            NSWorkspace.shared.recycle([bundle]) { _, error in
+                done.resume(returning: error.map { (($0 as NSError).domain, ($0 as NSError).code) })
+            }
+        }
+        #expect(error?.domain == NSCocoaErrorDomain)
+        #expect(error?.code == NSFileWriteNoPermissionError)
+        #expect(FileManager.default.fileExists(atPath: bundle.path), "the bundle did not move")
     }
 }
 
@@ -784,5 +1008,107 @@ private func world(_ existing: [URL: URL]) -> (URL) -> URL? {
 
         #expect(found == ["%1$@", "%2$d"])
         #expect(found != BlockedDuplicatesFormatTests.permitted, "the contract must reject this")
+    }
+}
+
+/// The not-removable refusal, in every shipped locale: its format contract, and how it is put
+/// together.
+///
+/// The Homebrew route is its own key, appended only when the configuration names a cask, rather than
+/// a second copy of the whole message: the paragraph is the part that varies, and two near-identical
+/// messages in seven languages is fourteen strings waiting to drift apart.
+@Suite struct BlockedNotRemovableFormatTests {
+    private static let languages = ["en", "es", "fr", "ja", "ko", "zh-Hans", "zh-Hant"]
+    private static let titleKey = "DragonKit.uninstall.blockedNotRemovableTitle"
+    private static let messageKey = "DragonKit.uninstall.blockedNotRemovableMessage"
+    private static let homebrewKey = "DragonKit.uninstall.blockedNotRemovableHomebrew"
+
+    /// Each key and the exact multiset of directives it may carry — an allow-list, for the reason
+    /// ``BlockedDuplicatesFormatTests`` gives: anything unlisted fails by default.
+    private static let contract: [String: [String]] = [
+        titleKey: [],
+        messageKey: ["%1$@", "%2$@"],
+        homebrewKey: ["%1$@"],
+    ]
+
+    /// Same loading path as ``BlockedDuplicatesFormatTests``, so this reads the shipped `.strings`
+    /// rather than whatever the test host's language happens to be.
+    @MainActor private func string(_ key: String, _ language: String) throws -> String {
+        let bundle = try #require(
+            LocalizationManager.lprojBundle(language, in: .module),
+            "missing \(language).lproj"
+        )
+        let url = try #require(bundle.url(forResource: "DragonKit", withExtension: "strings"))
+        let dict = try #require(NSDictionary(contentsOf: url) as? [String: String])
+        return try #require(dict[key], "\(language) is missing \(key)")
+    }
+
+    private static func directives(_ format: String) -> [String] {
+        BlockedDuplicatesFormatTests.conversionDirectives(in: format).sorted()
+    }
+
+    @MainActor @Test func everyLocaleCarriesExactlyThePermittedDirectives() throws {
+        for language in Self.languages {
+            for (key, permitted) in Self.contract {
+                let found = Self.directives(try string(key, language))
+                #expect(found == permitted, "\(language) \(key): directives were \(found), expected \(permitted)")
+            }
+        }
+    }
+
+    @MainActor @Test func everyLocaleRendersTheAppAndWhereItIsInstalled() throws {
+        let appName = "Dragon Sample App"
+        let location = "/Library/Input Methods/Dragon Sample App.app"
+        for language in Self.languages {
+            let format = try string(Self.messageKey, language)
+            // Validated before formatting, and never assumed from the contract test above, which
+            // may run concurrently: a directive with no matching argument reads past the end.
+            try #require(Self.directives(format) == ["%1$@", "%2$@"], "\(language): refusing to format")
+
+            let rendered = String(format: format, appName, location)
+            #expect(rendered.contains(appName), "\(language): the app name did not land")
+            #expect(rendered.contains(location), "\(language): the location did not land")
+            for specifier in ["%1$@", "%2$@", "%@"] {
+                #expect(!rendered.contains(specifier), "\(language): \(specifier) was not consumed")
+            }
+        }
+    }
+
+    /// The command is the one part of the paragraph that must not be translated: it is typed into
+    /// Terminal as it stands.
+    @MainActor @Test func everyLocaleKeepsTheHomebrewCommandVerbatim() throws {
+        for language in Self.languages {
+            let format = try string(Self.homebrewKey, language)
+            try #require(Self.directives(format) == ["%1$@"], "\(language): refusing to format")
+
+            let rendered = String(format: format, "dragon-sample-app")
+            #expect(
+                rendered.contains("brew uninstall --cask dragon-sample-app"),
+                "\(language): the command did not survive translation verbatim"
+            )
+            #expect(!rendered.contains("%"), "\(language): a specifier was not consumed")
+        }
+    }
+
+    /// The brew route is offered only when the configuration names a cask. A debug build never
+    /// does: ``UninstallConfig/caskToken(_:ifBundleIs:actual:)`` withholds the token from it,
+    /// because `brew uninstall --cask` would delete the installed release rather than the build
+    /// that is asking — so this refusal cannot tell a debug build to do that either.
+    @MainActor @Test func theHomebrewRouteIsOfferedOnlyWithACask() {
+        let location = DragonUninstaller.displayPath(installedForAllUsers)
+
+        let withCask = DragonUninstaller.notRemovableMessage(
+            appName: "Dragon Sample App", bundle: installedForAllUsers, homebrewCask: "dragon-sample-app"
+        )
+        #expect(withCask.contains(location))
+        #expect(withCask.contains("brew uninstall --cask dragon-sample-app"))
+
+        for cask in [nil, ""] as [String?] {
+            let without = DragonUninstaller.notRemovableMessage(
+                appName: "Dragon Sample App", bundle: installedForAllUsers, homebrewCask: cask
+            )
+            #expect(without.contains(location))
+            #expect(!without.contains("brew"), "no cask, no brew route (cask: \(String(describing: cask)))")
+        }
     }
 }

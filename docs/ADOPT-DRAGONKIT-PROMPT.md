@@ -243,7 +243,9 @@ hosting, Quit behavior, launch behavior, or uninstall implementation.
 - **Backend behavior is app-specific** — shared pane UI does not imply identical operations.
   Current KeyKey supplies `UninstallConfig` for its defaults, learning-data directory, cache,
   bundle, and conditional Homebrew receipt; DragonKit clears those targets, moves the running
-  bundle to Trash, and terminates after success. There is no `TISDisableInputSource`, input-source
+  bundle to Trash, and terminates after success — or, for a copy installed for all users in
+  root-owned `/Library/Input Methods`, refuses before clearing anything, since the user cannot
+  move it. There is no `TISDisableInputSource`, input-source
   unregister operation, active-source switch, or custom uninstall-operation hook in the current
   implementation. Removing KeyKey from Input Sources in System Settings and logging out when
   needed are separate user steps. Do not document automatic TIS cleanup unless a future runtime

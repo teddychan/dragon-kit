@@ -53,7 +53,9 @@ then retargets them to `@objc` selectors on `InputController` because IMK dispat
 selections back to the controller. Settings uses the shared DragonKit window and panes. Quit and
 Uninstall are absent from the IMK menu; Uninstall is the last Settings pane. The implemented
 uninstaller clears configured defaults/files, moves the running bundle to Trash, conditionally
-clears its Homebrew receipt, and terminates — but has **no TIS deregistration hook**. Removing the
+clears its Homebrew receipt, and terminates — but has **no TIS deregistration hook**. A copy
+installed for all users (root:wheel in `/Library/Input Methods`, KeyKey 2.16.0+) is one the user
+cannot move, so the uninstaller refuses it before removing anything. Removing the
 input source in System Settings and logging out when needed remain separate user steps; do not
 document automatic TIS cleanup unless an implementation adds and verifies it.
 

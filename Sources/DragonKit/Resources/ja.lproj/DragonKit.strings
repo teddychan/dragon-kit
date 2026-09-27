@@ -60,6 +60,9 @@
 "DragonKit.uninstall.blockedDuplicatesMessage" = "何も削除されていません。%1$@ のコピーが複数インストールされており、設定・ログイン項目・サポートファイルを共有しています。ここからアンインストールすると、別のコピーのデータまで消えるおそれがあります。\n\n不要なコピーをゴミ箱に移動し、アンインストールしたいものだけを残してから、もう一度お試しください。別のコピーを終了するだけでは足りません。\n\n見つかったコピー：";
 "DragonKit.uninstall.blockedIdentityTitle" = "アンインストールできません";
 "DragonKit.uninstall.blockedIdentityMessage" = "何も削除されていません。%@は自身の識別情報を安全に確認できなかったため、別のコピーに属する可能性のある設定やファイルを削除しません。元の入手元からインストールし直してからお試しください。";
+"DragonKit.uninstall.blockedNotRemovableTitle" = "ここからはアンインストールできません";
+"DragonKit.uninstall.blockedNotRemovableMessage" = "何も削除されていません。%1$@ はインストールされている場所から自身をゴミ箱に移動する権限がないため、何かを削除する前に中止しました。続けていれば、アプリはインストールされたまま設定だけが消えていました。\n\nアンインストールするには、Finder でゴミ箱にドラッグしてください（必要に応じて管理者パスワードが求められます）。インストール場所：\n%2$@";
+"DragonKit.uninstall.blockedNotRemovableHomebrew" = "Homebrew でインストールした場合は、代わりにターミナルで次のコマンドを実行することもできます：\nbrew uninstall --cask %1$@";
 
 "DragonKit.updates.upToDate.title" = "%@ は最新です";
 "DragonKit.updates.upToDate.message" = "%@ が現在利用可能な最新バージョンです。";

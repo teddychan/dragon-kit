@@ -60,6 +60,9 @@
 "DragonKit.uninstall.blockedDuplicatesMessage" = "未删除任何内容。你的电脑上安装了多个 %1$@ 副本，它们共用同一套设置、登录项和支持文件——从这里卸载可能会连同另一个副本的数据一起删掉。\n\n请把不需要的副本移到废纸篓，只保留你要卸载的那一个，然后重试。仅仅退出另一个副本是不够的。\n\n找到的副本：";
 "DragonKit.uninstall.blockedIdentityTitle" = "无法卸载";
 "DragonKit.uninstall.blockedIdentityMessage" = "未删除任何内容。%@ 无法安全确认自身身份，因此不会删除可能属于其他副本的设置或文件。请从原始来源重新安装后再试。";
+"DragonKit.uninstall.blockedNotRemovableTitle" = "无法在此卸载";
+"DragonKit.uninstall.blockedNotRemovableMessage" = "未删除任何内容。%1$@ 没有权限从当前安装位置把自己移到废纸篓，因此在删除任何内容之前就停止了——否则设置会被清空，应用却仍然留在电脑上。\n\n要卸载它，请在访达中把它拖到废纸篓，需要时会要求输入管理员密码。安装位置：\n%2$@";
+"DragonKit.uninstall.blockedNotRemovableHomebrew" = "如果你是通过 Homebrew 安装的，也可以改为在终端中运行：\nbrew uninstall --cask %1$@";
 
 "DragonKit.updates.upToDate.title" = "%@ 已是最新版本";
 "DragonKit.updates.upToDate.message" = "%@ 是当前可用的最新版本。";

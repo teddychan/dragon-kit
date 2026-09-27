@@ -93,6 +93,10 @@ enum UninstallPreflight: Equatable {
     /// More than one bundle carrying this exact identity exists on disk, so the state keyed on
     /// that identity cannot be attributed to the copy being uninstalled.
     case duplicateCopies([URL])
+    /// This user cannot move the running bundle to the Trash, so tearing down in front of that
+    /// move would leave the app installed with its settings already gone. Carries the resolved
+    /// bundle, because the refusal has to say where it is for the user to remove it by hand.
+    case bundleNotRemovable(URL)
 }
 
 /// Performs a complete self-uninstall: disable the login item, wipe the app's defaults
@@ -100,9 +104,16 @@ enum UninstallPreflight: Equatable {
 /// quit. Ported from ice-2's uninstall flow, generalized to any bundle id / suites.
 @MainActor
 public enum DragonUninstaller {
-    /// Whether this uninstall may touch anything, decided from identity alone — no filesystem
-    /// and no LaunchServices access of its own, so the whole decision is testable against a
-    /// fixed world.
+    /// Whether this uninstall may touch anything, decided from identity and from whether this
+    /// user can move the bundle — no filesystem and no LaunchServices access of its own, so the
+    /// whole decision is testable against a fixed world.
+    ///
+    /// **Removability** is asked because the teardown runs in front of the Trash move and cannot
+    /// be undone. Yahoo! KeyKey 2 installed for all users sits root:wheel inside root:wheel 755
+    /// `/Library/Input Methods`, and `NSWorkspace.recycle` asks for no password there — it fails.
+    /// Until this check the user lost their settings and learning data first and was then told
+    /// "Uninstall Incomplete" with the app still installed. `isWritable` answers for the resolved
+    /// bundle and for its folder; see the check below for why both.
     ///
     /// `recycle()` moves the *running* bundle and is path-scoped, which is safe. Everything
     /// either side of it is keyed on the bundle *identity*: the login item, the defaults
@@ -132,7 +143,8 @@ public enum DragonUninstaller {
         actualBundleID: String?,
         currentBundleURL: URL,
         discoveredCopies: [URL],
-        canonicalize: (URL) -> URL?
+        canonicalize: (URL) -> URL?,
+        isWritable: (URL) -> Bool
     ) -> UninstallPreflight {
         // No fallback from a missing id to the configured one. That fallback is exactly how the
         // sample app leaked a cask token: it answered the release id for the one build that
@@ -149,6 +161,21 @@ public enum DragonUninstaller {
         // disk cannot be compared against anything, so it authorises nothing.
         guard let current = canonicalize(currentBundleURL) else {
             return .identityUnverified
+        }
+
+        // Both the folder and the bundle. The Trash move is a rename into another directory, and
+        // macOS authorises that on two directories, not one: the folder loses an entry, and the
+        // bundle — itself a directory — has its own `..` rewritten. So a root-owned bundle in
+        // admin-writable /Applications, which the Mac App Store and every .pkg installer leave,
+        // fails exactly as one in root-owned /Library/Input Methods does. Measured on macOS 27.0
+        // on 2026-09-28: `NSWorkspace.recycle` failed with NSFileWriteNoPermissionError, and no
+        // password prompt, in both shapes; `UninstallRemovabilityTests` keeps that pinned.
+        //
+        // Before the copies are counted, because this settles the question on its own: a bundle
+        // this user cannot move cannot be uninstalled from here whether or not it is alone, and the
+        // way out the refusal offers — Finder, or brew — touches nothing the copies share.
+        guard isWritable(current.deletingLastPathComponent()), isWritable(current) else {
+            return .bundleNotRemovable(current)
         }
 
         // Seeded with the current bundle, so "discovery returned nothing" can never read as
@@ -202,6 +229,18 @@ public enum DragonUninstaller {
         return FileManager.default.fileExists(atPath: resolved.path) ? resolved : nil
     }
 
+    /// The production writability test behind ``preflight(…)``, which asks it of the resolved
+    /// bundle and its folder: whether this user may write to `url`.
+    ///
+    /// It answers for permissions and for a read-only volume, which is what makes a translocated
+    /// or disk-image copy a refusal up front rather than a teardown in front of a doomed move. It
+    /// does not answer every way the move can still fail — a sticky folder owned by someone else,
+    /// an ACL that denies deletion, the folder changing between the check and the move — which is
+    /// why the removal-failure alert behind the Trash move stays.
+    nonisolated static func isWritableByThisUser(_ url: URL) -> Bool {
+        FileManager.default.isWritableFile(atPath: url.path)
+    }
+
     /// Every same-identity bundle the system will admit to, from both directories that know.
     ///
     /// LaunchServices is not sufficient on its own: a copy built independently under `.build`
@@ -252,7 +291,8 @@ public enum DragonUninstaller {
                     // for copies of a bundle this process has not shown itself to be. An absent
                     // id short-circuits to `.identityUnverified` without a query at all.
                     discoveredCopies: actual.map { discoverBundleCopies(withIdentifier: $0) } ?? [],
-                    canonicalize: canonicalBundleURL
+                    canonicalize: canonicalBundleURL,
+                    isWritable: isWritableByThisUser
                 )
             },
             reportBlocked: { decision in
@@ -289,8 +329,9 @@ public enum DragonUninstaller {
     ) {
         // First, and before anything that cannot be undone. Every step below this line is keyed
         // on the bundle identity rather than on this bundle's path, so they are only correct
-        // while this is the sole bundle carrying that identity — see ``preflight(…)``. Telling
-        // the user is the one thing a blocked uninstall may do.
+        // while this is the sole bundle carrying that identity — and only worth doing when the
+        // Trash move they lead up to can succeed. See ``preflight(…)``. Telling the user is the
+        // one thing a blocked uninstall may do.
         let decision = preflight()
         guard decision == .proceed else {
             reportBlocked(decision)
@@ -320,9 +361,11 @@ public enum DragonUninstaller {
         }
 
         // The teardown above is irreversible and has already happened, so the Trash move is the
-        // one step whose failure the user has to hear about: on a read-only volume, an
-        // MDM-managed or SIP-protected path, or a plain permission denial, the app is still
-        // installed but every setting and the login item are gone. Discarding this error meant
+        // one step whose failure the user has to hear about. The preflight refuses the failures it
+        // can see coming — a folder or bundle this user cannot write, a read-only volume — but not
+        // all of them: an MDM-managed or SIP-protected path, a sticky folder, or a folder that
+        // changed after the check still fails here, with the app installed and every setting and
+        // the login item gone. Discarding this error meant
         // `onComplete()` — which terminates by default — reported a successful uninstall that
         // hadn't happened, and the user was told nothing.
         //
@@ -383,10 +426,11 @@ public enum DragonUninstaller {
     /// Tells the user why nothing was removed, and does *not* run `onComplete` — quitting here
     /// would look exactly like the successful uninstall that did not happen.
     ///
-    /// Both messages say plainly that no data was removed, because the alert arrives after the
+    /// Every message says plainly that no data was removed, because the alert arrives after the
     /// user pressed a confirmed, irreversible-sounding button and the honest answer is that it
-    /// did nothing. The paths go in the duplicate message rather than the log alone: the user
-    /// cannot act on "there is another copy" without being told where it is.
+    /// did nothing. The paths go in the duplicate and not-removable messages rather than the log
+    /// alone: the user cannot act on "there is another copy", or on "remove it yourself", without
+    /// being told where it is.
     private static func reportUninstallBlocked(config: UninstallConfig, decision: UninstallPreflight) {
         let alert = NSAlert()
         alert.alertStyle = .warning
@@ -428,11 +472,43 @@ public enum DragonUninstaller {
             // screen — unusable exactly when the user most needs to read it. Nothing is dropped;
             // the list scrolls and stays selectable so it can be copied.
             alert.accessoryView = duplicateCopyAccessory(urls)
+        case .bundleNotRemovable(let url):
+            // The path is private for the same reason as the duplicate list above.
+            logger.error(
+                """
+                Uninstall blocked: this user cannot move \(url.path, privacy: .private) to the \
+                Trash — the bundle or its folder is not writable
+                """
+            )
+            alert.messageText = L("DragonKit.uninstall.blockedNotRemovableTitle")
+            alert.informativeText = notRemovableMessage(
+                appName: config.appName, bundle: url, homebrewCask: config.homebrewCask
+            )
         }
 
         alert.addButton(withTitle: L("DragonKit.ok"))
         if let icon = NSApp.applicationIconImage { alert.icon = icon }
         alert.runModal()
+    }
+
+    /// The not-removable refusal's text: that nothing was removed, where the app is, and how to
+    /// remove it by hand — plus the Homebrew route when the app ships as a cask.
+    ///
+    /// The cask paragraph is only ever as trustworthy as the token, and that is already settled:
+    /// ``UninstallConfig/caskToken(_:ifBundleIs:actual:)`` withholds it from a debug build, for
+    /// which `brew uninstall --cask` would delete the installed release instead. The paragraph still
+    /// says "if you installed it with Homebrew", because a matching identity is not proof that
+    /// Homebrew installed this copy.
+    static func notRemovableMessage(appName: String, bundle: URL, homebrewCask: String?) -> String {
+        var message = String(
+            format: L("DragonKit.uninstall.blockedNotRemovableMessage"), appName, displayPath(bundle)
+        )
+        if let homebrewCask, !homebrewCask.isEmpty {
+            message += "\n\n" + String(
+                format: L("DragonKit.uninstall.blockedNotRemovableHomebrew"), homebrewCask
+            )
+        }
+        return message
     }
 
     /// How a discovered copy's path is shown: the user's home abbreviated to `~`.

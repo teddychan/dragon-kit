@@ -60,6 +60,9 @@
 "DragonKit.uninstall.blockedDuplicatesMessage" = "Nothing was removed. More than one copy of %1$@ is installed, and they share the same settings, login item and support files — so uninstalling from here could delete the other copy's data too.\n\nMove the copies you don't want to the Trash, leave only the one you mean to uninstall, then try again. Quitting the other copy is not enough.\n\nCopies found:";
 "DragonKit.uninstall.blockedIdentityTitle" = "Uninstall Unavailable";
 "DragonKit.uninstall.blockedIdentityMessage" = "Nothing was removed. %@ could not safely confirm its own identity, so it will not delete settings or files that may belong to another copy. Reinstall the app from its original source and try again.";
+"DragonKit.uninstall.blockedNotRemovableTitle" = "Can't Uninstall from Here";
+"DragonKit.uninstall.blockedNotRemovableMessage" = "Nothing was removed. %1$@ doesn't have permission to move itself to the Trash from where it is installed, so it stopped before deleting anything — otherwise its settings would be gone and the app still installed.\n\nTo uninstall it, drag it to the Trash in Finder, which asks for an administrator password when one is needed. It is installed at:\n%2$@";
+"DragonKit.uninstall.blockedNotRemovableHomebrew" = "If you installed it with Homebrew, you can run this in Terminal instead:\nbrew uninstall --cask %1$@";
 
 "DragonKit.updates.upToDate.title" = "%@ is up to date";
 "DragonKit.updates.upToDate.message" = "%@ is currently the newest version available.";

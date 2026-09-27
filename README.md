@@ -70,7 +70,10 @@ Modules:
   (`UninstallConfig`) — incl. an optional, default-off "also delete user data" toggle
   (`optionalDataToggle`) and always-removed `extraCleanupPaths` (caches, support files). A
   failed Trash move is reported to the user instead of quitting as though it had worked — the
-  settings teardown before it is irreversible. An app shipped as a Homebrew cask passes
+  settings teardown before it is irreversible. A bundle this user cannot move at all — in a
+  root-owned folder like an all-users `/Library/Input Methods`, or root-owned itself as Mac App
+  Store and `.pkg` installs are — is refused before anything is removed, with how to remove it
+  instead (Finder, or `brew uninstall --cask` when a token is set). An app shipped as a Homebrew cask passes
   `homebrewCask:` so the post-exit cleanup clears brew's receipt too: Homebrew never watches the
   filesystem, so an app that deletes itself leaves a receipt still claiming it is installed and a
   dangling `Caskroom` symlink, and `brew install` then refuses outright for an app that isn't
