@@ -232,9 +232,11 @@ public enum DragonUninstaller {
     /// The production writability test behind ``preflight(…)``, which asks it of the resolved
     /// bundle and its folder: whether this user may write to `url`.
     ///
-    /// It answers for permissions and for a read-only volume, which is what makes a translocated
-    /// or disk-image copy a refusal up front rather than a teardown in front of a doomed move. It
-    /// does not answer every way the move can still fail — a sticky folder owned by someone else,
+    /// It answers for permissions — the two shapes `UninstallRemovabilityTests` measures — and,
+    /// per access(2)'s `EROFS`, for a read-only volume, which should make a copy run from a disk
+    /// image or translocated by Gatekeeper a refusal up front too. That last part follows from the
+    /// man page and has not been measured. It does not answer every way the move can still fail —
+    /// a sticky folder owned by someone else,
     /// an ACL that denies deletion, the folder changing between the check and the move — which is
     /// why the removal-failure alert behind the Trash move stays.
     nonisolated static func isWritableByThisUser(_ url: URL) -> Bool {
