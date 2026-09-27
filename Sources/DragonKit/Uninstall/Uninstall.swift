@@ -236,9 +236,9 @@ public enum DragonUninstaller {
     /// per access(2)'s `EROFS`, for a read-only volume, which should make a copy run from a disk
     /// image or translocated by Gatekeeper a refusal up front too. That last part follows from the
     /// man page and has not been measured. It does not answer every way the move can still fail —
-    /// a sticky folder owned by someone else,
-    /// an ACL that denies deletion, the folder changing between the check and the move — which is
-    /// why the removal-failure alert behind the Trash move stays.
+    /// a sticky folder owned by someone else, an ACL that denies deletion, the folder changing
+    /// between the check and the move — which is why the removal-failure alert behind the Trash
+    /// move stays.
     nonisolated static func isWritableByThisUser(_ url: URL) -> Bool {
         FileManager.default.isWritableFile(atPath: url.path)
     }
