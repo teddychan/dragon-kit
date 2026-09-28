@@ -60,6 +60,9 @@
 "DragonKit.uninstall.blockedDuplicatesMessage" = "未移除任何項目。你的電腦上安裝了多個 %1$@ 副本，它們共用同一套設定、登入項目和支援檔案——從這裡解除安裝可能會連同另一個副本的資料一起刪除。\n\n請把不需要的副本移到垃圾桶，只保留你要解除安裝的那一個，然後再試一次。只是結束另一個副本並不足夠。\n\n找到的副本：";
 "DragonKit.uninstall.blockedIdentityTitle" = "無法解除安裝";
 "DragonKit.uninstall.blockedIdentityMessage" = "未移除任何項目。%@ 無法安全確認自身的身分，因此不會刪除可能屬於其他副本的設定或檔案。請從原始來源重新安裝後再試。";
+"DragonKit.uninstall.blockedNotRemovableTitle" = "無法在此解除安裝";
+"DragonKit.uninstall.blockedNotRemovableMessage" = "未移除任何項目。%1$@ 沒有權限從目前的安裝位置把自己移到垃圾桶，因此在刪除任何項目之前就停止了——否則設定會被清除，App 卻仍然留在電腦上。\n\n要解除安裝，請在 Finder 中把它拖到垃圾桶，需要時會要求輸入管理者密碼。安裝位置：\n%2$@";
+"DragonKit.uninstall.blockedNotRemovableHomebrew" = "如果你是透過 Homebrew 安裝的，也可以改為在「終端機」中執行：\nbrew uninstall --cask %1$@";
 
 "DragonKit.updates.upToDate.title" = "%@ 已是最新版本";
 "DragonKit.updates.upToDate.message" = "%@ 是目前可用的最新版本。";

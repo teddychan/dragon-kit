@@ -60,6 +60,9 @@
 "DragonKit.uninstall.blockedDuplicatesMessage" = "Rien n'a été supprimé. Plusieurs copies de %1$@ sont installées et partagent les mêmes réglages, le même élément d'ouverture et les mêmes fichiers de support : désinstaller ici risquerait d'effacer aussi les données de l'autre copie.\n\nPlacez dans la corbeille les copies dont vous ne voulez pas, ne gardez que celle à désinstaller, puis réessayez. Quitter l'autre copie ne suffit pas.\n\nCopies trouvées :";
 "DragonKit.uninstall.blockedIdentityTitle" = "Désinstallation indisponible";
 "DragonKit.uninstall.blockedIdentityMessage" = "Rien n'a été supprimé. %@ n'a pas pu confirmer son identité de manière sûre et ne supprimera donc ni réglages ni fichiers susceptibles d'appartenir à une autre copie. Réinstallez l'app depuis sa source d'origine, puis réessayez.";
+"DragonKit.uninstall.blockedNotRemovableTitle" = "Impossible de désinstaller depuis l'app";
+"DragonKit.uninstall.blockedNotRemovableMessage" = "Rien n'a été supprimé. %1$@ n'a pas l'autorisation de se placer dans la Corbeille depuis son emplacement d'installation : la désinstallation s'est donc arrêtée avant toute suppression — sinon, ses réglages auraient disparu alors que l'app serait restée installée.\n\nPour la désinstaller, faites-la glisser dans la Corbeille depuis le Finder, qui demande un mot de passe administrateur si nécessaire. Elle est installée ici :\n%2$@";
+"DragonKit.uninstall.blockedNotRemovableHomebrew" = "Si vous l'avez installée avec Homebrew, vous pouvez plutôt exécuter ceci dans Terminal :\nbrew uninstall --cask %1$@";
 
 "DragonKit.updates.upToDate.title" = "%@ est à jour";
 "DragonKit.updates.upToDate.message" = "%@ est actuellement la version la plus récente disponible.";
