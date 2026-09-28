@@ -12,6 +12,36 @@ nothing that already worked was taken away.
 
 ---
 
+## 4.1.2 — 2026-09-28
+
+**Would anyone using the apps notice? Only someone uninstalling an app they could not remove.**
+Nothing was redesigned and nothing was added. One safety problem was fixed.
+
+### Fixed
+
+- **Uninstall now stops before removing anything when it could not finish the job.** "Uninstall"
+  first clears your settings, your login item and the app's support files, and only then moves
+  the app to the Trash. When the app sits somewhere you cannot move it from yourself, that last
+  step fails — and by then everything else was already gone. You lost your settings and were told
+  "Uninstall Incomplete" with the app still installed.
+
+  That happens whenever the app, or the folder it is in, belongs to the system: Yahoo! KeyKey 2
+  installed for all users in `/Library/Input Methods` (new in its 2.16.0), and also an app a
+  Mac App Store or installer-package install put in `/Applications`. macOS does not ask for a
+  password when an app tries to move itself to the Trash; it simply refuses.
+
+  Uninstall now checks first. If it cannot move the app, it stops before touching anything, says
+  plainly that nothing was removed, shows where the app is, and tells you to drag it to the Trash
+  in Finder — which asks for an administrator password when one is needed. For an app installed
+  with Homebrew it also gives the `brew uninstall` command.
+
+  For an app you can move yourself, which is nearly every copy downloaded directly, nothing
+  changes.
+
+### Internal
+
+- Every app's About screen now reads `Built with · DragonKit v4.1.2`.
+
 ## 4.1.1 — 2026-08-20
 
 **Would anyone using the apps notice? Only if something was already wrong.** Nothing was
