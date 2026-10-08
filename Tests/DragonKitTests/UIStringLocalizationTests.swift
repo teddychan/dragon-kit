@@ -76,7 +76,7 @@ enum UIStringScanner {
         #expect(UIStringScanner.offenders(in: ###"Text("\(content.displayVersion) · \(content.date)")"###).isEmpty)
     }
 
-    /// The kit ships seven languages and `L()` resolves the module bundle first, so a raw literal
+    /// The kit ships eight languages and `L()` resolves the module bundle first, so a raw literal
     /// here is text no app can translate or override. The Sparkle "no update found" alert carried
     /// three of them — `"<App> is up to date"`, its message, and its `OK` button.
     @Test func noUnlocalizedUIStringsInKitSources() throws {

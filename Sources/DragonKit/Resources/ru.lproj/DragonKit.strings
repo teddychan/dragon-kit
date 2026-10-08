@@ -1,0 +1,100 @@
+"DragonKit.selectSetting" = "Выберите раздел настроек";
+"DragonKit.whatsNew.title" = "Что нового в этой версии";
+
+"DragonKit.ok" = "ОК";
+"DragonKit.cancel" = "Отменить";
+
+"DragonKit.language.label" = "Язык";
+"DragonKit.language.system" = "Автоматически";
+
+"DragonKit.about.website" = "Веб-сайт";
+"DragonKit.about.support" = "Поддержка на GitHub";
+"DragonKit.about.original" = "Исходный проект";
+"DragonKit.about.licenses" = "Лицензии открытого ПО";
+"DragonKit.about.credits" = "Благодарности";
+"DragonKit.about.createdBy" = "Автор";
+"DragonKit.about.basedOn" = "Основано на";
+"DragonKit.about.builtWith" = "Создано с помощью";
+"DragonKit.about.license" = "Лицензия";
+
+"DragonKit.pane.about" = "О программе";
+"DragonKit.pane.whatsNew" = "Что нового";
+"DragonKit.pane.permissions" = "Разрешения";
+"DragonKit.pane.backup" = "Резервное копирование";
+"DragonKit.pane.updates" = "Обновления";
+"DragonKit.pane.uninstall" = "Удаление";
+
+"DragonKit.permissions.granted" = "Предоставлено";
+"DragonKit.permissions.notGranted" = "Не предоставлено";
+"DragonKit.permissions.request" = "Запросить…";
+"DragonKit.permissions.openSettings" = "Открыть Системные настройки";
+"DragonKit.permissions.refresh" = "Обновить";
+"DragonKit.permissions.refreshHint" = "Заново проверяет состояние разрешений выше.";
+"DragonKit.permission.accessibility.title" = "Универсальный доступ";
+"DragonKit.permission.accessibility.detail" = "Отслеживать элементы интерфейса других приложений и управлять ими.";
+"DragonKit.permission.screenRecording.title" = "Запись экрана";
+"DragonKit.permission.screenRecording.detail" = "Захватывать содержимое экрана.";
+
+"DragonKit.backup.folderSection" = "Папка резервных копий";
+"DragonKit.backup.choose" = "Выбрать…";
+"DragonKit.backup.backupsSection" = "Резервные копии";
+"DragonKit.backup.now" = "Создать резервную копию";
+"DragonKit.backup.reveal" = "Показать в Finder";
+"DragonKit.backup.none" = "Резервных копий пока нет.";
+"DragonKit.backup.restore" = "Восстановить";
+"DragonKit.backup.restoreConfirmTitle" = "Восстановить эту резервную копию?";
+"DragonKit.backup.restoreConfirmMessage" = "Текущие настройки будут заменены, и приложение перезапустится.";
+"DragonKit.backup.deleteAccessibility" = "Удалить резервную копию %@";
+"DragonKit.backup.unchangedTitle" = "Нечего копировать";
+"DragonKit.backup.unchangedMessage" = "Настройки не менялись с момента последнего резервного копирования, поэтому новая копия не создана.";
+"DragonKit.backup.errorTitle" = "Ошибка резервного копирования";
+
+"DragonKit.uninstall.section" = "Удаление";
+"DragonKit.uninstall.title" = "Удалить %@?";
+"DragonKit.uninstall.body" = "%@ завершит работу и полностью удалит себя. Будут удалены:";
+"DragonKit.uninstall.permissionsNote" = "Выданные разрешения нужно отозвать самостоятельно в Системных настройках ▸ Конфиденциальность и безопасность — macOS не позволяет приложению сделать это самому. Это действие нельзя отменить.";
+"DragonKit.uninstall.confirm" = "Удалить";
+"DragonKit.uninstall.failedTitle" = "Удаление не завершено";
+"DragonKit.uninstall.failedMessage" = "Не удалось переместить %@ в Корзину. Настройки и объект входа удалены, но само приложение всё ещё установлено — переместите его в Корзину вручную.";
+"DragonKit.uninstall.blockedDuplicatesTitle" = "Установлено несколько копий";
+"DragonKit.uninstall.blockedDuplicatesMessage" = "Ничего не удалено. Установлено несколько копий %1$@, и у них общие настройки, объект входа и вспомогательные файлы — поэтому удаление отсюда может стереть и данные другой копии.\n\nПереместите лишние копии в Корзину, оставив только ту, которую хотите удалить, и повторите попытку. Просто завершить другую копию недостаточно.\n\nНайденные копии:";
+"DragonKit.uninstall.blockedIdentityTitle" = "Удаление недоступно";
+"DragonKit.uninstall.blockedIdentityMessage" = "Ничего не удалено. Приложению %@ не удалось надёжно подтвердить собственную подлинность, поэтому оно не будет удалять настройки и файлы, которые могут принадлежать другой копии. Переустановите приложение из исходного источника и повторите попытку.";
+"DragonKit.uninstall.blockedNotRemovableTitle" = "Удалить отсюда невозможно";
+"DragonKit.uninstall.blockedNotRemovableMessage" = "Ничего не удалено. У %1$@ нет прав на перемещение себя в Корзину из папки, где приложение установлено, поэтому удаление остановлено до того, как что-либо было стёрто, — иначе настройки пропали бы, а приложение осталось бы установленным.\n\nЧтобы удалить приложение, перетащите его в Корзину в Finder — при необходимости Finder запросит пароль администратора. Место установки:\n%2$@";
+"DragonKit.uninstall.blockedNotRemovableHomebrew" = "Если приложение установлено через Homebrew, вместо этого можно выполнить в Терминале:\nbrew uninstall --cask %1$@";
+
+"DragonKit.updates.upToDate.title" = "Обновлений для %@ нет";
+"DragonKit.updates.upToDate.message" = "Установлена последняя доступная версия %@.";
+"DragonKit.updates.autoCheck" = "Автоматически проверять наличие обновлений";
+"DragonKit.updates.autoDownload" = "Автоматически загружать обновления";
+"DragonKit.updates.checkNow" = "Проверить обновления…";
+"DragonKit.updates.checkNowTitle" = "Проверить наличие обновлений сейчас";
+"DragonKit.updates.lastChecked" = "Последняя проверка";
+"DragonKit.updates.never" = "Никогда";
+
+"DragonKit.whatsNew.kind.added" = "Добавлено";
+"DragonKit.whatsNew.kind.changed" = "Изменено";
+"DragonKit.whatsNew.kind.fixed" = "Исправлено";
+"DragonKit.whatsNew.kind.removed" = "Удалено";
+"DragonKit.whatsNew.kind.improved" = "Улучшено";
+"DragonKit.whatsNew.kind.security" = "Безопасность";
+
+"DragonKit.menu.about" = "О программе %@";
+"DragonKit.menu.checkForUpdates" = "Проверить обновления…";
+"DragonKit.menu.settings" = "Настройки…";
+"DragonKit.menu.quit" = "Завершить %@";
+
+"DragonKit.mainMenu.hide" = "Скрыть %@";
+"DragonKit.mainMenu.hideOthers" = "Скрыть остальные";
+"DragonKit.mainMenu.showAll" = "Показать все";
+"DragonKit.mainMenu.edit" = "Правка";
+"DragonKit.mainMenu.undo" = "Отменить";
+"DragonKit.mainMenu.redo" = "Повторить";
+"DragonKit.mainMenu.cut" = "Вырезать";
+"DragonKit.mainMenu.copy" = "Скопировать";
+"DragonKit.mainMenu.paste" = "Вставить";
+"DragonKit.mainMenu.selectAll" = "Выбрать все";
+"DragonKit.mainMenu.window" = "Окно";
+"DragonKit.mainMenu.close" = "Закрыть";
+"DragonKit.mainMenu.minimize" = "Свернуть";

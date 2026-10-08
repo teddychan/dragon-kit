@@ -89,9 +89,10 @@ enum AboutConfig {
     }
 }
 """
-# The seven locales DragonKit ships, which is what clipmenu-2, spectacle-2 and dragon-sample-app
-# each ship too — so for them the picker's default is the correct list (R13).
-ALL_LOCALES = ("en", "es", "fr", "ja", "ko", "zh-Hans", "zh-Hant")
+# Every locale DragonKit ships — what an app calling the bare `LanguagePicker()` has to ship too, so
+# that for it the picker's default is the correct list (R13). Moves with `DragonLanguage`: the
+# checker reads the kit's enum, so a stale tuple here fails the "ships all of them" case.
+ALL_LOCALES = ("en", "es", "fr", "ja", "ko", "ru", "zh-Hans", "zh-Hant")
 # Same rule as STALE_PBXPROJ below: a fixture pin that must read as *current* has to stay above
 # dragon-kit's newest real tag, or every compliant-app test starts failing the day the kit
 # catches up.
@@ -880,10 +881,10 @@ BUILD="$(git rev-list --count HEAD)"
 
         print("R13 — the language picker offers exactly what the app ships")
         # The false-positive trap this rule has to survive. clipmenu-2, spectacle-2 and
-        # dragon-sample-app all call LanguagePicker() bare AND ship all seven .lproj, so the
+        # dragon-sample-app all call LanguagePicker() bare AND ship every kit .lproj, so the
         # default is the correct list for them — a rule that merely demanded an explicit argument
         # would fail three conforming apps.
-        expect_pass("bare picker in an app that ships all seven", make_app(
+        expect_pass("bare picker in an app that ships every kit locale", make_app(
             tmp, locales=ALL_LOCALES, extra={"Sources/Lang.swift": language_pane()}))
         # The bug itself: yahoo-keykey-2 through v2.11.4 shipped App/en.lproj and
         # App/zh-Hant.lproj while its Settings offered Español, Français, 日本語, 한국어 and

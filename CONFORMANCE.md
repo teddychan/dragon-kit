@@ -376,7 +376,7 @@ literal `languages:` argument or, when there is none, the kit's default of
 
 So a bare `LanguagePicker()` is correct for an app whose coverage matches the kit's, and a
 violation for one whose coverage is narrower. A rule that simply demanded an explicit argument
-would fail every conforming app that ships all seven.
+would fail every conforming app that ships all of the kit's languages.
 
 **Violation:** the offered set differs from the shipped set in either direction; a `languages:`
 argument that isn't a literal list, or that names something which is no `DragonLanguage` case; a
@@ -527,7 +527,7 @@ violations with the gate flipped, so turning it on stays a one-line change.
 
 - **Shipping localizations.** Not having `.strings` isn't re-implementing a kit module. The
   rule is that localization *goes through* `L()`/`LocalizationManager` — not that every app
-  must ship 7 languages. An English-only app is compliant, and no rule here should be read as
+  must ship every language the kit does. An English-only app is compliant, and no rule here should be read as
   requiring otherwise. §R13 doesn't change this: it constrains what a picker *claims*, so an app
   with no `LanguagePicker` is outside it entirely, and an app with one is only ever asked to agree
   with whatever it does ship.

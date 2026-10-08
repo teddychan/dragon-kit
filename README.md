@@ -91,8 +91,8 @@ Modules:
   `DragonUpdater.start()` schedules background checks explicitly instead of relying on a
   property read to initialize the updater.
 - **Localization** — `L(_:)` (module bundle → app bundle → key) with a runtime
-  `LocalizationManager` + `LanguagePicker` and `.dragonLocalized()`. Ships **7 languages**
-  (en, es, fr, ja, ko, zh-Hans, zh-Hant); switches **live, no restart**. Apps add their own
+  `LocalizationManager` + `LanguagePicker` and `.dragonLocalized()`. Ships **8 languages**
+  (en, es, fr, ja, ko, ru, zh-Hans, zh-Hant); switches **live, no restart**. Apps add their own
   `Localizable.strings` per language and drop in `LanguagePicker`. An app translated into fewer
   languages than the kit passes its own set — `LanguagePicker(languages: [.en, .zhHans])` — so it
   never offers a language its own strings don't have; `onChange:` covers apps whose strings can't

@@ -103,7 +103,7 @@ modules, supplying only this app's own content/config. Use:
                         it confirms INLINE in the pane (no popup window)
   • Updates           — (DragonKitUpdates) DragonUpdater + UpdatesSettingsPane
   • Localization      — L(_:), LocalizationManager, LanguagePicker, .dragonLocalized().
-                        Ships 7 languages (en, es, fr, ja, ko, zh-Hans, zh-Hant) and
+                        Ships 8 languages (en, es, fr, ja, ko, ru, zh-Hans, zh-Hant) and
                         switches language LIVE, no restart. This app supplies its own
                         Localizable.strings per language and drops in LanguagePicker.
 

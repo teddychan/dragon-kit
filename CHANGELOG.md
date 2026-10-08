@@ -12,6 +12,35 @@ nothing that already worked was taken away.
 
 ---
 
+## 4.2.0 — 2026-10-08
+
+**Would anyone using the apps notice? Yes: Russian is now one of the languages.** The language
+menu in Settings lists **Русский**, and the shared screens (Settings, About, What's New, Updates,
+Backup & Restore, Uninstall) are translated. Nothing else changed.
+
+### Added
+
+- **Russian.** The full translation was contributed by
+  [@shendrykau](https://github.com/shendrykau) in
+  [teddychan/ice-2#132](https://github.com/teddychan/ice-2/issues/132). It uses the terms Apple's
+  own Russian macOS uses, so a setting reads the same here as in System Settings.
+
+### For the apps that use DragonKit
+
+- **Every app showing the standard language menu now needs its own Russian translation.** The
+  menu lists every language DragonKit has. An app that offered Русский without translating its own
+  text would switch the shared screens and leave the rest in English, which is the mismatch the
+  automatic language check exists to block. That check reads DragonKit's current language list, so
+  from this release on it fails such an app, whichever DragonKit version the app is on. Add the
+  app's Russian translation and move it to this version in the same change.
+
+### Internal
+
+- The tests that check every language has the same text and the same `%@`-style placeholders now
+  read the list of languages from DragonKit itself. A new language is covered automatically
+  instead of depending on someone remembering three hand-written lists.
+- Every app's About screen now reads `Built with · DragonKit v4.2.0`.
+
 ## 4.1.2 — 2026-09-28
 
 **Would anyone using the apps notice? Only someone uninstalling an app they could not remove.**
