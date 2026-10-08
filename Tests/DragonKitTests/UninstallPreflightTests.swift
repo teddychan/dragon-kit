@@ -823,7 +823,7 @@ struct UninstallRemovabilityTests {
 /// would ship to exactly the users least able to report it.
 @Suite struct BlockedDuplicatesFormatTests {
     private static let key = "DragonKit.uninstall.blockedDuplicatesMessage"
-    private static let languages = ["en", "es", "fr", "ja", "ko", "zh-Hans", "zh-Hant"]
+    private static let languages = DragonLanguage.selectable.compactMap(\.localeCode)
 
     /// Same loading path as `LocalizationTests.allLanguagesDefineTheSameKeys`, so this reads the
     /// shipped `.strings` rather than whatever the test host's language happens to be.
@@ -1018,7 +1018,7 @@ struct UninstallRemovabilityTests {
 /// a second copy of the whole message: the paragraph is the part that varies, and two near-identical
 /// messages in seven languages is fourteen strings waiting to drift apart.
 @Suite struct BlockedNotRemovableFormatTests {
-    private static let languages = ["en", "es", "fr", "ja", "ko", "zh-Hans", "zh-Hant"]
+    private static let languages = DragonLanguage.selectable.compactMap(\.localeCode)
     private static let titleKey = "DragonKit.uninstall.blockedNotRemovableTitle"
     private static let messageKey = "DragonKit.uninstall.blockedNotRemovableMessage"
     private static let homebrewKey = "DragonKit.uninstall.blockedNotRemovableHomebrew"

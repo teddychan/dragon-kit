@@ -8,7 +8,7 @@ import Foundation
     /// Deliberately asserted against a *real shipping* key: this used to use a `DragonKit.ping`
     /// = `pong` fixture, which — because key parity forces every key into every locale — shipped
     /// to users of all five Dragon apps in seven languages. Don't reintroduce a fixture key.
-    /// `DragonKit.ok` works because its value differs from the key in all seven `.lproj` files,
+    /// `DragonKit.ok` works because its value differs from the key in every `.lproj` file,
     /// so a broken resolver returning the key can't pass.
     @Test func resolvesKeyFromModuleBundle() {
         #expect(L("DragonKit.ok") == "OK")
@@ -21,7 +21,7 @@ import Foundation
     /// Every shipped language must define exactly the same keys as English — catches a
     /// translation added to one locale but forgotten in another.
     @Test func allLanguagesDefineTheSameKeys() throws {
-        let languages = ["en", "es", "fr", "ja", "ko", "zh-Hans", "zh-Hant"]
+        let languages = DragonLanguage.selectable.compactMap(\.localeCode)
 
         func keys(_ language: String) throws -> Set<String> {
             let bundle = try #require(
@@ -56,7 +56,7 @@ import Foundation
             configured: DragonLanguage.selectable, selection: .system
         )
         #expect(offered == DragonLanguage.selectable)
-        #expect(offered.count == 7)
+        #expect(offered.count == 8)
     }
 
     @Test func listsOnlyTheLanguagesTheAppConfigured() {

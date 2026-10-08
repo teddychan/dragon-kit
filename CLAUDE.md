@@ -24,7 +24,7 @@ depending on, and keep it from breaking five apps at once.
 |---|---|
 | `Sources/DragonKit/` | The core library. **No external dependencies.** |
 | `Sources/DragonKitUpdates/` | The only target that may touch Sparkle. |
-| `Sources/DragonKit/Resources/*.lproj/DragonKit.strings` | Kit-owned strings, 7 languages. |
+| `Sources/DragonKit/Resources/*.lproj/DragonKit.strings` | Kit-owned strings, 8 languages. |
 | `Tests/DragonKitTests/` | swift-testing suites for the core library. |
 | `Tests/DragonKitUpdatesTests/` | swift-testing suites for the Sparkle-backed target. Separate on purpose: keeping Sparkle out of the core test target is what keeps the two-product split honest. |
 | `Tests/*/HostWiringTests.swift` | The host-app integration fixture: assembles the shared panes and configs from a plain, non-`@testable` import, in both link shapes. Replaced `sample-app/`'s build — see [Verify before claiming done](#verify-before-claiming-done). |
@@ -71,8 +71,8 @@ signature, adding a non-defaulted parameter to a public initializer, or adding a
 requirement without a default is a breaking change — it needs a major `vX.0.0` tag and every app
 has to be bumped by hand. Prefer additive change with defaults.
 
-**User-visible text goes through `L(_:)`,** and a new key goes into **all seven** `.lproj`
-files (`en, es, fr, ja, ko, zh-Hans, zh-Hant`) — `LocalizationTests.allLanguagesDefineTheSameKeys()`
+**User-visible text goes through `L(_:)`,** and a new key goes into **all eight** `.lproj`
+files (`en, es, fr, ja, ko, ru, zh-Hans, zh-Hant`) — `LocalizationTests.allLanguagesDefineTheSameKeys()`
 fails the build otherwise. `L()` resolves the module bundle first, so an app cannot override or
 patch a kit string; getting app-specific copy for one means exposing it as config, the way
 `UninstallConfig` does for the uninstall checklist.

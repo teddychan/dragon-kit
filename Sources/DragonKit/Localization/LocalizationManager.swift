@@ -10,6 +10,7 @@ public enum DragonLanguage: String, CaseIterable, Sendable, Identifiable {
     case fr
     case ja
     case ko
+    case ru
     case zhHans = "zh-Hans"
     case zhHant = "zh-Hant"
 
@@ -31,6 +32,7 @@ public enum DragonLanguage: String, CaseIterable, Sendable, Identifiable {
         case .fr: return "Français"
         case .ja: return "日本語"
         case .ko: return "한국어"
+        case .ru: return "Русский"
         case .zhHans: return "简体中文"
         case .zhHant: return "繁體中文"
         }
