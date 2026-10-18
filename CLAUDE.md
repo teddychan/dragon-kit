@@ -133,7 +133,12 @@ checks the Website row against the Support row's repo name (**CONFORMANCE §R15*
 label: clipmenu-2 wrote `Sparkle → MIT` while the sample app wrote `Update framework → Sparkle
 (MIT)` within a day of 3.0.0, in the one slot still app-supplied. The field names carry the rule,
 which is why `Attribution(component:source:)` is deprecated in favour of `init(name:license:)`.
-DragonKit itself is never an attribution — the kit writes its own `Built with` row.
+DragonKit itself is never an attribution — the kit writes its own `Built with` row. The notice
+documents are the opposite: an app's licences page and any bundled acknowledgements file **do** list
+DragonKit, because MIT requires the notice to travel with copies and the `Built with` row carries a
+version, not a licence. So a test comparing an app's attributions with `Package.resolved` subtracts
+DragonKit in that test only — never in a helper the notice tests share. Nothing in CONFORMANCE
+checks attribution membership, which is how ice-2 #85 doubled the row before #86 reverted it.
 
 `AboutCanonTests` pins all of it. Note what it *cannot* pin: the kit's tests assert what the kit
 assembles, so they cannot see that two apps left an optional slot nil. **Five screenshots side by
@@ -234,6 +239,19 @@ python3 Scripts/dragon-conformance.py --app ~/git/dragon-sample-app --kit .
 
 That is a local convenience only. Each app's own CI runs the same checker through the reusable
 workflow, which is where a violation actually blocks a PR.
+
+A local PASS is only as good as the `--kit` checkout it ran from, and it can be fake two ways:
+
+- **A stale kit checkout runs a stale checker.** A clone behind `origin/main` may not contain the
+  rule you meant to check at all, so the PASS never evaluated it. Fetch and compare first, or run
+  the tagged checker from a `git archive <tag>` extract.
+- **§R10 silently passes without `.git`.** `latest_kit_version()` returns `None` when `git tag`
+  fails in `--kit`, and the stale-pin rule then reports nothing — so a `git archive` extract (or any
+  copy without `.git`) passes every pin. Give the extract the real `.git`.
+
+Never report a conformance PASS on its own: `Scripts/test_conformance.py` must be green, and the
+rules you depend on should be shown to fire by pointing `--config` at a doctored copy of the app's
+`.dragon-conformance.json` (a stale `pin` must produce R10).
 
 ## Git and releases
 
