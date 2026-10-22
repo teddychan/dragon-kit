@@ -18,7 +18,7 @@ Paste the block below, then apply the per-app tweaks noted underneath.
 > The marker must be **exhaustive, not illustrative** — it is the only enforcement these files
 > have. A change to any mirrored rule must update this file and
 > [`IMPLEMENT-MAC-APP-RELEASE-LIFECYCLE-PROMPT.md`](IMPLEMENT-MAC-APP-RELEASE-LIFECYCLE-PROMPT.md)
-> in the same PR; `.claude/skills/dragonkit-review/SKILL.md` asks a reviewer to check that.
+> in the same PR, and a reviewer should check that.
 
 ## Visual ownership guide
 
