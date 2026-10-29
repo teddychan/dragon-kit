@@ -6,9 +6,12 @@
 
 **Decision date:** 2026-08-10
 
+**Revised:** 2026-10-30 (release and publish are separate stages)
+
 This is the canonical release process for Dragon macOS apps. It defines the boundary between
-local development, a public app release, and the marketing site so those three concerns cannot
-silently acquire competing version numbers or block one another.
+local development, a public app release, publication to update and store channels, and the
+marketing site so those concerns cannot silently acquire competing version numbers or block one
+another.
 
 ## Repository boundary
 
@@ -52,6 +55,7 @@ version lineage.
 | Latest public app | Published `vX.Y.Z` with the release bundle identifier |
 | Local Debug build | Next candidate `vA.B.C Debug` with the `.debug` bundle identifier |
 | Next public app | The same candidate becomes `vA.B.C` after all tests pass |
+| Published channels | App Store, Sparkle appcast and Homebrew cask all carry that same `vA.B.C` |
 | Marketing site | Its own commit/deployment revision; it displays published app releases |
 
 A Debug build is the local, testable form of the intended next public version. It is not another
@@ -65,43 +69,125 @@ the same tested numeric candidate as the public release.
 
 ## Development and release flow
 
+An app moves through four stages, each after the one before it: the Debug loop, release,
+publish, and the marketing site. Release ends with a GitHub Release. Publishing to the App Store,
+Sparkle and Homebrew is a separate, later stage, and so is the marketing-site refresh.
+
 ```mermaid
 flowchart TD
     L["Latest public release vX.Y.Z"] --> K{"What kind of change?"}
-    K -->|Bug fix| PC["Choose patch candidate vX.Y.(Z+1)"]
-    K -->|New features| MC["Choose minor candidate vX.(Y+1).0"]
-    PC --> C["Develop the candidate"]
+    K -->|Bug fix| PC["Patch candidate vX.Y.(Z+1)"]
+    K -->|New feature| MC["Minor candidate vX.(Y+1).0"]
+    K -->|Major new version| XC["Major candidate v(X+1).0.0"]
+    PC --> C["Code the candidate on a feature branch"]
     MC --> C
-    C --> B["Build vA.B.C Debug locally with the .debug bundle id"]
-    B --> T["Run automated and hands-on tests"]
+    XC --> C
 
-    T -->|Tests fail| F["Modify and fix the code"]
-    F --> B
+    subgraph DEBUG ["Debug loop: same candidate every round"]
+        C --> B["Build vA.B.C Debug, replace the Debug app in /Applications, launch it"]
+        B --> T["Tests that touch the change, then hands-on testing"]
+        T -->|Fails| F["Fix the code"]
+        F --> B
+    end
 
-    T -->|All tests pass| RP["Prepare the public release"]
-    RP --> N["Update What's New for vA.B.C"]
-    N --> Q["Run final tests and local release preflight"]
-    Q -->|Preflight fails| F
-    Q -->|Preflight passes| G["Build with release identity and push public vA.B.C tag"]
-    G --> V["Tag Release Gate"]
-
-    V -->|Gate fails| F
-    V -->|Gate passes| R["Sign, notarize, and publish public release"]
-    R -. "Non-blocking notification" .-> W["Marketing site refreshes its changelog"]
-    R --> L2["Next development cycle"]
-    W --> L2
+    T -->|Ready to release| G{"Release gate: full unit and UI regression suite"}
+    G -->|Fails| F
+    G -->|Passes| PR["One PR: code, version bump, changelog entry"]
+    PR --> M["Merge to main"]
+    M --> TAG["Annotated tag vA.B.C, message is the changelog entry"]
+    TAG --> TG{"Tag gate in release CI"}
+    TG -->|Fails: fix, then a fresh version| F
+    TG -->|Passes| R["Signed, notarized Release build"]
+    R --> GR["GitHub Release with the binary, notes are the changelog entry"]
+    GR --> I["Install the Release app in /Applications"]
+    I --> P["Publish: App Store, Sparkle appcast, Homebrew cask"]
+    P --> W["Marketing site refresh"]
+    W --> L2["Next development cycle"]
 ```
 
-Choose the next candidate version before the Debug loop. The same numeric candidate stays in use
-while failed tests lead back to more development. Passing the tests removes the local Debug
-presentation and `.debug` identity; it does not assign a different number. There is no Debug tag
-between the previous public release and the new public tag.
+### 1. Choose the candidate version
+
+Choose the candidate when coding starts, above the latest public tag: raise Z for a bug fix,
+raise Y for a new feature (Z goes back to 0), and raise X for a major new version. Every Debug
+build of that work shares the one candidate. If a later round of work needs a bigger bump, raise
+the candidate then; do not create a new number for each build. Each build still gets its own
+numeric build number, normally the git commit count.
+
+### 2. The Debug loop
+
+Each round builds `vA.B.C Debug` with the `.debug` bundle identity, runs the tests that touch the
+change, and installs the result as `/Applications/<App Name> Debug.app`. The new Debug build
+replaces the previous one outright and is launched from that location, so hands-on testing always
+runs the copy that was just built, beside the installed public release. The loop creates no tag,
+no GitHub Release and no public artifact, and it needs no pull request.
+
+The same numeric candidate stays in use while failed tests lead back to more development. Passing
+the tests removes the local Debug presentation and `.debug` identity; it does not assign a
+different number. There is no Debug tag between the previous public release and the new public
+tag.
+
+### 3. Release
+
+Release turns the tested candidate into a public `vA.B.C` and a GitHub Release. The steps run in
+order, and any failure stops the release:
+
+1. **Release gate.** Run the full regression suite: every unit test and every UI test. A UI test
+   that fails because the app lost focus may be rerun once; a test that fails twice stops the
+   release.
+2. **One pull request** carries the code, the version bump and the changelog entry for
+   `vA.B.C`, together with the in-app What's New update. Merge it into `main`.
+3. **Annotated tag** `vA.B.C` on the merge commit. Its message is exactly the changelog entry.
+4. **Release build** from the tag: Developer ID signed, notarized, stapled and checked by
+   Gatekeeper, after the [tag gate](#whats-new-is-part-of-the-release) passes.
+5. **GitHub Release** for the tag, with the binary the app ships (`.zip`, `.pkg` or `.dmg`) and
+   the changelog entry as its notes.
+6. **Install** the Release build as `/Applications/<App Name>.app`, replacing the previous copy
+   outright.
+
+Every Dragon app has release CI, so pushing the tag runs steps 4 and 5; watch the run and check
+the attached asset. A tag on its own publishes nothing to any update or store channel: that is the
+next stage.
+
+### 4. Publish
+
+Publish sends an already released `vA.B.C` to every channel the app has. It always consumes the
+existing exact tag and its GitHub Release; it never builds from a branch or assigns a version.
+
+| Channel | What publishing does |
+|---|---|
+| Mac App Store | Upload the build for that tag, set What's New to the changelog entry, submit it for review with automatic release once approved. The step is done when the submission is waiting for review. |
+| Sparkle appcast | Add the version to the app-owned appcast, pointing at the GitHub Release asset. |
+| Homebrew cask | Bump the app's cask in the tap to the new version. |
+
+An app without a given channel skips it.
+
+### 5. Marketing site
+
+Refreshing the marketing site is its own step after publish, and only for an app that has a page
+on the site. See [Marketing-site separation](#marketing-site-separation).
+
+### Current CI behaviour and the pending split
+
+The stages above are the target model. The apps' release CI does not fully match it yet:
+
+| Step | Target model | Current behaviour |
+|---|---|---|
+| Tag push | Tag gate, Release build, GitHub Release, nothing else | Tag gate, Release build, GitHub Release, **and** the Sparkle appcast update, the Homebrew cask bump and the marketing-site notification, all in the same run |
+| Sparkle appcast and Homebrew cask | A separate, manually started publish run naming the existing tag | Published by the tag-push run |
+| Mac App Store | Part of the manual publish run | Already a separate, manually started run naming the existing tag (ClipMenu 2, the only app with this channel) |
+| Marketing-site notification | After publish | Sent by the tag-push run once the cask bump succeeds |
+
+The CI split (tag push produces only the GitHub Release; a manual publish run does the appcast,
+the cask and the App Store) is being prepared as workflow patches. Until it lands in an app,
+pushing that app's tag also publishes it to Sparkle and Homebrew users, so push a tag only when
+the version is ready for them too.
 
 ## Concrete examples
 
-If the latest public release is `v2.10.0`, the next candidate is `2.10.1` for a bug fix or
-`2.11.0` for backward-compatible features. Either way the candidate is chosen once and tested
-throughout, and the release does not renumber the tested build.
+If the latest public release is `v2.10.0`, the next candidate is `2.10.1` for a bug fix,
+`2.11.0` for backward-compatible features, or `3.0.0` for a major new version. Either way the
+candidate is chosen once and tested throughout, and the release does not renumber the tested
+build.
 
 **The version column never contains `Debug`.** It is the numeric candidate at every stage,
 including the Debug build — which is why the signal that a build *is* a Debug build gets its own
@@ -179,6 +265,7 @@ Every hands-on development build visibly says `Debug`. Prefer the following loca
 |---|---|
 | App display name | `<App Name> Debug` |
 | Bundle name and local `.app` filename | `<App Name> Debug` |
+| Install location | `/Applications/<App Name> Debug.app`, replacing the previous Debug build, launched from there |
 | Bundle identifier | `<release-bundle-id>.debug` |
 | Build number | Numeric `CFBundleVersion`, normally the git commit count |
 | Build channel | A build setting or custom plist key such as `DragonBuildChannel = Debug` |
@@ -203,6 +290,7 @@ the same candidate implementation into two bundles:
 | Display name | `<App Name>` | `<App Name> Debug` |
 | Bundle identifier | `<release-bundle-id>` | `<release-bundle-id>.debug` |
 | Target version | `X.Y.Z` | `X.Y.Z` |
+| Installed as | `/Applications/<App Name>.app` | `/Applications/<App Name> Debug.app` |
 | Public distribution | Yes, after the tag gate | Never |
 
 Do not maintain a copied Debug codebase. Put identity differences in Xcode build settings, the
@@ -232,6 +320,10 @@ Every public release updates the in-app What's New content, including maintenanc
 The heading continues to derive its version from `CFBundleShortVersionString`; the notes contain
 no separately maintained current-version literal.
 
+The same release also adds one entry to the app's changelog, in the release pull request. That
+entry is the single text for the version: the annotated tag's message, the GitHub Release notes
+and the App Store's What's New all use it as written.
+
 The public tag triggers the authoritative release gate. Before signing or notarization, it must:
 
 1. Accept only an exact public `vX.Y.Z` tag.
@@ -254,11 +346,18 @@ correct the problem, assign a fresh public version, and use a fresh tag.
 The marketing site has no authority over whether an app ships. It owns its repository, build,
 tests, deployment revision, changelog cache, and recovery process.
 
-After a public app release succeeds, the release workflow sends a fire-and-forget
-`repository_dispatch` event. It is skipped when the app has no page on the site, and it can
-never make the already-published release fail. The site then reads published GitHub Releases,
-regenerates its pages, and opens a pull request for review; merging that pull request is what
-publishes the changelog. A scheduled site-side refresh provides a backstop for a missed event.
+Refreshing the site is the last stage of a version, after publish, so the site never points
+visitors at a version they cannot yet get from the app's channels. It applies only to an app that
+has a page on the site, and it is its own step: a site failure leaves the release and the
+published channels untouched.
+
+The refresh starts from a fire-and-forget `repository_dispatch` event. It is skipped when the app
+has no page on the site, and it can never make the already-published release fail. Today the
+tag-push release run sends it once the Homebrew cask bump succeeds; under the
+[pending CI split](#current-ci-behaviour-and-the-pending-split) it moves after publish. The site
+then reads published GitHub Releases, regenerates its pages, and opens a pull request for review;
+merging that pull request is what publishes the changelog. A scheduled site-side refresh provides
+a backstop for a missed event.
 
 The site must ignore drafts and prereleases. Its automation may fail, retry, or deploy later
 without affecting the signed app, GitHub Release, Homebrew distribution, or Sparkle updates.
@@ -289,7 +388,13 @@ features does not make it a special release type; its purpose is to exercise Dra
 The lifecycle is correctly implemented when:
 
 - A developer can repeat the local Debug build-and-test loop without creating any tag or public
-  artifact.
+  artifact, and each round replaces the Debug app in `/Applications`.
+- A release runs the full regression suite first, then ships code, version bump and changelog
+  entry in one pull request, and tags the merge commit with that entry as the tag message.
+- The GitHub Release's notes are the changelog entry, and it carries the binary the app ships.
+- Publishing to the App Store, Sparkle and Homebrew consumes an existing released tag and is a
+  separate stage from the tag push (target model; see
+  [Current CI behaviour and the pending split](#current-ci-behaviour-and-the-pending-split)).
 - Every local hands-on build visibly says `Debug` while its bundle version remains the numeric
   candidate intended for the next public release.
 - The public release uses the exact candidate version that passed the Debug test loop, with the
