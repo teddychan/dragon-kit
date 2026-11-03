@@ -12,6 +12,47 @@ nothing that already worked was taken away.
 
 ---
 
+## 4.3.0 — 2026-11-03
+
+**Would anyone using the apps notice? Yes, on macOS 27: the menu icons come back.** On macOS 27
+the About, Check for Updates, Settings and Quit items in each app's menu showed no icon. They show
+it again once the app moves to this version. Older macOS looks the same as before.
+
+### Fixed
+
+- **Menu icons are visible again on macOS 27.** macOS 27 hides a menu item's icon unless the item
+  asks to keep it. None of DragonKit's menu items asked, so About, Check for Updates, Settings and
+  Quit lost their icons in every app. They all ask now.
+  ([#104](https://github.com/teddychan/dragon-kit/issues/104))
+
+### Added
+
+- **`keepImageVisible()` on any menu item.** An app's own menu items with an icon, such as
+  Spectacle 2's window actions or ClipMenu 2's folders, lose their icons on macOS 27 the same way.
+  Call `item.keepImageVisible()` after giving the item its image. It does nothing on older macOS,
+  and it builds with the macOS 26 SDK the apps release with.
+
+### For the apps that use DragonKit
+
+- **Move to this version, then call `keepImageVisible()` on each of the app's own menu items that
+  has an icon.** The move alone fixes the DragonKit items. An app that already has its own method
+  with this name, as Spectacle 2 does, still builds after the move and can then delete its copy.
+- The automatic conformance check fails any app on a DragonKit version older than the newest one,
+  so every app still on 4.2.0 fails it until it moves.
+
+### Internal
+
+- The release guide for the apps (`docs/MAC-APP-RELEASE-LIFECYCLE.md`) now describes the four
+  stages a version goes through: the Debug build, release, publish, and the marketing site update.
+  Release ends at a GitHub Release whose notes are the changelog entry. Publishing to the App
+  Store, Sparkle and Homebrew is a separate stage.
+- The project rules for contributors and coding agents (`CLAUDE.md`) gained two notes. An app's
+  licences page lists DragonKit even though About never does. A local conformance pass can be
+  wrong when the DragonKit copy it ran from is out of date or has no git history.
+- The code review instructions for coding agents moved out of this repository, so it carries no
+  agent configuration.
+- Every app's About screen now reads `Built with · DragonKit v4.3.0`.
+
 ## 4.2.0 — 2026-10-08
 
 **Would anyone using the apps notice? Yes: Russian is now one of the languages.** The language
