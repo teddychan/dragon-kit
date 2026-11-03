@@ -88,6 +88,7 @@ public enum DragonAppMenu {
                 keyEquivalent: "q"
             )
             quit.image = NSImage(systemSymbolName: "power", accessibilityDescription: nil)
+            quit.keepImageVisible()
             items.append(quit)
         }
         return items
@@ -101,6 +102,17 @@ public enum DragonAppMenu {
     }
 }
 
+public extension NSMenuItem {
+    /// Keeps this item's image on screen on macOS 27, which hides menu item images unless the
+    /// item asks for `preferredImageVisibility = .visible`. The kit's own menu lost every SF
+    /// Symbol to it (#104), and an app's own imaged items need the same call. Set by name, because
+    /// the apps' release CI builds with the macOS 26 SDK, which does not declare the property.
+    func keepImageVisible() {
+        guard responds(to: Selector(("setPreferredImageVisibility:"))) else { return }
+        setValue(1, forKey: "preferredImageVisibility")
+    }
+}
+
 /// An `NSMenuItem` that runs a closure when selected, so callers pass behavior directly
 /// instead of wiring `target`/`action` and retaining a separate handler object.
 private final class ClosureMenuItem: NSMenuItem {
@@ -111,6 +123,7 @@ private final class ClosureMenuItem: NSMenuItem {
         super.init(title: title, action: #selector(invoke), keyEquivalent: keyEquivalent)
         self.target = self
         self.image = NSImage(systemSymbolName: symbolName, accessibilityDescription: nil)
+        keepImageVisible()
     }
 
     @available(*, unavailable)
