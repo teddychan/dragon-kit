@@ -45,6 +45,16 @@ import AppKit
         }
     }
 
+    /// macOS 27 hides a menu item's image unless the item asks to keep it (#104), so a symbol
+    /// that is set but not kept visible is the same drift as a missing one. Read by key because
+    /// CI builds with the macOS 26 SDK, which does not declare `preferredImageVisibility`.
+    @Test func everySymbolStaysVisibleOnMacOS27() {
+        guard #available(macOS 27, *) else { return }
+        for item in DragonAppMenu.items(config()) where item.image != nil {
+            #expect(item.value(forKey: "preferredImageVisibility") as? Int == 1, "\(item.title) hides its SF Symbol")
+        }
+    }
+
     @Test func settingsAndQuitCarryTheStandardKeyEquivalents() {
         let items = DragonAppMenu.items(config())
         #expect(items.first { $0.title == "Settings…" }?.keyEquivalent == ",")
