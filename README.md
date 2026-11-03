@@ -177,6 +177,10 @@ content above (clipboard history, input-method toggles, …) build that and appe
 [Dragon Sample App](https://github.com/teddychan/dragon-sample-app) uses `DragonAppMenu.menu(_:)`
 — mirror it in new apps.
 
+macOS 27 hides a menu item's image unless the item asks to keep it. The kit's items already ask.
+An app's own items with an image call `keepImageVisible()` on each, the same call the kit makes.
+It is safe on older macOS and builds with the macOS 26 SDK.
+
 KeyKey's IMK host has one extra adapter at this boundary. `InputController.menu()` obtains the
 canonical items from `DragonAppMenu.items(_:)`, then retargets each top-level item to an `@objc`
 selector on `InputController`. IMK routes top-level menu selections back to that controller, so

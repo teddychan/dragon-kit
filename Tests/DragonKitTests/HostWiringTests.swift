@@ -185,4 +185,14 @@ import DragonKit
         #expect(content.websiteMatchesSupportRepo)
         #expect(content.versionString.hasPrefix("v"))
     }
+
+    /// A host's own imaged menu items (Spectacle 2's window actions, ClipMenu 2's folders) vanish
+    /// on macOS 27 the same way the kit's did (#104), so the kit's fix has to be reachable from the
+    /// plain import an app has, and has to build against the macOS 26 SDK the apps release with.
+    @Test func aHostKeepsItsOwnMenuImagesVisible() {
+        let item = NSMenuItem(title: "Left Half", action: nil, keyEquivalent: "")
+        item.keepImageVisible()
+        guard #available(macOS 27, *) else { return }
+        #expect(item.value(forKey: "preferredImageVisibility") as? Int == 1)
+    }
 }
