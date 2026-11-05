@@ -6,7 +6,8 @@
 
 **Decision date:** 2026-08-10
 
-**Revised:** 2026-10-30 (release and publish are separate stages)
+**Revised:** 2026-11-05 (release includes the Sparkle appcast and Homebrew cask; publish is the Mac App Store;
+the marketing site refreshes only on request)
 
 This is the canonical release process for Dragon macOS apps. It defines the boundary between
 local development, a public app release, publication to update and store channels, and the
@@ -70,8 +71,9 @@ the same tested numeric candidate as the public release.
 ## Development and release flow
 
 An app moves through four stages, each after the one before it: the Debug loop, release,
-publish, and the marketing site. Release ends with a GitHub Release. Publishing to the App Store,
-Sparkle and Homebrew is a separate, later stage, and so is the marketing-site refresh.
+publish, and the marketing site. Release ends with the version on the GitHub Release, the Sparkle
+appcast and the Homebrew cask. Publishing to the Mac App Store is a separate, later stage. The
+marketing-site refresh is its own step, done only when it is asked for.
 
 ```mermaid
 flowchart TD
@@ -99,10 +101,11 @@ flowchart TD
     TG -->|Fails: fix, then a fresh version| F
     TG -->|Passes| R["Signed, notarized Release build"]
     R --> GR["GitHub Release with the binary, notes are the changelog entry"]
-    GR --> I["Install the Release app in /Applications"]
-    I --> P["Publish: App Store, Sparkle appcast, Homebrew cask"]
-    P --> W["Marketing site refresh"]
-    W --> L2["Next development cycle"]
+    GR --> SH["Sparkle appcast and Homebrew cask carry vA.B.C"]
+    SH --> I["Install the Release app in /Applications"]
+    I --> P["Publish: Mac App Store"]
+    P -.->|Only when asked| W["Marketing site refresh"]
+    I --> L2["Next development cycle"]
 ```
 
 ### 1. Choose the candidate version
@@ -128,8 +131,8 @@ tag.
 
 ### 3. Release
 
-Release turns the tested candidate into a public `vA.B.C` and a GitHub Release. The steps run in
-order, and any failure stops the release:
+Release turns the tested candidate into a public `vA.B.C` on the GitHub Release, the Sparkle
+appcast and the Homebrew cask. The steps run in order, and any failure stops the release:
 
 1. **Release gate.** Run the full regression suite: every unit test and every UI test. A UI test
    that fails because the app lost focus may be rerun once; a test that fails twice stops the
@@ -141,46 +144,43 @@ order, and any failure stops the release:
    Gatekeeper, after the [tag gate](#whats-new-is-part-of-the-release) passes.
 5. **GitHub Release** for the tag, with the binary the app ships (`.zip`, `.pkg` or `.dmg`) and
    the changelog entry as its notes.
-6. **Install** the Release build as `/Applications/<App Name>.app`, replacing the previous copy
+6. **Sparkle appcast and Homebrew cask.** Add the version to the app-owned appcast, pointing at
+   the GitHub Release asset, and bump the app's cask in the tap. An app without one of these
+   channels skips it.
+7. **Install** the Release build as `/Applications/<App Name>.app`, replacing the previous copy
    outright.
 
-Every Dragon app has release CI, so pushing the tag runs steps 4 and 5; watch the run and check
-the attached asset. A tag on its own publishes nothing to any update or store channel: that is the
-next stage.
+Every Dragon app has release CI, so pushing the tag runs steps 4, 5 and 6; watch the run and
+check the attached asset, the appcast entry and the cask version. The tag push never submits to
+the Mac App Store: that is the next stage.
 
 ### 4. Publish
 
-Publish sends an already released `vA.B.C` to every channel the app has. It always consumes the
-existing exact tag and its GitHub Release; it never builds from a branch or assigns a version.
+Publish sends an already released `vA.B.C` to the Mac App Store. It always consumes the existing
+exact tag and its GitHub Release; it never builds from a branch or assigns a version.
 
 | Channel | What publishing does |
 |---|---|
 | Mac App Store | Upload the build for that tag, set What's New to the changelog entry, submit it for review with automatic release once approved. The step is done when the submission is waiting for review. |
-| Sparkle appcast | Add the version to the app-owned appcast, pointing at the GitHub Release asset. |
-| Homebrew cask | Bump the app's cask in the tap to the new version. |
 
-An app without a given channel skips it.
+An app that is not on the Mac App Store has no publish stage.
 
 ### 5. Marketing site
 
-Refreshing the marketing site is its own step after publish, and only for an app that has a page
-on the site. See [Marketing-site separation](#marketing-site-separation).
+Refreshing the marketing site is its own step, done only when it is asked for, and only for an
+app that has a page on the site. A release never refreshes it on its own; after a publish, ask
+whether to refresh it. See [Marketing-site separation](#marketing-site-separation).
 
-### Current CI behaviour and the pending split
+### Current CI behaviour
 
-The stages above are the target model. The apps' release CI does not fully match it yet:
-
-| Step | Target model | Current behaviour |
+| Step | Model | Current behaviour |
 |---|---|---|
-| Tag push | Tag gate, Release build, GitHub Release, nothing else | Tag gate, Release build, GitHub Release, **and** the Sparkle appcast update, the Homebrew cask bump and the marketing-site notification, all in the same run |
-| Sparkle appcast and Homebrew cask | A separate, manually started publish run naming the existing tag | Published by the tag-push run |
-| Mac App Store | Part of the manual publish run | Already a separate, manually started run naming the existing tag (ClipMenu 2, the only app with this channel) |
-| Marketing-site notification | After publish | Sent by the tag-push run once the cask bump succeeds |
+| Tag push | Tag gate, Release build, GitHub Release, Sparkle appcast, Homebrew cask | The same, in one run |
+| Mac App Store | A separate, manually started run naming the existing tag | The same (ClipMenu 2, the only app with this channel) |
+| Marketing-site notification | Only when the refresh is asked for | **Differs:** the tag-push run sends it once the cask bump succeeds |
 
-The CI split (tag push produces only the GitHub Release; a manual publish run does the appcast,
-the cask and the App Store) is being prepared as workflow patches. Until it lands in an app,
-pushing that app's tag also publishes it to Sparkle and Homebrew users, so push a tag only when
-the version is ready for them too.
+The marketing-site notification is the one remaining difference. Until the apps' release CI stops
+sending it, pushing a tag also starts a marketing-site changelog refresh.
 
 ## Concrete examples
 
@@ -346,15 +346,15 @@ correct the problem, assign a fresh public version, and use a fresh tag.
 The marketing site has no authority over whether an app ships. It owns its repository, build,
 tests, deployment revision, changelog cache, and recovery process.
 
-Refreshing the site is the last stage of a version, after publish, so the site never points
-visitors at a version they cannot yet get from the app's channels. It applies only to an app that
-has a page on the site, and it is its own step: a site failure leaves the release and the
-published channels untouched.
+Refreshing the site is the last step of a version, done only when it is asked for and never
+before the app's channels carry that version, so the site never points visitors at a version they
+cannot yet get. It applies only to an app that has a page on the site, and it is its own step: a
+site failure leaves the release and the published channels untouched.
 
 The refresh starts from a fire-and-forget `repository_dispatch` event. It is skipped when the app
 has no page on the site, and it can never make the already-published release fail. Today the
-tag-push release run sends it once the Homebrew cask bump succeeds; under the
-[pending CI split](#current-ci-behaviour-and-the-pending-split) it moves after publish. The site
+tag-push release run sends it once the Homebrew cask bump succeeds, which the model does not want
+(see [Current CI behaviour](#current-ci-behaviour)). The site
 then reads published GitHub Releases, regenerates its pages, and opens a pull request for review;
 merging that pull request is what publishes the changelog. A scheduled site-side refresh provides
 a backstop for a missed event.
@@ -392,9 +392,9 @@ The lifecycle is correctly implemented when:
 - A release runs the full regression suite first, then ships code, version bump and changelog
   entry in one pull request, and tags the merge commit with that entry as the tag message.
 - The GitHub Release's notes are the changelog entry, and it carries the binary the app ships.
-- Publishing to the App Store, Sparkle and Homebrew consumes an existing released tag and is a
-  separate stage from the tag push (target model; see
-  [Current CI behaviour and the pending split](#current-ci-behaviour-and-the-pending-split)).
+- A release puts the version on the GitHub Release, the Sparkle appcast and the Homebrew cask.
+- Publishing to the Mac App Store consumes an existing released tag and is a separate stage from
+  the tag push.
 - Every local hands-on build visibly says `Debug` while its bundle version remains the numeric
   candidate intended for the next public release.
 - The public release uses the exact candidate version that passed the Debug test loop, with the
@@ -405,7 +405,8 @@ The lifecycle is correctly implemented when:
 - Every app repository accepts only exact public `vX.Y.Z` tags; the Sample App has no prefixed
   exception and no longer releases from DragonKit's package-version namespace.
 - The in-app version is derived from the bundle on every user-visible surface.
-- Only a successful public release notifies the marketing site.
+- Only a successful public release can notify the marketing site, and only when the refresh is
+  asked for (target; see [Current CI behaviour](#current-ci-behaviour)).
 - A site failure cannot fail or delay the app release.
 - Draft or prerelease GitHub entries never appear in the public changelog.
 - Production appcasts are hosted independently from the marketing site.
