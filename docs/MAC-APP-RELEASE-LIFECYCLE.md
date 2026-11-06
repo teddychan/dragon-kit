@@ -6,8 +6,9 @@
 
 **Decision date:** 2026-08-10
 
-**Revised:** 2026-11-05 (release includes the Sparkle appcast and Homebrew cask; publish is the Mac App Store;
-the marketing site refreshes only on request)
+**Revised:** 2026-11-06 (the App Store's What's New comes from `whats-new.json`; the site's refresh pull
+request waits until the update is asked for), 2026-11-05 (release includes the Sparkle appcast and Homebrew
+cask; publish is the Mac App Store; the marketing site refreshes only on request)
 
 This is the canonical release process for Dragon macOS apps. It defines the boundary between
 local development, a public app release, publication to update and store channels, and the
@@ -161,15 +162,17 @@ exact tag and its GitHub Release; it never builds from a branch or assigns a ver
 
 | Channel | What publishing does |
 |---|---|
-| Mac App Store | Upload the build for that tag, set What's New to the changelog entry, submit it for review with automatic release once approved. The step is done when the submission is waiting for review. |
+| Mac App Store | Upload the build for that tag, set What's New for each store language from that release's `whats-new.json` (a language missing there gets the English text), submit it for review with automatic release once approved. The step is done when the submission is waiting for review. |
 
 An app that is not on the Mac App Store has no publish stage.
 
 ### 5. Marketing site
 
 Refreshing the marketing site is its own step, done only when it is asked for, and only for an
-app that has a page on the site. A release never refreshes it on its own; after a publish, ask
-whether to refresh it. See [Marketing-site separation](#marketing-site-separation).
+app that has a page on the site. A release or a publish never refreshes it on its own. Release CI
+may open the site's changelog-refresh pull request, but that pull request stays unmerged until the
+refresh is asked for. At publish, and only then, ask whether to refresh it. See
+[Marketing-site separation](#marketing-site-separation).
 
 ### Current CI behaviour
 
@@ -177,10 +180,10 @@ whether to refresh it. See [Marketing-site separation](#marketing-site-separatio
 |---|---|---|
 | Tag push | Tag gate, Release build, GitHub Release, Sparkle appcast, Homebrew cask | The same, in one run |
 | Mac App Store | A separate, manually started run naming the existing tag | The same (ClipMenu 2, the only app with this channel) |
-| Marketing-site notification | Only when the refresh is asked for | **Differs:** the tag-push run sends it once the cask bump succeeds |
+| Marketing-site refresh | The tag-push run may notify the site, which opens a pull request; it is merged only when the refresh is asked for | **Differs:** the site merges the pull request a release notification opens by itself |
 
-The marketing-site notification is the one remaining difference. Until the apps' release CI stops
-sending it, pushing a tag also starts a marketing-site changelog refresh.
+The site's own merge is the one remaining difference. Until the site stops merging those pull
+requests by itself, pushing a tag also publishes a marketing-site changelog refresh.
 
 ## Concrete examples
 
@@ -321,8 +324,12 @@ The heading continues to derive its version from `CFBundleShortVersionString`; t
 no separately maintained current-version literal.
 
 The same release also adds one entry to the app's changelog, in the release pull request. That
-entry is the single text for the version: the annotated tag's message, the GitHub Release notes
-and the App Store's What's New all use it as written.
+entry is the annotated tag's message and the GitHub Release notes, as written.
+
+The in-app What's New content is a separate text for people using the app, translated into the
+languages the app ships. Release CI exports it as `whats-new.json` on the GitHub Release, and the
+App Store's What's New uses it for each store language, with the English text for a language it
+lacks.
 
 The public tag triggers the authoritative release gate. Before signing or notarization, it must:
 
@@ -351,13 +358,14 @@ before the app's channels carry that version, so the site never points visitors 
 cannot yet get. It applies only to an app that has a page on the site, and it is its own step: a
 site failure leaves the release and the published channels untouched.
 
-The refresh starts from a fire-and-forget `repository_dispatch` event. It is skipped when the app
-has no page on the site, and it can never make the already-published release fail. Today the
-tag-push release run sends it once the Homebrew cask bump succeeds, which the model does not want
-(see [Current CI behaviour](#current-ci-behaviour)). The site
-then reads published GitHub Releases, regenerates its pages, and opens a pull request for review;
-merging that pull request is what publishes the changelog. A scheduled site-side refresh provides
-a backstop for a missed event.
+The refresh starts from a `repository_dispatch` event that the tag-push release run sends once
+the Homebrew cask bump succeeds. It is skipped when the app has no page on the site. Since
+dragon-release-ci v6.9.0, a dispatch the site does not accept turns the release run red; the
+GitHub Release, the appcast and the cask are already published by then, and nothing that fails on
+the site side touches them. The site then reads published GitHub Releases, regenerates its pages,
+and opens a pull request. That pull request waits until the refresh is asked for; merging it is
+what publishes the changelog (see [Current CI behaviour](#current-ci-behaviour)). A scheduled
+site-side refresh provides a backstop for a missed event.
 
 The site must ignore drafts and prereleases. Its automation may fail, retry, or deploy later
 without affecting the signed app, GitHub Release, Homebrew distribution, or Sparkle updates.
@@ -405,8 +413,9 @@ The lifecycle is correctly implemented when:
 - Every app repository accepts only exact public `vX.Y.Z` tags; the Sample App has no prefixed
   exception and no longer releases from DragonKit's package-version namespace.
 - The in-app version is derived from the bundle on every user-visible surface.
-- Only a successful public release can notify the marketing site, and only when the refresh is
-  asked for (target; see [Current CI behaviour](#current-ci-behaviour)).
-- A site failure cannot fail or delay the app release.
+- Only a successful public release can notify the marketing site, and the site's refresh pull
+  request is merged only when the refresh is asked for (see
+  [Current CI behaviour](#current-ci-behaviour)).
+- A site failure cannot undo or delay the app's GitHub Release, appcast or cask.
 - Draft or prerelease GitHub entries never appear in the public changelog.
 - Production appcasts are hosted independently from the marketing site.

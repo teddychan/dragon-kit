@@ -277,10 +277,10 @@ it from the app's `Info.plist` (`CFBundleShortVersionString`) — never hardcode
 Start with the accepted, canonical development-to-release boundary in
 [`docs/MAC-APP-RELEASE-LIFECYCLE.md`](docs/MAC-APP-RELEASE-LIFECYCLE.md). In particular, Debug
 is only a local build-and-test configuration; it is not another version or release channel.
-Every public tag gates current What's New content, and marketing-site refreshes are asynchronous
-and non-blocking. DragonKit owns shared package code, contracts, conformance guidance, and
-reusable release conventions; every app lives in its own repository and owns all of its build,
-release, artifact, appcast, download, and operational infrastructure.
+Every public tag gates current What's New content, and the marketing site is refreshed only when
+that is asked for, never as part of a release. DragonKit owns shared package code, contracts,
+conformance guidance, and reusable release conventions; every app lives in its own repository and
+owns all of its build, release, artifact, appcast, download, and operational infrastructure.
 
 For an authorized rollout across separate repository checkouts, use the ready-to-paste
 [`docs/IMPLEMENT-MAC-APP-RELEASE-LIFECYCLE-PROMPT.md`](docs/IMPLEMENT-MAC-APP-RELEASE-LIFECYCLE-PROMPT.md).

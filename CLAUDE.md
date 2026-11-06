@@ -261,8 +261,8 @@ rules you depend on should be shown to fire by pointing `--config` at a doctored
 [`docs/MAC-APP-RELEASE-LIFECYCLE.md`](docs/MAC-APP-RELEASE-LIFECYCLE.md) is the canonical
 lifecycle for every Dragon macOS app. Debug is a local build-and-test configuration, never a
 tag, prerelease, appcast or public artifact. Only a public app tag enters the release gate; a
-successful public release notifies the independently deployed marketing site without waiting
-for it.
+successful public release may notify the independently deployed marketing site, whose refresh
+pull request waits until the refresh is asked for.
 
 One public tag series lives in this repo:
 
