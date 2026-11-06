@@ -180,10 +180,9 @@ refresh is asked for. At publish, and only then, ask whether to refresh it. See
 |---|---|---|
 | Tag push | Tag gate, Release build, GitHub Release, Sparkle appcast, Homebrew cask | The same, in one run |
 | Mac App Store | A separate, manually started run naming the existing tag | The same (ClipMenu 2, the only app with this channel) |
-| Marketing-site refresh | The tag-push run may notify the site, which opens a pull request; it is merged only when the refresh is asked for | **Differs:** the site merges the pull request a release notification opens by itself |
+| Marketing-site refresh | The tag-push run may notify the site, which opens a pull request; it is merged only when the refresh is asked for | The same: the site opens the pull request and leaves it open (since www.dragonapp.com#119) |
 
-The site's own merge is the one remaining difference. Until the site stops merging those pull
-requests by itself, pushing a tag also publishes a marketing-site changelog refresh.
+CI matches the model in every row.
 
 ## Concrete examples
 
