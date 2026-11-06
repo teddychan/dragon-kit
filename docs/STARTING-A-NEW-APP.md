@@ -29,9 +29,9 @@ accessory apps, and a localization helper.
 - **The release lifecycle is shared too.** Read
   [`MAC-APP-RELEASE-LIFECYCLE.md`](MAC-APP-RELEASE-LIFECYCLE.md): Debug is a local test loop,
   not a second version or public channel; only a passing public tag may ship, and the marketing
-  site refreshes independently afterward. Every app—including Dragon Sample App—uses an exact
-  `vX.Y.Z` public tag. One repository owns one public version series; never invent a Debug,
-  Sample, App Store, or other channel-specific tag prefix.
+  site is refreshed separately, only when that is asked for. Every app—including Dragon Sample
+  App—uses an exact `vX.Y.Z` public tag. One repository owns one public version series; never
+  invent a Debug, Sample, App Store, or other channel-specific tag prefix.
 - The dated records under `docs/superpowers/` are historical rationale only. Do not use them as
   implementation instructions; use this guide, `CONFORMANCE.md`, the release-lifecycle document,
   and the external Dragon Sample App instead.
