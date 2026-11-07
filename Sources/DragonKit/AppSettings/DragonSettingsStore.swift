@@ -120,3 +120,13 @@ public struct DragonSettingsStore<Value: Codable & Sendable>: Sendable {
         return result
     }
 }
+
+/// The settings suite every Dragon app uses: `<bundle id>.settings`, kept apart from the app's
+/// own defaults domain so Backup & Restore captures the settings and nothing else, and cleared by
+/// Uninstall whether or not the app lists it.
+public enum DragonSettingsSuite {
+    /// `<bundleID>.settings`.
+    public static func standardName(for bundleID: String) -> String {
+        "\(bundleID).settings"
+    }
+}

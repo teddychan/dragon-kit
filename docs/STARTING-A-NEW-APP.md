@@ -252,7 +252,8 @@ BackupSettingsPane(config: BackupConfig(
 ```swift
 UninstallSettingsPane(config: UninstallConfig(
     appName: "My App",
-    suiteNames: ["\(bundleID).settings"],  // extra domains to wipe (bundle id is wiped too)
+    // The bundle id's domain and its standard settings suite (`<bundle id>.settings`) are
+    // always wiped; `suiteNames:` is only for any other suites the app keeps.
     checklistItems: ["The app and its login item", "All settings"],
     optionalDataToggle: (                  // optional, default-off toggle in the confirmation;
         label: "Also delete my data",      // its paths are deleted only if the user opts in
@@ -437,7 +438,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 AnySettingsPane(AboutSettingsPane(content: AboutConfig.content)),
                 AnySettingsPane(UninstallSettingsPane(config: UninstallConfig(
                     appName: AppIdentity.displayName,
-                    suiteNames: [AppIdentity.settingsSuite],
                     checklistItems: ["The app and its login item", "All settings"],
                     extraCleanupPaths: [
                         AppIdentity.cachesDirectory,

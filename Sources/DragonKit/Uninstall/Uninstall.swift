@@ -50,7 +50,10 @@ public struct UninstallConfig {
     ) {
         self.appName = appName
         self.bundleID = bundleID
-        self.suiteNames = suiteNames
+        // The standard settings suite is always cleared, so an app that forgets to list it
+        // doesn't leave its settings behind for a reinstall to find.
+        let standard = bundleID.isEmpty ? [] : [DragonSettingsSuite.standardName(for: bundleID)]
+        self.suiteNames = suiteNames.contains(where: standard.contains) ? suiteNames : standard + suiteNames
         self.checklistItems = checklistItems
         self.optionalDataToggle = optionalDataToggle
         self.extraCleanupPaths = extraCleanupPaths
