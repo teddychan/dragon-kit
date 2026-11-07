@@ -35,6 +35,7 @@
 "DragonKit.permission.screenRecording.title" = "画面収録";
 "DragonKit.permission.screenRecording.detail" = "画面の内容をキャプチャします。";
 
+"DragonKit.backup.contentsSection" = "バックアップに含まれるもの";
 "DragonKit.backup.folderSection" = "バックアップフォルダ";
 "DragonKit.backup.choose" = "選択…";
 "DragonKit.backup.backupsSection" = "バックアップ";

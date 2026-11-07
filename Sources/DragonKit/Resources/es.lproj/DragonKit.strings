@@ -35,6 +35,7 @@
 "DragonKit.permission.screenRecording.title" = "Grabación de pantalla";
 "DragonKit.permission.screenRecording.detail" = "Capturar el contenido de la pantalla.";
 
+"DragonKit.backup.contentsSection" = "Una copia de seguridad guarda";
 "DragonKit.backup.folderSection" = "Carpeta de copias";
 "DragonKit.backup.choose" = "Elegir…";
 "DragonKit.backup.backupsSection" = "Copias de seguridad";
