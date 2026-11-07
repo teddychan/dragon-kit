@@ -35,6 +35,7 @@
 "DragonKit.permission.screenRecording.title" = "螢幕錄製";
 "DragonKit.permission.screenRecording.detail" = "擷取螢幕上的內容。";
 
+"DragonKit.backup.contentsSection" = "備份包含";
 "DragonKit.backup.folderSection" = "備份檔案夾";
 "DragonKit.backup.choose" = "選擇…";
 "DragonKit.backup.backupsSection" = "備份";

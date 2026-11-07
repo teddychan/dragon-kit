@@ -9,8 +9,19 @@ public struct BackupConfig {
     public let appVersion: String
     /// Called after a successful restore so the app can relaunch to pick up the new values.
     public let relaunch: () -> Void
+    /// What a backup holds, as already-localized lines in the app's own words. When non-empty the
+    /// pane lists them first, under "A backup saves", so users know what Back Up Now captures.
+    /// Defaults to empty, which renders the pane exactly as before.
+    public let contents: [String]
 
-    public init(appName: String, suiteName: String, appVersion: String, relaunch: @escaping () -> Void) {
+    public init(
+        appName: String,
+        suiteName: String,
+        appVersion: String,
+        contents: [String] = [],
+        relaunch: @escaping () -> Void
+    ) {
+        self.contents = contents
         self.appName = appName
         self.suiteName = suiteName
         self.appVersion = appVersion
@@ -141,6 +152,13 @@ private struct BackupPaneView: View {
 
     var body: some View {
         DragonForm {
+            if !config.contents.isEmpty {
+                DragonSection(LocalizedStringKey(L("DragonKit.backup.contentsSection"))) {
+                    ForEach(Array(config.contents.enumerated()), id: \.offset) { _, line in
+                        Label(line, systemImage: "checkmark.circle")
+                    }
+                }
+            }
             DragonSection(LocalizedStringKey(L("DragonKit.backup.folderSection"))) {
                 LabeledContent {
                     Button(L("DragonKit.backup.choose")) { chooseFolder() }

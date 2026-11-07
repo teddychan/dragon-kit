@@ -99,3 +99,21 @@ import Foundation
         #expect(!resolution.isStale)
     }
 }
+
+/// `BackupConfig.contents` is the app's own list of what a backup holds, shown at the top of the
+/// pane. It has to default to empty so every existing host compiles and renders unchanged.
+@Suite struct BackupContentsTests {
+    @Test func contentsDefaultsToEmptySoExistingHostsAreUnchanged() {
+        let config = BackupConfig(appName: "App", suiteName: "suite", appVersion: "1.0.0", relaunch: {})
+        #expect(config.contents.isEmpty)
+    }
+
+    @Test func contentsKeepsTheAppsLinesInOrder() {
+        let config = BackupConfig(
+            appName: "App", suiteName: "suite", appVersion: "1.0.0",
+            contents: ["Launch at login", "Which items are hidden"],
+            relaunch: {}
+        )
+        #expect(config.contents == ["Launch at login", "Which items are hidden"])
+    }
+}

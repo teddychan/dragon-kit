@@ -35,6 +35,7 @@
 "DragonKit.permission.screenRecording.title" = "화면 기록";
 "DragonKit.permission.screenRecording.detail" = "화면의 내용을 캡처합니다.";
 
+"DragonKit.backup.contentsSection" = "백업에 저장되는 항목";
 "DragonKit.backup.folderSection" = "백업 폴더";
 "DragonKit.backup.choose" = "선택…";
 "DragonKit.backup.backupsSection" = "백업";
