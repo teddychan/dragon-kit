@@ -1,6 +1,43 @@
 import AppKit
 import SwiftUI
 
+/// An app-owned snapshot presented by the shared Backup & Restore pane.
+public struct BackupEntry: Identifiable, Sendable, Equatable {
+    public let url: URL
+    public let title: String
+    public let detail: String?
+    public var id: URL { url }
+
+    public init(url: URL, title: String, detail: String? = nil) {
+        self.url = url
+        self.title = title
+        self.detail = detail
+    }
+}
+
+/// Domain-specific snapshot operations. ClipMenu keeps its existing snippets and safety backups
+/// while DragonKit owns the shared pane. Main-actor callbacks may capture its SwiftData context;
+/// hosts remain responsible for moving their own file work off the main actor.
+public struct BackupOperations {
+    public let listBackups: @MainActor (URL) async throws -> [BackupEntry]
+    public let backUp: @MainActor (URL) async throws -> Bool
+    public let restore: @MainActor (URL, URL) async throws -> Void
+    public let delete: @MainActor (URL, URL) async throws -> Void
+
+    /// `backUp` returns true for a new snapshot and false when nothing changed.
+    public init(
+        listBackups: @escaping @MainActor (URL) async throws -> [BackupEntry],
+        backUp: @escaping @MainActor (URL) async throws -> Bool,
+        restore: @escaping @MainActor (URL, URL) async throws -> Void,
+        delete: @escaping @MainActor (URL, URL) async throws -> Void
+    ) {
+        self.listBackups = listBackups
+        self.backUp = backUp
+        self.restore = restore
+        self.delete = delete
+    }
+}
+
 /// App-supplied configuration for the Backup & Restore pane.
 public struct BackupConfig {
     public let appName: String
@@ -13,15 +50,27 @@ public struct BackupConfig {
     /// pane lists them first, under "A backup saves", so users know what Back Up Now captures.
     /// Defaults to empty, which renders the pane exactly as before.
     public let contents: [String]
+    public let operations: BackupOperations?
+    public let folderPathKey: String
+    public let folderBookmarkKey: String
+    public let restoreConfirmationMessage: String?
 
     public init(
         appName: String,
         suiteName: String,
         appVersion: String,
         contents: [String] = [],
+        operations: BackupOperations? = nil,
+        folderPathKey: String? = nil,
+        folderBookmarkKey: String? = nil,
+        restoreConfirmationMessage: String? = nil,
         relaunch: @escaping () -> Void
     ) {
         self.contents = contents
+        self.operations = operations
+        self.folderPathKey = folderPathKey ?? "DragonKit.backup.folderPath.\(suiteName)"
+        self.folderBookmarkKey = folderBookmarkKey ?? "DragonKit.backup.folderBookmark.\(suiteName)"
+        self.restoreConfirmationMessage = restoreConfirmationMessage
         self.appName = appName
         self.suiteName = suiteName
         self.appVersion = appVersion
@@ -29,8 +78,30 @@ public struct BackupConfig {
     }
 }
 
+extension BackupConfig {
+    @MainActor
+    var resolvedOperations: BackupOperations {
+        if let operations { return operations }
+        return BackupOperations(
+            listBackups: { folder in
+                await listBackups(in: folder).map { BackupEntry(url: $0, title: $0.lastPathComponent) }
+            },
+            backUp: { folder in
+                let outcome = try await performBackup(
+                    suiteName: suiteName, appName: appName, folder: folder,
+                    appVersion: appVersion, date: Date())
+                if case .written = outcome { return true }
+                return false
+            },
+            restore: { url, folder in
+                try await restoreBackup(at: url, in: folder, suiteName: suiteName)
+            },
+            delete: { url, folder in await deleteBackup(at: url, in: folder) })
+    }
+}
+
 /// Backup & Restore pane: choose a folder, back up now, and restore/delete existing
-/// backups. Uses ``DragonBackup`` for all logic. The pane's own preferences (the chosen folder's
+/// backups. Uses ``DragonBackup`` unless the host supplies its domain-specific operations. The pane's own preferences (the chosen folder's
 /// path and its security-scoped bookmark) live in `standard` defaults — never the backed-up
 /// suite — so a backup never captures backup settings.
 public struct BackupSettingsPane: SettingsPane {
@@ -38,10 +109,22 @@ public struct BackupSettingsPane: SettingsPane {
     public let title = "DragonKit.pane.backup"
     public let systemImage = "arrow.clockwise.circle"
     private let config: BackupConfig
+    private let additionalContent: AnyView
 
-    public init(config: BackupConfig) { self.config = config }
+    public init(config: BackupConfig) {
+        self.config = config
+        self.additionalContent = AnyView(EmptyView())
+    }
 
-    public var paneBody: some View { BackupPaneView(config: config) }
+    public init<AdditionalContent: View>(
+        config: BackupConfig,
+        @ViewBuilder additionalContent: () -> AdditionalContent
+    ) {
+        self.config = config
+        self.additionalContent = AnyView(additionalContent())
+    }
+
+    public var paneBody: some View { BackupPaneView(config: config, additionalContent: additionalContent) }
 }
 
 /// The chosen-folder plumbing, kept out of the SwiftUI view so the bookmark round trip and the
@@ -112,14 +195,15 @@ enum BackupFolder {
 @MainActor
 private struct BackupPaneView: View {
     let config: BackupConfig
+    let additionalContent: AnyView
     @AppStorage private var folderPath: String
     @AppStorage private var folderBookmark: Data
     /// The folder file operations actually use — nil only until `.task` has resolved it.
     @State private var folder: URL?
-    @State private var backups: [URL] = []
+    @State private var backups: [BackupEntry] = []
     @State private var restoreTarget: URL?
     @State private var notice: Notice?
-    @State private var isBackingUp = false
+    @State private var isWorking = false
 
     /// Payload for the one alert that reports both failures and the healthy "nothing changed" case.
     ///
@@ -133,10 +217,11 @@ private struct BackupPaneView: View {
         let message: String
     }
 
-    init(config: BackupConfig) {
+    init(config: BackupConfig, additionalContent: AnyView) {
         self.config = config
-        _folderPath = AppStorage(wrappedValue: "", "DragonKit.backup.folderPath.\(config.suiteName)")
-        _folderBookmark = AppStorage(wrappedValue: Data(), "DragonKit.backup.folderBookmark.\(config.suiteName)")
+        self.additionalContent = additionalContent
+        _folderPath = AppStorage(wrappedValue: "", config.folderPathKey)
+        _folderBookmark = AppStorage(wrappedValue: Data(), config.folderBookmarkKey)
     }
 
     /// What the folder row shows. Deliberately built from the stored path rather than by resolving
@@ -162,6 +247,7 @@ private struct BackupPaneView: View {
             DragonSection(LocalizedStringKey(L("DragonKit.backup.folderSection"))) {
                 LabeledContent {
                     Button(L("DragonKit.backup.choose")) { chooseFolder() }
+                        .disabled(isWorking)
                 } label: {
                     Text(displayPath)
                         .lineLimit(1)
@@ -174,7 +260,7 @@ private struct BackupPaneView: View {
                     Button(L("DragonKit.backup.now")) { backUpNow() }
                         // A second press while the first write is still in flight would queue a
                         // duplicate run against the same suite instead of doing nothing useful.
-                        .disabled(isBackingUp)
+                        .disabled(isWorking)
                     Button(L("DragonKit.backup.reveal")) { revealFolder() }
                 }
                 // Both actions need the resolved folder. Until it arrives they would be
@@ -183,26 +269,34 @@ private struct BackupPaneView: View {
                 if backups.isEmpty {
                     Text(L("DragonKit.backup.none")).foregroundStyle(.secondary)
                 } else {
-                    ForEach(backups, id: \.self) { url in
+                    ForEach(backups) { entry in
                         LabeledContent {
-                            Button(L("DragonKit.backup.restore")) { restoreTarget = url }
-                            Button(role: .destructive) { delete(url) } label: {
+                            Button(L("DragonKit.backup.restore")) { restoreTarget = entry.url }
+                                .disabled(isWorking)
+                            Button(role: .destructive) { delete(entry.url) } label: {
                                 Image(systemName: "trash")
                             }
                             // Every row's delete button is the same unlabelled trash glyph, and
                             // activating the wrong one destroys a backup for good. The filename is
                             // the only thing telling them apart, so VoiceOver has to say it.
+                            .disabled(isWorking)
                             .accessibilityLabel(
-                                String(format: L("DragonKit.backup.deleteAccessibility"), url.lastPathComponent)
+                                String(format: L("DragonKit.backup.deleteAccessibility"), entry.title)
                             )
                         } label: {
-                            Text(url.lastPathComponent)
-                                .lineLimit(1)
-                                .truncationMode(.middle)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(entry.title)
+                                    .lineLimit(1)
+                                    .truncationMode(.middle)
+                                if let detail = entry.detail {
+                                    Text(detail).font(.caption).foregroundStyle(.secondary)
+                                }
+                            }
                         }
                     }
                 }
             }
+            additionalContent
         }
         .task { await load() }
         .alert(
@@ -212,7 +306,7 @@ private struct BackupPaneView: View {
             Button(L("DragonKit.backup.restore"), role: .destructive) { performRestore() }
             Button(L("DragonKit.cancel"), role: .cancel) { restoreTarget = nil }
         } message: {
-            Text(L("DragonKit.backup.restoreConfirmMessage"))
+            Text(config.restoreConfirmationMessage ?? L("DragonKit.backup.restoreConfirmMessage"))
         }
         .alert(
             notice?.title ?? "",
@@ -240,7 +334,13 @@ private struct BackupPaneView: View {
 
     private func refresh() async {
         guard let target = folder else { return }
-        let found = await listBackups(in: target)
+        let found: [BackupEntry]
+        do {
+            found = try await config.resolvedOperations.listBackups(target)
+        } catch {
+            notice = Notice(title: L("DragonKit.backup.errorTitle"), message: error.localizedDescription)
+            return
+        }
         // Drop a listing for a folder the user has since navigated away from. Choosing a new
         // folder while a slow network listing is in flight would otherwise let the old folder's
         // answer land last and overwrite the new folder's contents.
@@ -249,6 +349,7 @@ private struct BackupPaneView: View {
     }
 
     private func chooseFolder() {
+        guard !isWorking else { return }
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
@@ -279,22 +380,15 @@ private struct BackupPaneView: View {
     }
 
     private func backUpNow() {
-        guard let target = folder, !isBackingUp else { return }
-        isBackingUp = true
+        guard let target = folder, !isWorking else { return }
+        isWorking = true
         Task {
-            defer { isBackingUp = false }
+            defer { isWorking = false }
             do {
-                let outcome = try await performBackup(
-                    suiteName: config.suiteName,
-                    appName: config.appName,
-                    folder: target,
-                    appVersion: config.appVersion,
-                    date: Date()
-                )
-                switch outcome {
-                case .written:
+                let written = try await config.resolvedOperations.backUp(target)
+                if written {
                     await refresh()
-                case .unchanged:
+                } else {
                     // A no-op is a healthy outcome, not a failure: the user asked for a backup and
                     // already has an identical one. Reporting it through the error alert — the
                     // only message alert this pane used to have — would title a successful check
@@ -314,20 +408,29 @@ private struct BackupPaneView: View {
     }
 
     private func delete(_ url: URL) {
-        guard let target = folder else { return }
+        guard let target = folder, !isWorking else { return }
+        isWorking = true
         Task {
-            await deleteBackup(at: url, in: target)
-            await refresh()
+            defer { isWorking = false }
+            do {
+                try await config.resolvedOperations.delete(url, target)
+                await refresh()
+            } catch {
+                notice = Notice(title: L("DragonKit.backup.errorTitle"), message: error.localizedDescription)
+            }
         }
     }
 
     private func performRestore() {
-        guard let url = restoreTarget, let target = folder else { return }
+        guard let url = restoreTarget, let target = folder, !isWorking else { return }
         restoreTarget = nil
+        isWorking = true
         Task {
+            defer { isWorking = false }
             do {
-                try await restoreBackup(at: url, in: target, suiteName: config.suiteName)
+                try await config.resolvedOperations.restore(url, target)
                 config.relaunch()
+                await refresh()
             } catch {
                 notice = Notice(
                     title: L("DragonKit.backup.errorTitle"),

@@ -66,6 +66,11 @@ Modules:
   different snapshot out of the retention window. `restore` refuses a file that isn't a backup,
   or one taken from another suite; both used to *erase* the suite instead. The pane keeps the
   chosen folder as a security-scoped bookmark so it survives relaunch under App Sandbox.
+  Apps with existing domain snapshots can pass `BackupOperations` to `BackupConfig` and keep
+  their file format, retention, and restore safeguards. `BackupEntry` supplies each row's title
+  and optional detail. Folder preference keys can retain the app's existing names, and
+  `BackupSettingsPane(config:additionalContent:)` accepts app-owned controls below the shared
+  sections. Omitting these options keeps the settings-suite implementation unchanged.
 - **Uninstall** — `DragonUninstaller` + `UninstallView` / `UninstallSettingsPane`
   (`UninstallConfig`) — incl. an optional, default-off "also delete user data" toggle
   (`optionalDataToggle`) and always-removed `extraCleanupPaths` (caches, support files). A
@@ -297,17 +302,13 @@ all five apps — ice-2, clipmenu-2, spectacle-2, KeyKey and Dragon Sample App �
 from their own repository and run [`conformance.yml`](.github/workflows/conformance.yml) in their
 own CI, so re-implementing a kit module now fails a PR instead of passing review.
 
-Approved migration debt: **backup unification**. Every app's target is DragonKit's
-`BackupSettingsPane` backed by `DragonBackup`. clipmenu-2's `SyncBackupPane` and ice-2's
-`IceBackupSettingsPane` remain only until their data and workflows are mapped safely, and the
-conformance rule keeps recognizing those two spellings until both migrations land — then the
-shared pane is enforced through the conformance triad. See [TechDebt.md](TechDebt.md).
-
-`DragonBackup` snapshots one UserDefaults suite today and knows nothing about folders-as-a-shape,
-so a capability those panes need — versioned snapshot files of arbitrary app data, retention, a
-restore list — is added once here as part of the migration, never preserved as an app-local
-exception. The settings pane's *own* user-picked folder already carries a security-scoped
-bookmark, so the folder it had survives relaunch under App Sandbox.
+Approved migration debt: **backup unification**. Every app's target remains the shared
+`BackupSettingsPane` and backup behavior owned by DragonKit. `BackupOperations` now lets ClipMenu
+adopt that pane while retaining its existing `.clipbackup` files, snippet data, and pre-restore
+safety snapshots. This is presentation migration, not a claim that `DragonBackup` can snapshot
+arbitrary app data. Ice's legacy pane and ClipMenu's domain engine adapter remain migration work.
+The conformance rule keeps recognizing legacy pane spellings until those migrations are complete.
+See [TechDebt.md](TechDebt.md).
 
 ## License
 MIT.

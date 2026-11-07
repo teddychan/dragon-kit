@@ -195,4 +195,23 @@ import DragonKit
         guard #available(macOS 27, *) else { return }
         #expect(item.value(forKey: "preferredImageVisibility") as? Int == 1)
     }
+    @Test func aHostCanUseItsExistingSnapshotsInTheSharedBackupPane() {
+        let operations = BackupOperations(
+            listBackups: { folder in [BackupEntry(url: folder.appending(path: "backup.clipbackup"), title: "Backup", detail: "Snippets")] },
+            backUp: { _ in true },
+            restore: { _, _ in },
+            delete: { _, _ in })
+        let config = BackupConfig(
+            appName: appName, suiteName: suiteName, appVersion: "1.0.0",
+            contents: ["Settings", "Snippets"], operations: operations,
+            folderPathKey: "existingPath", folderBookmarkKey: "existingBookmark",
+            restoreConfirmationMessage: "Restore settings and snippets?", relaunch: {})
+        let pane = BackupSettingsPane(config: config) {
+            DragonSection("App options") { Text("App-owned controls") }
+        }
+        #expect(pane.id == "backup")
+        #expect(pane.title == "DragonKit.pane.backup")
+        _ = pane.paneBody
+    }
+
 }

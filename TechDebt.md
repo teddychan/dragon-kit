@@ -2,7 +2,7 @@
 
 ## Unify every app on DragonKit backup
 
-**Status:** Approved target; app migration and machine enforcement deferred.
+**Status:** Approved target; shared-pane adoption is available, domain engine migration and machine enforcement remain deferred.
 
 The shared Settings information architecture is the canon owned by `CONFORMANCE.md` §R9:
 
@@ -15,16 +15,18 @@ The host controls its app-owned panes and whether its capabilities require
 from DragonKit. In particular, all apps must use `BackupSettingsPane` and `DragonBackup`; an
 app-specific backup pane or engine is not the target architecture.
 
-Two apps have not migrated:
+Two apps have remaining migration work:
 
 | App | Current debt | Target |
 |---|---|---|
-| ClipMenu 2 | `SyncBackupPane` implements folder-based snippet/settings backup and sync. | Replace it with `BackupSettingsPane` backed by `DragonBackup`. |
+| ClipMenu 2 | `BackupOperations` can connect its existing snippet/settings engine to the shared pane. Its `.clipbackup` format and safety snapshots remain app-domain logic. | Adopt `BackupSettingsPane`, then map the domain engine into shared backup capabilities without losing existing files or restore safeguards. |
 | Ice 2 | `IceBackupSettingsPane` implements Ice-specific settings/layout backup. | Replace it with `BackupSettingsPane` backed by `DragonBackup`. |
 
-`DragonBackup` currently snapshots a UserDefaults suite. Before replacing either pane, inventory
-the data and user-visible workflows in the existing implementation and decide how each maps to the
-shared model. If the shared model lacks a capability every app should have, add it once in
+`DragonBackup` currently snapshots a UserDefaults suite. `BackupOperations` lets an app migrate
+its presentation first, and the shared pane accepts app-owned controls below its standard sections.
+This does not generalize `DragonBackup` to arbitrary files or make existing app formats equivalent.
+Before replacing a domain engine, inventory its data and user-visible workflows and decide how each
+maps to the shared model. If the shared model lacks a capability every app should have, add it once in
 DragonKit rather than preserving an app-local exception. Do not claim folder, snippet, layout, or
 sync behavior that `DragonBackup` does not implement.
 

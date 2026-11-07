@@ -30,6 +30,16 @@ import Foundation
         #expect(lhs.resolvingSymlinksInPath().path == rhs.resolvingSymlinksInPath().path, note)
     }
 
+    @Test func existingPlainBookmarksKeepTheirFolderDuringSharedPaneAdoption() throws {
+        let directory = try Self.makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let bookmark = try directory.bookmarkData(
+            options: [], includingResourceValuesForKeys: nil, relativeTo: nil)
+        let resolution = BackupFolder.folder(
+            bookmark: bookmark, legacyPath: directory.path, appName: "Host")
+        Self.expectSameDirectory(resolution.url, directory, "an existing host folder must not move during adoption")
+    }
+
     @Test func bookmarkRoundTripsBackToTheSameFolder() throws {
         let directory = try Self.makeTemporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
