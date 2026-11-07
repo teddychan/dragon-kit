@@ -12,6 +12,13 @@ nothing that already worked was taken away.
 
 ---
 
+## 4.5.0 (2026-11-08)
+
+Apps can now use the shared Backup & Restore pane with their existing backup files and data.
+The pane keeps the same folder picker, backup list, restore controls, and Reveal in Finder button.
+Apps can supply their own snapshot operations, descriptions, and additional controls without
+rebuilding the pane. Existing settings-only integrations continue to work as before.
+
 ## 4.4.0 — 2026-11-07
 
 **Would anyone using the apps notice? In Uninstall, and in Backup & Restore for apps that use the
