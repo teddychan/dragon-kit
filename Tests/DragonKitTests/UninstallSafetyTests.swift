@@ -286,3 +286,31 @@ import Foundation
         #expect(succeeded.order == ["recycle", "cleanup", "complete"])
     }
 }
+
+/// Every Dragon app keeps its settings in `<bundle id>.settings` (see
+/// ``DragonSettingsSuite/standardName(for:)``), which Backup & Restore backs up. Uninstall
+/// clears that suite whether or not the app remembers to list it.
+@Suite struct UninstallSettingsSuiteTests {
+    @Test func theStandardSettingsSuiteIsClearedWithoutBeingListed() {
+        let config = UninstallConfig(appName: "Acme", bundleID: "com.example.acme", checklistItems: ["x"])
+        #expect(config.suiteNames == ["com.example.acme.settings"])
+    }
+
+    @Test func listingTheStandardSuiteAgainDoesNotDuplicateIt() {
+        let config = UninstallConfig(
+            appName: "Acme", bundleID: "com.example.acme",
+            suiteNames: ["com.example.acme.settings", "com.example.acme.extra"],
+            checklistItems: ["x"]
+        )
+        #expect(config.suiteNames == ["com.example.acme.settings", "com.example.acme.extra"])
+    }
+
+    @Test func noBundleIdAddsNoSuite() {
+        let config = UninstallConfig(appName: "Acme", bundleID: "", checklistItems: ["x"])
+        #expect(config.suiteNames.isEmpty)
+    }
+
+    @Test func theConventionIsTheBundleIdPlusSettings() {
+        #expect(DragonSettingsSuite.standardName(for: "com.example.acme") == "com.example.acme.settings")
+    }
+}
