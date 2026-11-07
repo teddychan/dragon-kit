@@ -12,6 +12,42 @@ nothing that already worked was taken away.
 
 ---
 
+## 4.4.0 — 2026-11-07
+
+**Would anyone using the apps notice? In Uninstall, and in Backup & Restore for apps that use the
+new list.** Uninstall now removes an app's settings even when the app didn't ask it to. Backup &
+Restore can now say what a backup holds.
+
+### Added
+
+- **Backup & Restore can list what a backup holds.** Pass `contents:` to `BackupConfig`, one
+  already-localized line per setting, and the pane shows them first under "A backup saves".
+  Without it the pane looks the same as before.
+  ([#110](https://github.com/teddychan/dragon-kit/issues/110))
+- **`DragonSettingsSuite.standardName(for:)`** names the settings suite every Dragon app uses,
+  `<bundle id>.settings`.
+
+### Changed
+
+- **Uninstall always removes the app's settings suite.** It removed `<bundle id>.settings` only
+  when the app listed it in `suiteNames`, so an app that forgot left its settings behind for the
+  next install to find. It is now removed either way.
+  ([#112](https://github.com/teddychan/dragon-kit/issues/112))
+
+### For the apps that use DragonKit
+
+- **Move to this version.** Listing `<bundle id>.settings` in `suiteNames` still works, and the
+  line can now be deleted.
+- To show what a backup holds, pass `contents:` to `BackupConfig`. Ice 2 3.0.0 is the first app
+  to do so.
+- The automatic conformance check fails any app on an older DragonKit, so every app still on
+  4.3.0 fails it until it moves.
+
+### Internal
+
+- The Uninstall examples in `docs/STARTING-A-NEW-APP.md` no longer list the settings suite.
+- Every app's About screen now reads `Built with · DragonKit v4.4.0`.
+
 ## 4.3.0 — 2026-11-03
 
 **Would anyone using the apps notice? Yes, on macOS 27: the menu icons come back.** On macOS 27
