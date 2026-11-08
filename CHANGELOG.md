@@ -17,6 +17,7 @@ nothing that already worked was taken away.
 Settings backups keep each app's files separate when several apps use the same folder.
 Saving twice in one second preserves both backups, and failed deletions now report the error.
 Older backups remain available for manual restore without being removed by automatic cleanup.
+Restored language choices take effect immediately in apps that keep running.
 
 The conformance checker now rejects missing sidebar and version information and applies
 exceptions only to the violations they cover. The Debug starter installs one canonical app

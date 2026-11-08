@@ -429,6 +429,7 @@ private struct BackupPaneView: View {
             defer { isWorking = false }
             do {
                 try await config.resolvedOperations.restore(url, target)
+                LocalizationManager.shared.reloadFromPersistence()
                 config.relaunch()
                 await refresh()
             } catch {
