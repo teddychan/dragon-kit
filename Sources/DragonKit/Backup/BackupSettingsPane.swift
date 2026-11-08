@@ -84,7 +84,7 @@ extension BackupConfig {
         if let operations { return operations }
         return BackupOperations(
             listBackups: { folder in
-                await listBackups(in: folder).map { BackupEntry(url: $0, title: $0.lastPathComponent) }
+                await listBackups(in: folder, suiteName: suiteName).map { BackupEntry(url: $0, title: $0.lastPathComponent) }
             },
             backUp: { folder in
                 let outcome = try await performBackup(
@@ -96,7 +96,7 @@ extension BackupConfig {
             restore: { url, folder in
                 try await restoreBackup(at: url, in: folder, suiteName: suiteName)
             },
-            delete: { url, folder in await deleteBackup(at: url, in: folder) })
+            delete: { url, folder in try await deleteBackup(at: url, in: folder) })
     }
 }
 
@@ -495,8 +495,8 @@ private nonisolated func makeBookmark(for url: URL) async -> Data? {
     BackupFolder.makeBookmark(for: url)
 }
 
-private nonisolated func listBackups(in folder: URL) async -> [URL] {
-    withSecurityScope(folder) { DragonBackup.listBackups(in: folder) }
+private nonisolated func listBackups(in folder: URL, suiteName: String) async -> [URL] {
+    withSecurityScope(folder) { DragonBackup.listBackups(in: folder, suiteName: suiteName) }
 }
 
 /// Write-if-changed, then prune only when something was actually written.
@@ -520,7 +520,7 @@ private nonisolated func performBackup(
             date: date
         )
         if case .written = outcome {
-            DragonBackup.prune(in: folder, keeping: DragonBackup.defaultRetentionLimit)
+            DragonBackup.prune(in: folder, keeping: DragonBackup.defaultRetentionLimit, suiteName: suiteName)
         }
         return outcome
     }
@@ -534,9 +534,9 @@ private nonisolated func createFolder(at folder: URL) async {
 
 /// The scope belongs to the folder the user granted, not to the individual file inside it, so the
 /// delete is wrapped in the folder's scope rather than the backup's.
-private nonisolated func deleteBackup(at url: URL, in folder: URL) async {
-    withSecurityScope(folder) {
-        try? FileManager.default.removeItem(at: url)
+private nonisolated func deleteBackup(at url: URL, in folder: URL) async throws {
+    try withSecurityScope(folder) {
+        try FileManager.default.removeItem(at: url)
     }
 }
 
