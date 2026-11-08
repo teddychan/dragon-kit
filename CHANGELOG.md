@@ -12,6 +12,16 @@ nothing that already worked was taken away.
 
 ---
 
+## 4.5.1 (2026-11-08)
+
+Settings backups keep each app's files separate when several apps use the same folder.
+Saving twice in one second preserves both backups, and failed deletions now report the error.
+Older backups remain available for manual restore without being removed by automatic cleanup.
+
+The conformance checker now rejects missing sidebar and version information and applies
+exceptions only to the violations they cover. The Debug starter installs one canonical app
+so builds from different worktrees do not compete for the same identity.
+
 ## 4.5.0 (2026-11-08)
 
 Apps can now use the shared Backup & Restore pane with their existing backup files and data.
