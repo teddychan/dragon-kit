@@ -71,6 +71,11 @@ Modules:
   and optional detail. Folder preference keys can retain the app's existing names, and
   `BackupSettingsPane(config:additionalContent:)` accepts app-owned controls below the shared
   sections. Omitting these options keeps the settings-suite implementation unchanged.
+  The default pane scopes matching and retention to its settings suite, so sharing a folder
+  with another app cannot discard that app's snapshots. Valid legacy files without a recorded
+  suite stay available for manual restore but never suppress a new backup or enter automatic
+  retention. Changed snapshots receive distinct files even within one second, and deletion
+  failures reach the pane's error notice.
 - **Uninstall** — `DragonUninstaller` + `UninstallView` / `UninstallSettingsPane`
   (`UninstallConfig`) — incl. an optional, default-off "also delete user data" toggle
   (`optionalDataToggle`) and always-removed `extraCleanupPaths` (caches, support files). A

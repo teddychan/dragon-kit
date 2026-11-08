@@ -150,9 +150,20 @@ public enum DragonBackup {
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         let payload = makePayload(suiteName: suiteName, defaults: defaults, appVersion: appVersion, createdDate: date)
         let data = try serialize(payload)
-        let url = folder.appending(path: fileName(appName: appName, for: date))
-        try data.write(to: url, options: .atomic)
-        return url
+        let name = fileName(appName: appName, for: date)
+        var url = folder.appending(path: name)
+        while true {
+            do {
+                // Successful snapshots must never be replaced, including concurrent writes or
+                // settings changed within one timestamp second (#117). Foundation does not
+                // support combining withoutOverwriting with atomic writes.
+                try data.write(to: url, options: .withoutOverwriting)
+                return url
+            } catch let error as CocoaError where error.code == .fileWriteFileExists {
+                let stem = (name as NSString).deletingPathExtension
+                url = folder.appending(path: "\(stem)-\(UUID().uuidString).\(fileExtension)")
+            }
+        }
     }
 
     /// The outcome of ``writeBackupIfChanged(suiteName:appName:to:defaults:appVersion:date:)``.
@@ -168,15 +179,14 @@ public enum DragonBackup {
     ///
     /// Only the metadata-free `defaults` payload is compared: `createdDate` and `appVersion`
     /// differ on every write, so comparing whole payloads would report "changed" every time and
-    /// defeat the check entirely. Only the single newest file is inspected — an older matching
-    /// backup is not the one the user would be told about, and reading the whole folder to find
-    /// it would cost a full re-read on every "Back up now".
+    /// defeat the check entirely. After cataloging ownership and creation dates, only the newest
+    /// owned file's defaults are compared. An older matching snapshot cannot hide a later change.
     public static func newestMatchingBackup(
         suiteName: String,
         defaults: UserDefaults = .standard,
         in folder: URL
     ) -> URL? {
-        guard let newest = listBackups(in: folder).first,
+        guard let newest = snapshots(in: folder).first(where: { $0.suiteName == suiteName })?.url,
               let data = try? Data(contentsOf: newest),
               let payload = try? deserialize(data),
               let stored = payload[PayloadKey.defaults] as? [String: Any]
@@ -236,20 +246,59 @@ public enum DragonBackup {
         apply(payload, suiteName: suiteName, defaults: defaults)
     }
 
-    /// Existing backup files in `folder`, newest first (filenames sort chronologically).
+    /// Existing backup files, newest first by their recorded creation dates. Unreadable and
+    /// unowned files remain discoverable for manual recovery.
     public static func listBackups(in folder: URL) -> [URL] {
-        let contents = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
-        return contents
-            .filter { $0.pathExtension == fileExtension }
-            .sorted { $0.lastPathComponent > $1.lastPathComponent }
+        snapshots(in: folder).map(\.url)
     }
 
-    /// Delete the oldest backups beyond `max`, keeping the newest `max`.
+    /// This suite's backups plus readable legacy snapshots with no recorded suite, so users
+    /// retain their manual restore entry point. Legacy files never drive matching or retention.
+    public static func listBackups(in folder: URL, suiteName: String) -> [URL] {
+        snapshots(in: folder).filter { $0.suiteName == suiteName || $0.isLegacy }.map(\.url)
+    }
+
+    private struct Snapshot {
+        let url: URL
+        let suiteName: String?
+        let createdDate: Date?
+        let isLegacy: Bool
+    }
+
+    private static func snapshots(in folder: URL) -> [Snapshot] {
+        let contents = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
+        return contents.filter { $0.pathExtension == fileExtension }.map { url in
+            let payload = (try? Data(contentsOf: url)).flatMap { try? deserialize($0) }
+            let suite = payload?[PayloadKey.suiteName] as? String
+            return Snapshot(url: url, suiteName: suite?.isEmpty == false ? suite : nil,
+                            createdDate: payload?[PayloadKey.createdDate] as? Date,
+                            isLegacy: payload != nil && suite == nil)
+        }.sorted {
+            let left = $0.createdDate ?? .distantPast
+            let right = $1.createdDate ?? .distantPast
+            return left == right ? $0.url.lastPathComponent > $1.url.lastPathComponent : left > right
+        }
+    }
+
+    /// Retain a single-suite folder. Mixed-suite folders require the scoped overload because
+    /// this legacy signature cannot identify which app requested deletion (#116).
     public static func prune(in folder: URL, keeping max: Int) {
-        let all = listBackups(in: folder)
-        guard all.count > max else { return }
-        for url in all[max...] {
-            try? FileManager.default.removeItem(at: url)
+        let all = snapshots(in: folder)
+        let suites = Set(all.compactMap(\.suiteName))
+        guard suites.count == 1, let suiteName = suites.first else { return }
+        prune(all, keeping: max, suiteName: suiteName)
+    }
+
+    /// Delete only this suite's oldest dated snapshots, preserving foreign and unknown files.
+    public static func prune(in folder: URL, keeping max: Int, suiteName: String) {
+        prune(snapshots(in: folder), keeping: max, suiteName: suiteName)
+    }
+
+    private static func prune(_ snapshots: [Snapshot], keeping max: Int, suiteName: String) {
+        let owned = snapshots.filter { $0.suiteName == suiteName && $0.createdDate != nil }
+        guard max >= 0, owned.count > max else { return }
+        for snapshot in owned.dropFirst(max) {
+            try? FileManager.default.removeItem(at: snapshot.url)
         }
     }
 }
