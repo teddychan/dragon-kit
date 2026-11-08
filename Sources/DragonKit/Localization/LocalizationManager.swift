@@ -53,6 +53,7 @@ public final class LocalizationManager: ObservableObject {
     public static let shared = LocalizationManager()
 
     private let defaultsKey = "DragonKit.language"
+    private let defaults: UserDefaults
     private var bundleCache: [String: Bundle] = [:]
 
     /// The current selection. Defaults to `.system`.
@@ -64,22 +65,34 @@ public final class LocalizationManager: ObservableObject {
         didSet { bundleCache.removeAll() }
     }
 
-    private init() {
-        let raw = UserDefaults.standard.string(forKey: defaultsKey)
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        let raw = defaults.string(forKey: defaultsKey)
         self.language = raw.flatMap(DragonLanguage.init(rawValue:)) ?? .system
+    }
+
+    // KeyKey's IMK restore retains the server (teddychan/yahoo-keykey-2-macos#177).
+    // Read restored state without writing back into the snapshot.
+    func reloadFromPersistence() {
+        let raw = defaults.string(forKey: defaultsKey)
+        applyLanguage(raw.flatMap(DragonLanguage.init(rawValue:)) ?? .system)
     }
 
     /// Change the language, persist it, and notify observers (SwiftUI via `@Published`, AppKit
     /// via ``Notification/Name/dragonLanguageChanged``).
     public func setLanguage(_ newValue: DragonLanguage) {
+        if newValue == .system {
+            defaults.removeObject(forKey: defaultsKey)
+        } else {
+            defaults.set(newValue.rawValue, forKey: defaultsKey)
+        }
+        applyLanguage(newValue)
+    }
+
+    private func applyLanguage(_ newValue: DragonLanguage) {
         guard newValue != language else { return }
         bundleCache.removeAll()
         language = newValue
-        if newValue == .system {
-            UserDefaults.standard.removeObject(forKey: defaultsKey)
-        } else {
-            UserDefaults.standard.set(newValue.rawValue, forKey: defaultsKey)
-        }
         NotificationCenter.default.post(name: .dragonLanguageChanged, object: newValue)
     }
 
