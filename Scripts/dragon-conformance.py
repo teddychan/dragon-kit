@@ -565,11 +565,13 @@ def rule_r6_r7_modules(root: str, cfg: Config, files: list[str]) -> list[Violati
 
 
 def rule_r8_kit_strings(root: str, cfg: Config) -> list[Violation]:
+    if cfg.excuses("R8", ""):
+        return []
     # Omitting `strings` used to disable this rule outright: the loop had nothing to iterate and
     # the app passed by giving the checker no work to do. That is the same shape as deleting
     # `.dragon-conformance.json`, which §R0 makes a violation for exactly this reason — and §R13
     # reads the same globs, so a missing one quietly narrowed two rules at once.
-    if not cfg.strings and not cfg.excuses("R8", ""):
+    if not cfg.strings:
         return [Violation("R8", "config declares no 'strings' — R8 cannot read the app's own "
                           "keys, and §R13 reads the same globs for the app's '.lproj'. Point it "
                           "at the app's locale files, or sanction R8 in 'exceptions' with a "
@@ -596,13 +598,13 @@ def rule_r8_kit_strings(root: str, cfg: Config) -> list[Violation]:
 
 
 def rule_r9_pane_order(root: str, cfg: Config) -> list[Violation]:
+    if cfg.excuses("R9", ""):
+        return []
     target = cfg.pane_order.get("file")
     # Same hole as R8's missing `strings`: no `paneOrder` meant no rule at all, silently. The
     # sidebar order is canon that changes the UI of every Dragon app at once, so an app that
     # doesn't say where its order lives has opted out of the one check on it.
     if not target:
-        if cfg.excuses("R9", ""):
-            return []
         return [Violation("R9", "config declares no 'paneOrder' — the canonical sidebar order "
                           "cannot be checked. Name the file that declares the panes, or sanction "
                           "R9 in 'exceptions' with a reason and an owner (§R11)")]
@@ -610,16 +612,24 @@ def rule_r9_pane_order(root: str, cfg: Config) -> list[Violation]:
     if not os.path.exists(path):
         return [Violation("R9", f"paneOrder.file '{target}' does not exist")]
     seen: list[str] = []
-    for raw in read(path):
-        line = strip_comment(raw)
-        for slot, spellings in CANONICAL_PANE_SLOTS:
-            if slot in seen:
-                continue
-            if any(re.search(rf"\b{re.escape(name)}\b", line) for name in spellings):
-                seen.append(slot)
+    body = mask_noncode("".join(read(path)))
+    slots = {name: slot for slot, spellings in CANONICAL_PANE_SLOTS for name in spellings}
+    for match in re.finditer(r"\b(?:" + "|".join(map(re.escape, slots)) + r")\b", body):
+        slot = slots[match.group()]
+        if slot not in seen:
+            seen.append(slot)
     expected = [slot for slot, _ in CANONICAL_PANE_SLOTS if slot in seen]
     if seen != expected:
         return [Violation("R9", f"settings pane order is {seen}, canon is {expected} "
+                          f"(order is read from {target})", path)]
+    # Relative order alone accepted [] == [] after a sidebar moved out of the declared file.
+    # Required slots make an unreadable or incomplete declaration a failure as well.
+    required = [slot for slot, _ in CANONICAL_PANE_SLOTS
+                if not (slot == "Permissions" and "no-permissions" in cfg.traits)
+                and not (slot == "Updates" and "sparkle" not in cfg.traits)]
+    missing = [slot for slot in required if slot not in seen]
+    if missing:
+        return [Violation("R9", f"missing required settings panes: {', '.join(missing)} "
                           f"(order is read from {target})", path)]
     return []
 
@@ -662,7 +672,8 @@ def rule_r10_pin(root: str, cfg: Config, kit: str) -> list[Violation]:
     found = tuple(int(part) for part in match.group(1).split("."))
     latest = latest_kit_version(kit)
     if latest is None:
-        return []
+        return [Violation("R10", "cannot determine the newest published DragonKit version. "
+                          "Use a kit Git checkout with its published vX.Y.Z tags fetched", kit)]
     if found < latest:
         pretty_found = ".".join(str(n) for n in found)
         pretty_latest = ".".join(str(n) for n in latest)

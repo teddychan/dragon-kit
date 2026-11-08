@@ -114,6 +114,10 @@ what you give it):
 If the app declares `no-permissions`, omit only Permissions and preserve the relative order of
 every remaining pane. Yahoo KeyKey's current sidebar is General → Backup & Restore → What's New
 → Updates → About → Uninstall.
+The `paneOrder` file must declare every applicable shared slot in code. A comment, string
+literal, empty file, or unrecognized declaration cannot establish conformance. Version checking
+also requires a kit Git checkout with published vX.Y.Z tags; a source-only copy cannot prove the
+app's pin is current.
 
 Host wiring:
   • For an NSStatusItem app, copy dragon-sample-app's AppDelegate pattern and build the menu with
@@ -169,6 +173,8 @@ DONE means the conformance checker passes, not that it compiles:
   • A genuine, sanctioned divergence goes in `exceptions` with a `reason` and a `sanctionedBy`
     — only when an applicable rule genuinely fires after supported parameters, traits and slot
     spellings have been used. A different host topology is not itself an exception.
+    App-wide R8 and R9 exceptions suppress their complete rule, including actual violations.
+    Their schema is still validated by R11 and other rules remain enforced.
 
 Start by reading the docs + sample-app, then propose a short migration plan (which screens map
 to which modules, what config each needs) before changing code. Include the current checker
