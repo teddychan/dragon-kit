@@ -18,6 +18,23 @@ The prime directive, from [CONFORMANCE.md](CONFORMANCE.md):
 Your job in this repo is the other half of that bargain: keep what the kit owns worth
 depending on, and keep it from breaking five apps at once.
 
+## Agent skills
+
+### Issue tracker
+
+Issues and implementation tickets live in this repository's GitHub Issues. See
+[`docs/agents/issue-tracker.md`](docs/agents/issue-tracker.md).
+
+### Triage labels
+
+Use the canonical category and state roles. See
+[`docs/agents/triage-labels.md`](docs/agents/triage-labels.md).
+
+### Domain docs
+
+This is a single-context package. See [`docs/agents/domain.md`](docs/agents/domain.md)
+for glossary and architecture-decision guidance.
+
 ## Layout
 
 | Path | What it is |
@@ -217,6 +234,9 @@ This is what CI runs, in this order:
 swift test && python3 Scripts/test_conformance.py
 ```
 
+For changes to the Debug starter, also run `python3 Scripts/test_debug_starter.py` locally.
+It executes the documented script with isolated synthetic Debug and Release apps on macOS.
+
 `swift test` also carries the integration coverage `cd sample-app && swift build` used to provide.
 `Tests/DragonKitTests/HostWiringTests.swift` assembles the Mac App Store shape — every shared pane
 and config a sandboxed host wires, with `DragonKitUpdates` out of scope — and
@@ -245,9 +265,9 @@ A local PASS is only as good as the `--kit` checkout it ran from, and it can be 
 - **A stale kit checkout runs a stale checker.** A clone behind `origin/main` may not contain the
   rule you meant to check at all, so the PASS never evaluated it. Fetch and compare first, or run
   the tagged checker from a `git archive <tag>` extract.
-- **§R10 silently passes without `.git`.** `latest_kit_version()` returns `None` when `git tag`
-  fails in `--kit`, and the stale-pin rule then reports nothing — so a `git archive` extract (or any
-  copy without `.git`) passes every pin. Give the extract the real `.git`.
+- **§R10 requires readable version tags.** A source-only copy cannot establish the newest
+  published version. Use a checkout with its Git metadata and fetched tags; a `git archive`
+  extract without that metadata must fail the check rather than certify a pin.
 
 Never report a conformance PASS on its own: `Scripts/test_conformance.py` must be green, and the
 rules you depend on should be shown to fire by pointing `--config` at a doctored copy of the app's
@@ -266,8 +286,8 @@ pull request waits until the refresh is asked for.
 
 One public tag series lives in this repo:
 
-- **`vX.Y.Z`** — the library, and nothing else. **Triggers a version-consistency check only —
-  still no build and no release**; it is purely a version marker the five apps pin against.
+- **`vX.Y.Z`** — the library, and nothing else. Triggers a version-consistency check and a
+  changelog-only GitHub Release, with no app build or downloadable artifact.
   `kit-version-check.yml` asserts `DragonKitVersion.current` equals the tag, because every app's
   About reports that constant as "Built with · DragonKit vX.Y.Z" and nothing else can catch a
   missed bump. Shipping one isn't finished until the apps bump.
