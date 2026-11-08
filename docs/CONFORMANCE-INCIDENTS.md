@@ -177,6 +177,12 @@ app's spelling is not a rule that is checking that app.**
 Both spellings are migration debt, not a supported difference; they go when clipmenu-2 and ice-2
 migrate to `BackupSettingsPane` + `DragonBackup`. See [`TechDebt.md`](../TechDebt.md).
 
+**Missing slots also passed.** A whole-package review reproduced a clean result with an empty
+`paneOrder` file and with General removed entirely. The checker compared the order of the slots
+it recognized, so no slots meant `[] == []`. Required-slot checks now use the same capability
+conditions as the canon. Comments and literals are masked so a description of the intended
+sidebar cannot satisfy its missing slots. Legacy backup spellings remain accepted during migration.
+
 ## §R10 — The DragonKit pin is current
 
 **A stale pin is how an app silently misses shared fixes.** Every app sat on 1.3.0 while the kit was
@@ -203,6 +209,12 @@ depended on the kit by `path: ".."` because it lived inside it. That app owns it
 now, so nothing qualifies — and the branch was an always-pass with no fixture behind it, which made
 it the cheapest way for any app to opt out of the staleness check. Declaring it is now itself an
 R10 violation, the same way §R0 makes deleting `.dragon-conformance.json` one.
+
+**Missing tag metadata disabled the check.** The same review ran an identical synthetic app
+against a real kit checkout and a source-only copy. A stale pin failed against the checkout but
+passed against the copy because `latest_kit_version()` returned `None` and R10 returned no
+violations. A Git repository with no published tags had the same outcome. Both now fail with a
+diagnostic requiring a checkout with published version tags.
 
 ## §R11 — Exceptions are explicit, reasoned, and few
 
@@ -257,6 +269,12 @@ passed.
 consult
 `excuses(rule, "")` and nothing else, so a path-scoped entry for one of them printed as a live,
 narrowly-scoped sanction on every run and suppressed nothing at all — the app still failed.
+
+An app-wide entry had a different hole in R8 and R9. Those rules consulted the exception only
+when their configuration was missing. A valid entry printed as sanctioned but still failed on
+an actual duplicated kit key or reordered sidebar. Synthetic violating fixtures reproduced both
+cases. Each rule now consults its app-wide exception before checking any branch; R11 still
+validates the entry and unrelated rules still run.
 
 **§R15 does take a path, and the only live exception in the fleet is one.** That rule is consulted
 both ways — per construction site and once for the whole app — so a path there scopes a real

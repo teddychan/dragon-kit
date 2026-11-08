@@ -244,8 +244,10 @@ unmarked one is required, which for Updates would mean telling a Mac App Store t
 pane it cannot link. Every other slot is required, and the relative order never changes.
 
 The checker extracts kit pane identifiers in declaration order from the file named by
-`paneOrder` — a **required** key (§R0) — and requires their **relative** order to match.
-App-specific panes anywhere between General and Permissions are fine.
+`paneOrder` — a **required** key (§R0) — and requires both the applicable slots and their
+**relative** order to match. Comments and string literals do not declare slots. An empty or
+unrecognized declaration is a violation, not a pass. App-specific panes anywhere between
+General and Permissions are fine.
 
 Each slot is matched on the **pane identifier**, never on its display title — so a slot is
 satisfied by `BackupSettingsPane` (which the kit titles "Backup & Restore") or by a recognized
@@ -262,6 +264,10 @@ names what the kit itself ships rather than every recognized identifier.
 The version at `pin.file`/`pin.pattern` must be `>=` the newest `vX.Y.Z` tag in dragon-kit.
 **Every app pins a published version — there is no path-dependency exemption**, and declaring
 `"pin": {"kind": "path"}` is itself an R10 violation.
+
+The kit must be a Git checkout with published `vX.Y.Z` tags available. If the checker cannot
+read those tags, or finds none, it reports a violation because pin currency is unverified.
+A source-only copy does not establish a current version.
 
 **`pin.pattern` must anchor on dragon-kit, and the checker reads the pattern to make sure it
 does.** The pattern is one search over the whole file, so an unanchored version regex matches
@@ -298,6 +304,10 @@ validated:**
 The checker prints every exception on each run, so they stay visible instead of becoming
 permanent. **The target is none at all.** An exception is the last resort, after a trait, a slot
 spelling, and changing the app.
+
+A valid app-wide R8 or R9 exception suppresses the complete corresponding rule, including
+actual kit-owned keys or a noncanonical sidebar order. It does not suppress R11's validation
+of the exception or any other rule.
 
 ### The registry is what the apps declare, and an empty one proves nothing
 
