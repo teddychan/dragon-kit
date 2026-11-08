@@ -660,14 +660,41 @@ swift build -c debug
 BIN_DIR="$(swift build -c debug --show-bin-path)"
 
 APP="$BIN_DIR/$DEBUG_APP_NAME.app"
+INSTALLED_APP="/Applications/$DEBUG_APP_NAME.app"
 if [[ -z "$RELEASE_APP_NAME" || -z "$RELEASE_BUNDLE_ID" \
       || "$DEBUG_APP_NAME" != *" Debug" \
+      || "$DEBUG_APP_NAME" == */* \
       || "$DEBUG_BUNDLE_ID" != "$RELEASE_BUNDLE_ID.debug" \
       || "$BIN_DIR" != /* || ! -d "$BIN_DIR" \
       || ! -x "$BIN_DIR/$SOURCE_BIN_NAME" ]]; then
   echo "error: refusing to package or clean a non-Debug identity" >&2
   exit 1
 fi
+if [[ -e "$INSTALLED_APP" ]]; then
+  INSTALLED_ID="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$INSTALLED_APP/Contents/Info.plist")"
+  if [[ "$INSTALLED_ID" != "$DEBUG_BUNDLE_ID" ]]; then
+    echo "error: refusing to replace '$INSTALLED_APP' with a different bundle identity" >&2
+    exit 1
+  fi
+fi
+
+# A worktree's build path cannot identify a Debug copy launched from another checkout.
+# Select the exact Debug bundle identity so the installed Release app is never stopped.
+swift - "$DEBUG_BUNDLE_ID" <<'SWIFT'
+import AppKit
+
+let running = NSRunningApplication.runningApplications(withBundleIdentifier: CommandLine.arguments[1])
+for app in running { app.terminate() }
+let deadline = Date().addingTimeInterval(5)
+while running.contains(where: { !$0.isTerminated }) && Date() < deadline {
+    RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+}
+guard running.allSatisfy({ $0.isTerminated }) else {
+    fputs("error: the previous Debug app did not quit; leaving its bundle intact\n", stderr)
+    exit(1)
+}
+SWIFT
+
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN_DIR/$SOURCE_BIN_NAME" "$APP/Contents/MacOS/$DEBUG_BIN_NAME"
@@ -712,17 +739,20 @@ delete_key SUFeedURL
 cp -R "$BIN_DIR"/*.bundle "$APP/Contents/MacOS/" 2>/dev/null || true
 codesign --force --deep --sign - "$APP" >/dev/null 2>&1
 
-pkill -f "$APP/Contents/MacOS/$DEBUG_BIN_NAME" 2>/dev/null || true
-sleep 1
-open -n "$APP"
+rm -rf "$INSTALLED_APP"
+mv "$APP" "$INSTALLED_APP"
+open -n "$INSTALLED_APP"
 echo "Launched $DEBUG_APP_NAME v$SHORT_VERSION Debug"
 echo "  id:   $DEBUG_BUNDLE_ID"
-echo "  path: $APP"
+echo "  path: $INSTALLED_APP"
 ```
 
-The only recursive delete and process match above contain the validated ` Debug.app` path, and
-uninstall recycles `Bundle.main.bundleURL`; none names `/Applications/<APP_DISPLAY>.app` or the
-release executable. If the app is later distributed by Homebrew, never pass a cask token flat:
+The recursive deletes above contain validated ` Debug.app` paths, and process selection matches
+the exact `.debug` bundle identifier across worktrees. A Debug app that refuses to quit stops the
+script before its bundle is replaced. Moving the assembled bundle into `/Applications` leaves no
+second copy in the build directory. Uninstall recycles `Bundle.main.bundleURL`; none of these
+operations names `/Applications/<APP_DISPLAY>.app` or the release executable.
+If the app is later distributed by Homebrew, never pass a cask token flat:
 use `UninstallConfig.caskToken("<APP_DIR>", ifBundleIs: "<BUNDLE_ID>")`, which returns `nil` in
 the `.debug` bundle. Any new reset command follows the same rule as uninstall: use
 `AppIdentity.bundleID`, `settingsSuite`, and the identity-derived URLs, never release literals.
