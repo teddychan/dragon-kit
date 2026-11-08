@@ -67,6 +67,10 @@ struct GeneralPane: SettingsPane {
 }
 """
 COMPLIANT_STRINGS = '"app.pane.general" = "General";\n'
+COMPLIANT_NAVIGATION = """enum Navigation {
+    case general, permissions, backup, whatsNew, updates, about, uninstall
+}
+"""
 # Every fixture app gets this, because every real app has one: `COMPLIANT_PANES` above wires
 # `AboutSettingsPane(content: AboutConfig.content)` and R15 refuses to report a pass on an About
 # pane it never found. Written before `extra`, so a test can still replace it wholesale.
@@ -178,8 +182,8 @@ def make_app(tmp: str, *, menu: str = COMPLIANT_MENU, panes: str = COMPLIANT_PAN
     return root
 
 
-def run(app: str) -> tuple[int, str]:
-    proc = subprocess.run([sys.executable, CHECKER, "--app", app, "--kit", KIT],
+def run(app: str, *, kit: str = KIT) -> tuple[int, str]:
+    proc = subprocess.run([sys.executable, CHECKER, "--app", app, "--kit", kit],
                           capture_output=True, text=True)
     return proc.returncode, proc.stdout + proc.stderr
 
@@ -211,7 +215,7 @@ def expect_pass(name: str, app: str) -> None:
         print(f"  ok    {name}")
 
 
-def expect_violation(name: str, app: str, rule: str, because: str) -> None:
+def expect_violation(name: str, app: str, rule: str, because: str, *, kit: str = KIT) -> None:
     """Assert the checker fails, with `rule`, *on the branch whose message contains `because`*.
 
     `because` is not decoration. This function used to assert `rule in out` and nothing more, so it
@@ -229,7 +233,7 @@ def expect_violation(name: str, app: str, rule: str, because: str) -> None:
     evidence about the rule under test, and it is how a fixture keeps reporting `ok` after the
     branch it was written for stops firing at all.
     """
-    code, out = run(app)
+    code, out = run(app, kit=kit)
     if code == 0:
         FAILURES.append(f"{name}: expected {rule} violation, but the checker PASSED.\n{out}")
         print(f"  FAIL  {name} (rule did not bite)")
@@ -562,7 +566,9 @@ struct Custom: View {
 
         print("R5 — shared panes must be the kit's")
         expect_violation("no Uninstall pane", make_app(
-            tmp, panes=COMPLIANT_PANES.replace("UninstallSettingsPane", "HomeGrownUninstall")
+            tmp, panes=COMPLIANT_PANES.replace("UninstallSettingsPane", "HomeGrownUninstall"),
+            extra={"Sources/Nav.swift": COMPLIANT_NAVIGATION},
+            config_over={"paneOrder": {"file": "Sources/Nav.swift"}}
         ), "R5",
             because="no reference to UninstallSettingsPane")
         # R5 searched raw text, so the line a migration left behind counted as wiring the pane —
@@ -572,7 +578,8 @@ struct Custom: View {
                 "UninstallSettingsPane", "HomeGrownUninstall") + """
 // Migration note: this used to be AnySettingsPane(UninstallSettingsPane(config: config)).
 /* AnySettingsPane(UninstallSettingsPane(config: UninstallConfig(appName: "T"))) */
-"""), "R5",
+""", extra={"Sources/Nav.swift": COMPLIANT_NAVIGATION},
+            config_over={"paneOrder": {"file": "Sources/Nav.swift"}}), "R5",
             because="no reference to UninstallSettingsPane")
 
         print("R6/R7 — modules")
@@ -634,6 +641,20 @@ let attributions = [
                 "rule": "R8",
                 "reason": "String Catalogs, so there is no .strings file to read keys from",
                 "sanctionedBy": "CONFORMANCE.md §R11"}]}))
+        r8_exception = {"rule": "R8", "reason": "legacy copied keys during a sanctioned migration",
+                        "sanctionedBy": "CONFORMANCE.md §R11"}
+        expect_pass("an R8 exception suppresses actual kit-owned keys", make_app(
+            tmp, strings=COMPLIANT_STRINGS + '"DragonKit.menu.settings" = "Settings…";\n',
+            config_over={"exceptions": [r8_exception]}))
+        expect_violation("an R8 exception does not suppress another rule", make_app(
+            tmp, strings='"DragonKit.menu.settings" = "Settings…";\n',
+            extra={"Sources/Login.swift": "let login = SMAppService.mainApp\n"},
+            config_over={"exceptions": [r8_exception]}), "R7",
+            because="direct launch-at-login wiring")
+        expect_violation("an R8 exception still needs a reason", make_app(
+            tmp, strings='"DragonKit.menu.settings" = "Settings…";\n',
+            config_over={"exceptions": [dict(r8_exception, reason="")]}), "R11",
+            because="declares no 'reason'")
 
         print("R9 — pane order")
         bad_order = COMPLIANT_PANES.replace(
@@ -644,6 +665,50 @@ let attributions = [
             "            AnySettingsPane(PermissionsSettingsPane(permissions: "
             "[.accessibility()])),")
         expect_violation("About before Permissions", make_app(tmp, panes=bad_order), "R9",
+            because="settings pane order is")
+        r9_exception = {"rule": "R9", "reason": "a sanctioned host sidebar order",
+                        "sanctionedBy": "CONFORMANCE.md §R11"}
+        expect_pass("an R9 exception suppresses actual noncanonical order", make_app(
+            tmp, panes=bad_order, config_over={"exceptions": [r9_exception]}))
+        expect_violation("an R9 exception still needs an owner", make_app(
+            tmp, panes=bad_order,
+            config_over={"exceptions": [dict(r9_exception, sanctionedBy="")]}), "R11",
+            because="declares no 'sanctionedBy'")
+        expect_violation("an R8 exception does not suppress R9", make_app(
+            tmp, panes=bad_order, config_over={"exceptions": [r8_exception]}), "R9",
+            because="settings pane order is")
+        for name, body in (
+            ("empty", ""),
+            ("comment-only", "/* GeneralPane PermissionsPane BackupSettingsPane "
+             "WhatsNewPane UpdatesSettingsPane AboutPane UninstallSettingsPane */\n"),
+            ("unrecognized", "enum Navigation { case custom }\n"),
+            ("literal-only", 'let note = "GeneralPane PermissionsPane BackupSettingsPane '
+             'WhatsNewPane UpdatesSettingsPane AboutPane UninstallSettingsPane"\n'),
+        ):
+            expect_violation(f"{name} pane-order input cannot pass", make_app(
+                tmp, extra={"Sources/Nav.swift": body},
+                config_over={"paneOrder": {"file": "Sources/Nav.swift"}}), "R9",
+                because="missing required settings panes")
+        expect_violation("General cannot disappear from the sidebar", make_app(
+            tmp, extra={"Sources/Nav.swift": "enum Navigation {\n"
+                        "case permissions, backup, whatsNew, updates, about, uninstall\n}\n"},
+            config_over={"paneOrder": {"file": "Sources/Nav.swift"}}), "R9",
+            because="missing required settings panes: General")
+        for slot in ("permissions", "backup", "whatsNew", "updates", "about", "uninstall"):
+            missing_slot = COMPLIANT_NAVIGATION.replace(slot, "custom")
+            expect_violation(f"{slot} cannot disappear from the sidebar", make_app(
+                tmp, extra={"Sources/Nav.swift": missing_slot},
+                config_over={"paneOrder": {"file": "Sources/Nav.swift"}}), "R9",
+                because="missing required settings panes")
+        expect_pass("a host can omit both capability-dependent slots", make_app(
+            tmp, extra={"Sources/Nav.swift": "enum Navigation {\n"
+                        "case general, backup, whatsNew, about, uninstall\n}\n"},
+            config_over={"paneOrder": {"file": "Sources/Nav.swift"},
+                         "traits": ["no-permissions"]}))
+        expect_violation("same-line cases preserve their written order", make_app(
+            tmp, extra={"Sources/Nav.swift": "enum Navigation {\n"
+                        "case about, general, permissions, backup, whatsNew, updates, uninstall\n}\n"},
+            config_over={"paneOrder": {"file": "Sources/Nav.swift"}}), "R9",
             because="settings pane order is")
         # An app may drive its sidebar from an enum instead of a pane array (ice-2 does), so
         # R9 has to read case names too — measuring type names only reported a false order.
@@ -726,6 +791,15 @@ enum SettingsNavigationIdentifier: String {
         expect_violation("stale pin", make_app(tmp, package=(
             '.package(url: "https://github.com/teddychan/dragon-kit", from: "0.0.1"),\n')), "R10",
             because="a stale pin silently misses shared fixes")
+        for metadata in ("source-only", "tagless"):
+            kit = os.path.join(tmp, metadata)
+            os.mkdir(kit)
+            os.symlink(os.path.join(KIT, "Sources"), os.path.join(kit, "Sources"),
+                       target_is_directory=True)
+            if metadata == "tagless":
+                subprocess.run(["git", "init", "--quiet", kit], check=True)
+            expect_violation(f"{metadata} kit cannot establish pin currency", make_app(tmp),
+                "R10", because="cannot determine the newest published DragonKit version", kit=kit)
         # The retired path-pin exemption, which returned "no violations" for any app declaring it
         # and had no fixture of its own — so the checker carried an always-pass branch that
         # nothing here would have noticed. It existed only for an app living inside the kit, an

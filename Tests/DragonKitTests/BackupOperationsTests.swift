@@ -4,6 +4,58 @@ import Testing
 
 @MainActor
 @Suite struct BackupOperationsTests {
+    @Test func defaultDeletionFailureReachesTheCallersErrorHandler() async throws {
+        let manager = FileManager.default
+        let folder = manager.temporaryDirectory.resolvingSymlinksInPath().appending(path: UUID().uuidString)
+        try manager.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer {
+            try? manager.setAttributes([.posixPermissions: 0o755], ofItemAtPath: folder.path)
+            try? manager.removeItem(at: folder)
+        }
+        let file = folder.appending(path: "protected.dragonbackup")
+        try DragonBackup.serialize(["schemaVersion": 1, "suiteName": "host", "defaults": [String: Int]()]).write(to: file)
+        try manager.setAttributes([.posixPermissions: 0o555], ofItemAtPath: folder.path)
+        let operations = BackupConfig(appName: "Host", suiteName: "host", appVersion: "1", relaunch: {}).resolvedOperations
+        await #expect(throws: (any Error).self) { try await operations.delete(file, folder) }
+        #expect(manager.fileExists(atPath: file.path))
+        #expect(try await operations.listBackups(folder).count == 1)
+    }
+
+    @Test func defaultAdapterListsAndRetainsOnlyItsOwnSuite() async throws {
+        let suite = "DragonKit.BackupOperationsTests.\(UUID().uuidString)"
+        let foreignSuite = suite + ".foreign"
+        let defaults = UserDefaults.standard
+        let folder = FileManager.default.temporaryDirectory.resolvingSymlinksInPath().appending(path: UUID().uuidString)
+        defer {
+            defaults.removePersistentDomain(forName: suite)
+            defaults.removePersistentDomain(forName: foreignSuite)
+            try? FileManager.default.removeItem(at: folder)
+        }
+        let start = Date(timeIntervalSince1970: 1_700_000_000)
+        let foreign = try DragonBackup.writeBackup(
+            suiteName: foreignSuite, appName: "Foreign", to: folder,
+            appVersion: "1", date: start)
+        let foreignBytes = try Data(contentsOf: foreign)
+        for index in 1...10 {
+            defaults.setPersistentDomain(["value": index], forName: suite)
+            _ = try DragonBackup.writeBackup(
+                suiteName: suite, appName: "Host", to: folder,
+                appVersion: "1", date: start.addingTimeInterval(Double(index)))
+        }
+        let unknown = folder.appending(path: "unknown.dragonbackup")
+        let unknownBytes = Data("unreadable snapshot".utf8)
+        try unknownBytes.write(to: unknown)
+        defaults.setPersistentDomain(["value": 11], forName: suite)
+        let operations = BackupConfig(appName: "Host", suiteName: suite, appVersion: "1", relaunch: {}).resolvedOperations
+        #expect(try await operations.backUp(folder))
+        let listed = try await operations.listBackups(folder)
+        #expect(listed.count == 10)
+        #expect(!listed.contains { $0.url.lastPathComponent == foreign.lastPathComponent })
+        #expect(!listed.contains { $0.url.lastPathComponent == unknown.lastPathComponent })
+        #expect(try Data(contentsOf: foreign) == foreignBytes)
+        #expect(try Data(contentsOf: unknown) == unknownBytes)
+    }
+
     @Test func existingHostsStillBackUpRestoreAndDeleteTheirSettingsSuite() async throws {
         let suite = "DragonKit.BackupOperationsTests.\(UUID().uuidString)"
         let defaults = UserDefaults.standard
